@@ -1,0 +1,57 @@
+'use client';
+
+import { Handle, Position } from '@xyflow/react';
+
+interface ActionNodeProps {
+  data: {
+    label: string;
+    nodeType: string;
+    config: Record<string, any>;
+  };
+  selected?: boolean;
+}
+
+const actionIcons: Record<string, string> = {
+  send_email: '✉️',
+  send_sms: '📱',
+  update_spreadsheet: '📊',
+  create_task: '✅',
+  send_notification: '🔔',
+  wait: '⏳',
+  http_request: '🌐',
+  javascript: '💻',
+  filter: '🔍',
+  transform: '🔄',
+};
+
+export default function ActionNode({ data, selected }: ActionNodeProps) {
+  const icon = actionIcons[data.nodeType] || '⚡';
+
+  return (
+    <div
+      className={`bg-white border-2 rounded-xl px-4 py-3 min-w-[180px] shadow-sm ${
+        selected ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+      }`}
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 !bg-gray-400 border-2 border-white"
+      />
+      <div className="flex items-center gap-2">
+        <span className="text-xl">{icon}</span>
+        <div>
+          <div className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+            Action
+          </div>
+          <div className="font-medium text-gray-900">{data.label}</div>
+        </div>
+      </div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-3 h-3 !bg-gray-400 border-2 border-white"
+      />
+    </div>
+  );
+}
