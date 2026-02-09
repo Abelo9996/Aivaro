@@ -128,7 +128,7 @@ export default function ConnectionsPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div data-walkthrough="connections-grid" className="grid md:grid-cols-2 gap-4">
         {availableConnections.map((service) => {
           const connected = getConnectionByType(service.type);
           const isConnecting = connecting === service.type;

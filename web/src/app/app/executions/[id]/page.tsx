@@ -6,11 +6,13 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Execution } from '@/types';
+import ChatPanel from '@/components/chat/ChatPanel';
 
 export default function ExecutionDetailPage() {
   const params = useParams();
   const [execution, setExecution] = useState<Execution | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -22,11 +24,21 @@ export default function ExecutionDetailPage() {
     try {
       const data = await api.getExecution(id);
       setExecution(data);
+      // Auto-show chat if execution is completed with output
+      if (data.status === 'completed' && data.node_executions?.some(n => n.output)) {
+        setShowChat(true);
+      }
     } catch (err) {
       console.error('Failed to load execution:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChatMessage = async (message: string, history: Array<{role: string, content: string}>) => {
+    if (!execution) throw new Error('No execution loaded');
+    const result = await api.chatExecution(execution.id, message, history);
+    return result.response;
   };
 
   const getStatusColor = (status: string) => {
@@ -106,61 +118,93 @@ export default function ExecutionDetailPage() {
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="font-semibold mb-6">Step Timeline</h2>
-        <div className="space-y-4">
-          {execution.node_executions && execution.node_executions.length > 0 ? (
-            execution.node_executions.map((node, index) => (
-              <div
-                key={node.id}
-                className={`relative pl-8 pb-4 ${
-                  index !== execution.node_executions!.length - 1
-                    ? 'border-l-2 border-gray-200'
-                    : ''
-                }`}
-              >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Timeline */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="font-semibold mb-6">Step Timeline</h2>
+          <div className="space-y-4">
+            {execution.node_executions && execution.node_executions.length > 0 ? (
+              execution.node_executions.map((node, index) => (
                 <div
-                  className={`absolute left-0 -translate-x-1/2 w-4 h-4 rounded-full border-2 ${getStatusColor(
-                    node.status
-                  )}`}
-                />
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium">{node.node_id}</div>
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded ${getStatusColor(
-                        node.status
-                      )}`}
-                    >
-                      {node.status}
-                    </span>
+                  key={node.id}
+                  className={`relative pl-8 pb-4 ${
+                    index !== execution.node_executions!.length - 1
+                      ? 'border-l-2 border-gray-200'
+                      : ''
+                  }`}
+                >
+                  <div
+                    className={`absolute left-0 -translate-x-1/2 w-4 h-4 rounded-full border-2 ${getStatusColor(
+                      node.status
+                    )}`}
+                  />
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium">{node.node_id}</div>
+                      <span
+                        className={`px-2 py-0.5 text-xs rounded ${getStatusColor(
+                          node.status
+                        )}`}
+                      >
+                        {node.status}
+                      </span>
+                    </div>
+                    {node.started_at && (
+                      <div className="text-xs text-gray-500 mb-2">
+                        {formatDate(node.started_at)}
+                      </div>
+                    )}
+                    {node.output && (
+                      <details className="mt-2">
+                        <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
+                          View Output
+                        </summary>
+                        <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto">
+                          {JSON.stringify(node.output, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                    {node.error && (
+                      <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm">
+                        {node.error}
+                      </div>
+                    )}
                   </div>
-                  {node.started_at && (
-                    <div className="text-xs text-gray-500 mb-2">
-                      {formatDate(node.started_at)}
-                    </div>
-                  )}
-                  {node.output && (
-                    <details className="mt-2">
-                      <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
-                        View Output
-                      </summary>
-                      <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto">
-                        {JSON.stringify(node.output, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-                  {node.error && (
-                    <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm">
-                      {node.error}
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))
+              ))
+            ) : (
+              <p className="text-gray-500">No steps executed yet.</p>
+            )}
+          </div>
+        </div>
+
+        {/* AI Chat Panel */}
+        <div className="lg:col-span-1">
+          {showChat ? (
+            <ChatPanel
+              title="Ask About Results"
+              placeholder="Ask about this execution..."
+              welcomeMessage={`I've analyzed this ${execution.status === 'completed' ? 'completed' : execution.status} workflow run. What would you like to know about the results?`}
+              onSendMessage={handleChatMessage}
+            />
           ) : (
-            <p className="text-gray-500">No steps executed yet.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-2xl">🤖</span>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">AI Assistant</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Ask questions about this workflow run and its results
+                </p>
+                <button
+                  onClick={() => setShowChat(true)}
+                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm"
+                >
+                  Start Chat
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

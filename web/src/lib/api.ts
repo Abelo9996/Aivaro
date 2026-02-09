@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://work-1-rvvbmdvsfidltqxj.prod-runtime.all-hands.dev';
 
 class ApiClient {
   private token: string | null = null;
@@ -230,6 +230,33 @@ class ApiClient {
         sample_data: sampleData,
       }),
     });
+  }
+
+  // Chat APIs
+  async chatExecution(executionId: string, message: string, history?: Array<{role: string, content: string}>) {
+    return this.request<{response: string, context_type: string}>(`/api/chat/execution/${executionId}`, {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    });
+  }
+
+  async chatAssistant(message: string, history?: Array<{role: string, content: string}>) {
+    return this.request<{response: string, context_type: string}>('/api/chat/assistant', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    });
+  }
+
+  async getAssistantContext() {
+    return this.request<{
+      context_summary: {
+        workflows_count: number;
+        executions_count: number;
+        user_name: string;
+        business_type?: string;
+      };
+      capabilities: string[];
+    }>('/api/chat/assistant/context');
   }
 }
 

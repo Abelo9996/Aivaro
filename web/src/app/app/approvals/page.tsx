@@ -79,7 +79,10 @@ export default function ApprovalsPage() {
       </div>
 
       {approvals.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div 
+          data-walkthrough="approvals-list"
+          className="bg-white rounded-xl border border-gray-200 p-12 text-center"
+        >
           <div className="text-5xl mb-4">✅</div>
           <h3 className="text-lg font-semibold mb-2">
             {filter === 'pending' ? 'All caught up!' : 'No approvals found'}
@@ -91,7 +94,7 @@ export default function ApprovalsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div data-walkthrough="approvals-list" className="space-y-4">
           {approvals.map((approval) => (
             <div
               key={approval.id}

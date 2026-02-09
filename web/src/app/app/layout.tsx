@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
+import { WalkthroughProvider } from '@/components/walkthrough';
+import GlobalAssistant from '@/components/chat/GlobalAssistant';
 
 export default function AppLayout({
   children,
@@ -14,6 +16,7 @@ export default function AppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -43,13 +46,33 @@ export default function AppLayout({
     return null;
   }
 
+  // Only show walkthrough on dashboard page (first login experience)
+  const isDashboard = pathname === '/app';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      <div className="flex-1 flex flex-col ml-64">
-        <Header />
-        <main className="flex-1 p-6">{children}</main>
+    <WalkthroughProvider autoStart={isDashboard}>
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col ml-64">
+          <Header />
+          <main className="flex-1 p-6">{children}</main>
+        </div>
+        
+        {/* Global AI Assistant FAB */}
+        <button
+          onClick={() => setIsAssistantOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-primary-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center z-40"
+          title="AI Assistant"
+        >
+          <span className="text-2xl">🤖</span>
+        </button>
+        
+        {/* Global Assistant Modal */}
+        <GlobalAssistant 
+          isOpen={isAssistantOpen} 
+          onClose={() => setIsAssistantOpen(false)} 
+        />
       </div>
-    </div>
+    </WalkthroughProvider>
   );
 }

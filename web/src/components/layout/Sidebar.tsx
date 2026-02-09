@@ -6,12 +6,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/app', label: 'Dashboard', icon: '🏠' },
-  { href: '/app/workflows', label: 'Workflows', icon: '⚡' },
-  { href: '/app/templates', label: 'Templates', icon: '📋' },
-  { href: '/app/executions', label: 'Run History', icon: '📊' },
-  { href: '/app/approvals', label: 'Approvals', icon: '✅' },
-  { href: '/app/connections', label: 'Connections', icon: '🔗' },
+  { href: '/app', label: 'Dashboard', icon: '🏠', walkthrough: 'nav-dashboard' },
+  { href: '/app/workflows', label: 'Workflows', icon: '⚡', walkthrough: 'nav-workflows' },
+  { href: '/app/templates', label: 'Templates', icon: '📋', walkthrough: 'nav-templates' },
+  { href: '/app/executions', label: 'Run History', icon: '📊', walkthrough: 'nav-executions' },
+  { href: '/app/approvals', label: 'Approvals', icon: '✅', walkthrough: 'nav-approvals' },
+  { href: '/app/connections', label: 'Connections', icon: '🔗', walkthrough: 'nav-connections' },
 ];
 
 export default function Sidebar() {
@@ -38,6 +38,7 @@ export default function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  data-walkthrough={item.walkthrough}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg transition',
                     isActive

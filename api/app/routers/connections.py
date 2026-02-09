@@ -20,9 +20,10 @@ router = APIRouter()
 # In-memory state storage (use Redis in production)
 oauth_states = {}
 
-# Frontend URL for redirects
-FRONTEND_URL = "http://localhost:3000"
-API_URL = "http://localhost:8000"
+# Frontend URL for redirects - use environment variables for flexibility
+import os
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://work-2-rvvbmdvsfidltqxj.prod-runtime.all-hands.dev")
+API_URL = os.getenv("API_URL", "https://work-1-rvvbmdvsfidltqxj.prod-runtime.all-hands.dev")
 
 
 @router.get("/", response_model=List[ConnectionResponse])
@@ -243,7 +244,5 @@ async def test_connection(
             return {"success": True, "message": "Connection is valid", "user": user_info}
         else:
             return {"success": False, "message": "Connection token may be expired"}
-    
-    return {"success": True, "message": "Connection test successful"}
     
     return {"success": True, "message": "Connection test successful"}

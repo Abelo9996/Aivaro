@@ -69,6 +69,7 @@ export default function WorkflowsPage() {
         </div>
         <Link
           href="/app/workflows/new"
+          data-walkthrough="create-workflow-btn"
           className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700"
         >
           + New Workflow
@@ -76,7 +77,10 @@ export default function WorkflowsPage() {
       </div>
 
       {workflows.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div 
+          data-walkthrough="workflows-list"
+          className="bg-white rounded-xl border border-gray-200 p-12 text-center"
+        >
           <div className="text-5xl mb-4">⚡</div>
           <h3 className="text-lg font-semibold mb-2">No workflows yet</h3>
           <p className="text-gray-500 mb-6">
@@ -98,7 +102,10 @@ export default function WorkflowsPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div 
+          data-walkthrough="workflows-list"
+          className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+        >
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

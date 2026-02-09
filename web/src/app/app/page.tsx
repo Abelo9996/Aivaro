@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-8" data-walkthrough="dashboard">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500">Welcome back! Here's what's happening.</p>
       </div>
@@ -74,6 +74,7 @@ export default function DashboardPage() {
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         <Link
           href="/app/workflows/new"
+          data-walkthrough="quick-action-create"
           className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition"
         >
           <div className="text-3xl mb-3">✨</div>
@@ -82,6 +83,7 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/app/templates"
+          data-walkthrough="quick-action-templates"
           className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition"
         >
           <div className="text-3xl mb-3">📋</div>
@@ -90,6 +92,7 @@ export default function DashboardPage() {
         </Link>
         <Link
           href="/app/executions"
+          data-walkthrough="quick-action-history"
           className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition"
         >
           <div className="text-3xl mb-3">📊</div>

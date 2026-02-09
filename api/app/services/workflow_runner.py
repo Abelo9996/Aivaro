@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
-from app.models import Workflow, Execution, ExecutionNode, Approval
+from app.models import Workflow, Execution, ExecutionNode, Approval, Connection
 from app.services.node_executor import execute_node
 
 
@@ -14,6 +14,23 @@ class WorkflowRunner:
         self.workflow = self.execution.workflow
         self.nodes = {n["id"]: n for n in self.workflow.nodes}
         self.edges = self.workflow.edges
+        self.connections = self._load_connections()
+    
+    def _load_connections(self) -> dict:
+        """Load user's connections for use in node execution."""
+        user_id = self.workflow.user_id
+        connections_data = {}
+        
+        connections = self.db.query(Connection).filter(
+            Connection.user_id == user_id,
+            Connection.is_connected == True
+        ).all()
+        
+        for conn in connections:
+            if conn.credentials:
+                connections_data[conn.type] = conn.credentials
+        
+        return connections_data
         
     def get_start_nodes(self) -> list[dict]:
         """Find nodes with type 'start'"""
@@ -73,7 +90,8 @@ class WorkflowRunner:
             node_type=node["type"],
             parameters=node.get("parameters", {}),
             input_data=input_data,
-            is_test=self.execution.is_test
+            is_test=self.execution.is_test,
+            connections=self.connections
         )
         
         exec_node.output_data = result.get("output", {})
@@ -193,7 +211,8 @@ class WorkflowRunner:
             node_type=node["type"],
             parameters=node.get("parameters", {}),
             input_data=exec_node.input_data,
-            is_test=self.execution.is_test
+            is_test=self.execution.is_test,
+            connections=self.connections
         )
         
         exec_node.output_data = result.get("output", {})

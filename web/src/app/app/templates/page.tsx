@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { Template } from '@/types';
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [creatingId, setCreatingId] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     loadTemplates();
@@ -16,16 +20,18 @@ export default function TemplatesPage() {
 
   const loadTemplates = async () => {
     try {
+      setError(null);
       const data = await api.templates.list();
       setTemplates(data);
     } catch (err) {
       console.error('Failed to load templates:', err);
+      setError('Failed to load templates. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const categories = ['all', ...Array.from(new Set(templates.map(t => t.category)))];
+  const categories = ['all', ...Array.from(new Set(templates.map(t => t.category).filter(Boolean)))];
   
   const filteredTemplates = selectedCategory === 'all' 
     ? templates 
@@ -33,17 +39,40 @@ export default function TemplatesPage() {
 
   const handleUseTemplate = async (template: Template) => {
     try {
+      setCreatingId(template.id);
       const workflow = await api.createWorkflowFromTemplate(template.id);
-      window.location.href = `/app/workflows/${workflow.id}`;
+      router.push(`/app/workflows/${workflow.id}`);
     } catch (err) {
       console.error('Failed to create workflow from template:', err);
+      setError('Failed to create workflow. Please try again.');
+      setCreatingId(null);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading templates...</div>
+        <div className="flex items-center gap-3 text-gray-500">
+          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Loading templates...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button 
+          onClick={loadTemplates}
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
@@ -75,14 +104,18 @@ export default function TemplatesPage() {
       </div>
 
       {/* Templates Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map((template) => (
+      <div 
+        data-walkthrough="templates-grid"
+        className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
+        {filteredTemplates.map((template, index) => (
           <div
             key={template.id}
-            className="bg-white rounded-xl border border-gray-200 p-6 hover:border-primary-300 hover:shadow-sm transition"
+            data-walkthrough={index === 0 ? "template-card" : undefined}
+            className="bg-white rounded-xl border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition group"
           >
             <div className="text-3xl mb-4">{template.icon || '⚡'}</div>
-            <h3 className="font-semibold mb-2">{template.name}</h3>
+            <h3 className="font-semibold mb-2 text-gray-900">{template.name}</h3>
             <p className="text-sm text-gray-500 mb-4 line-clamp-2">
               {template.description}
             </p>
@@ -91,14 +124,25 @@ export default function TemplatesPage() {
                 {template.category}
               </span>
               <span className="text-xs text-gray-400">
-                {template.definition.nodes?.length || 0} steps
+                {template.definition?.nodes?.length || 0} steps
               </span>
             </div>
             <button
               onClick={() => handleUseTemplate(template)}
-              className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+              disabled={creatingId === template.id}
+              className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Use Template
+              {creatingId === template.id ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                'Use Template'
+              )}
             </button>
           </div>
         ))}
@@ -111,14 +155,14 @@ export default function TemplatesPage() {
       )}
 
       {/* Custom Workflow Option */}
-      <div className="mt-12 bg-gray-50 rounded-xl p-8 text-center">
+      <div className="mt-12 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-8 text-center">
         <h3 className="text-lg font-semibold mb-2">Need something custom?</h3>
         <p className="text-gray-500 mb-4">
           Build your own workflow from scratch with our visual editor.
         </p>
         <Link
           href="/app/workflows/new"
-          className="inline-block bg-gray-900 text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800"
+          className="inline-block bg-gray-900 text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800 transition"
         >
           Create Custom Workflow
         </Link>

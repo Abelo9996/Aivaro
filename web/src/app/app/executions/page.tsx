@@ -71,7 +71,10 @@ export default function ExecutionsPage() {
       </div>
 
       {executions.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div 
+          data-walkthrough="executions-list"
+          className="bg-white rounded-xl border border-gray-200 p-12 text-center"
+        >
           <div className="text-5xl mb-4">📊</div>
           <h3 className="text-lg font-semibold mb-2">No runs yet</h3>
           <p className="text-gray-500 mb-6">
@@ -85,7 +88,7 @@ export default function ExecutionsPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div data-walkthrough="executions-list" className="space-y-4">
           {executions.map((execution) => (
             <Link
               key={execution.id}

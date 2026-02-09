@@ -31,9 +31,10 @@ def upgrade() -> None:
 
     op.create_table('templates',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('title', sa.String(), nullable=False),
+        sa.Column('name', sa.String(), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('summary', sa.Text(), nullable=True),
+        sa.Column('icon', sa.String(), nullable=True),
         sa.Column('category', sa.String(), nullable=True),
         sa.Column('business_types', postgresql.JSON(astext_type=sa.Text()), nullable=True),
         sa.Column('nodes', postgresql.JSON(astext_type=sa.Text()), nullable=True),

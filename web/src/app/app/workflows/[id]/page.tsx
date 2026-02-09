@@ -17,7 +17,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { api } from '@/lib/api';
-import { useWorkflowStore } from '@/stores/workflowStore';
 import { useModeStore } from '@/stores/modeStore';
 import NodePalette from '@/components/workflow/NodePalette';
 import NodeInspector from '@/components/workflow/NodeInspector';
@@ -38,11 +37,11 @@ export default function WorkflowEditorPage() {
   const params = useParams();
   const router = useRouter();
   const { isAdvancedMode } = useModeStore();
-  const { setCurrentWorkflow, currentWorkflow } = useWorkflowStore();
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [showPalette, setShowPalette] = useState(false);
@@ -51,66 +50,108 @@ export default function WorkflowEditorPage() {
   const workflowId = params.id as string;
   const isNew = workflowId === 'new';
 
-  useEffect(() => {
-    if (isNew) {
-      // Create a new workflow with default trigger
-      const defaultNodes: Node[] = [
-        {
-          id: 'trigger-1',
-          type: 'trigger',
-          position: { x: 250, y: 100 },
-          data: { 
-            label: 'When this happens...',
-            nodeType: 'manual_trigger',
-            config: {},
-          },
-        },
-      ];
-      setNodes(defaultNodes);
-      setEdges([]);
-      setLoading(false);
-    } else {
-      loadWorkflow(workflowId);
+  // Helper function to map node types to React Flow node categories
+  const getNodeCategory = (nodeType: string): string => {
+    // Trigger/Start nodes
+    if (nodeType.startsWith('start_') || nodeType.includes('trigger') || nodeType === 'webhook') {
+      return 'trigger';
     }
-  }, [workflowId, isNew]);
-
-  const loadWorkflow = async (id: string) => {
-    try {
-      const workflow = await api.getWorkflow(id);
-      setCurrentWorkflow(workflow);
-      setWorkflowName(workflow.name);
-      
-      // Convert workflow nodes to React Flow nodes
-      const flowNodes: Node[] = workflow.nodes.map((node: WorkflowNode) => ({
-        id: node.id,
-        type: node.type === 'trigger' ? 'trigger' : 
-              node.type === 'condition' ? 'condition' :
-              node.type === 'approval' ? 'approval' : 'action',
-        position: node.position || { x: 100, y: 100 },
-        data: {
-          label: node.label || node.type,
-          nodeType: node.type,
-          config: node.config || {},
-        },
-      }));
-      
-      // Convert workflow edges
-      const flowEdges: Edge[] = workflow.edges.map((edge: any) => ({
-        id: edge.id || `${edge.source}-${edge.target}`,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-      }));
-      
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-    } catch (err) {
-      console.error('Failed to load workflow:', err);
-    } finally {
-      setLoading(false);
+    // Condition nodes
+    if (nodeType === 'condition' || nodeType === 'filter' || nodeType === 'branch') {
+      return 'condition';
     }
+    // Approval nodes
+    if (nodeType === 'approval' || nodeType === 'human_review') {
+      return 'approval';
+    }
+    // Everything else is an action
+    return 'action';
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setError(null);
+      
+      if (isNew) {
+        // Create a new workflow with default trigger
+        const defaultNodes: Node[] = [
+          {
+            id: 'trigger-1',
+            type: 'trigger',
+            position: { x: 250, y: 100 },
+            data: { 
+              label: 'When this happens...',
+              nodeType: 'manual_trigger',
+              config: {},
+            },
+          },
+        ];
+        setNodes(defaultNodes);
+        setEdges([]);
+        setLoading(false);
+      } else {
+        try {
+          const workflow = await api.getWorkflow(workflowId);
+          
+          if (!workflow) {
+            setError('Workflow not found');
+            setLoading(false);
+            return;
+          }
+          
+          setWorkflowName(workflow.name || 'Untitled Workflow');
+          
+          // Helper function to map node types
+          const mapNodeType = (nodeType: string): string => {
+            if (nodeType.startsWith('start_') || nodeType.includes('trigger') || nodeType === 'webhook') {
+              return 'trigger';
+            }
+            if (nodeType === 'condition' || nodeType === 'filter' || nodeType === 'branch') {
+              return 'condition';
+            }
+            if (nodeType === 'approval' || nodeType === 'human_review') {
+              return 'approval';
+            }
+            return 'action';
+          };
+          
+          // Convert workflow nodes to React Flow nodes
+          const flowNodes: Node[] = (workflow.nodes || []).map((node: WorkflowNode, index: number) => ({
+            id: node.id,
+            type: mapNodeType(node.type),
+            position: node.position || { x: 250, y: 100 + index * 150 },
+            data: {
+              label: node.label || node.type,
+              nodeType: node.type,
+              config: node.config || node.parameters || {},
+              requiresApproval: node.requiresApproval || false,
+            },
+          }));
+          
+          // Convert workflow edges
+          const flowEdges: Edge[] = (workflow.edges || []).map((edge: any) => ({
+            id: edge.id || `${edge.source}-${edge.target}`,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle,
+            targetHandle: edge.targetHandle,
+            animated: true,
+            style: { stroke: '#6366f1' },
+          }));
+          
+          setNodes(flowNodes);
+          setEdges(flowEdges);
+        } catch (err: any) {
+          console.error('Failed to load workflow:', err);
+          setError(err.message || 'Failed to load workflow');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadData();
+  }, [workflowId, isNew, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -166,7 +207,8 @@ export default function WorkflowEditorPage() {
           type: n.data.nodeType,
           label: n.data.label,
           position: n.position,
-          config: n.data.config || {},
+          parameters: n.data.config || {},
+          requiresApproval: n.data.requiresApproval || false,
         })),
         edges: edges.map((e) => ({
           id: e.id,
@@ -203,6 +245,14 @@ export default function WorkflowEditorPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-gray-500">Loading workflow...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-red-500">Error: {error}</div>
       </div>
     );
   }

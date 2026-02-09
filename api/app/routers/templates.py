@@ -64,7 +64,7 @@ async def use_template(
     
     workflow = Workflow(
         user_id=current_user.id,
-        name=template.title,
+        name=template.name,
         description=template.description,
         summary=template.summary,
         nodes=template.nodes,

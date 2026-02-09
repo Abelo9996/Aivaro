@@ -24,44 +24,63 @@ def _generate_with_openai(prompt: str) -> dict:
         
         client = openai.OpenAI(api_key=settings.openai_api_key)
         
-        system_prompt = """You are a workflow automation assistant. Generate a workflow based on the user's description.
+        system_prompt = """You are a workflow automation assistant for Aivaro, a tool that helps non-technical founders automate their business processes.
 
-Return a JSON object with:
-- workflowName: A short, descriptive name
+Generate a workflow based on the user's description. Return a JSON object with:
+- workflowName: A short, descriptive name (3-5 words)
 - summary: A plain English sentence starting with "When... Aivaro will..."
 - nodes: Array of nodes with {id, type, label, position: {x, y}, parameters, requiresApproval}
 - edges: Array of edges with {id, source, target}
 
 Available node types:
-- start_manual: Manual start trigger
-- start_form: Form submission trigger
-- send_email: Send an email (requiresApproval: true by default)
-- append_row: Add row to spreadsheet
-- delay: Wait for a duration
-- send_notification: Send a notification
+- start_manual: Manual start trigger (when user clicks "Run")
+- start_form: Form submission trigger (when someone fills a form)
+- start_schedule: Scheduled trigger (runs on a schedule)
+- send_email: Send an email (requiresApproval: true for external emails)
+- append_row: Add row to Google Sheets or spreadsheet
+- delay: Wait for a duration (use for follow-up sequences)
+- send_notification: Send a push/Slack notification
+- send_slack: Send a Slack message
+- http_request: Make an API call
+- condition: Branch based on conditions
+- ai_summarize: Use AI to summarize or analyze data
 
 Guidelines:
-- Always start with a start node
-- Create 3-6 steps
-- No cycles
-- Position nodes vertically, spaced 150px apart
-- Mark email sending as requiresApproval: true
-- Use friendly labels like "Send booking confirmation"
+- Always start with a start node (start_manual, start_form, or start_schedule)
+- Create 3-8 practical steps based on complexity
+- No cycles in the workflow
+- Position nodes vertically, starting at y=50, spaced 150px apart, x=250
+- Mark email sending to external recipients as requiresApproval: true
+- Use friendly, action-oriented labels like "Send booking confirmation" not "Email Node"
+- Include realistic parameters with template variables like {{name}}, {{email}}, {{date}}
+- For delays, use realistic durations (hours or days for follow-ups)
+- Think about what a small business owner would actually need
 
-Return ONLY valid JSON, no markdown or explanation."""
+Example parameters:
+- send_email: {to: "{{email}}", subject: "...", body: "Hi {{name}},\\n\\n..."}
+- append_row: {spreadsheet: "...", columns: [{name: "...", value: "{{...}}"}]}
+- delay: {duration: 2, unit: "days"}
+- send_notification: {message: "..."}
+
+Return ONLY valid JSON, no markdown code blocks or explanation."""
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": f"Create a workflow for: {prompt}"}
             ],
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=1500
         )
         
         content = response.choices[0].message.content
-        return json.loads(content)
+        # Strip markdown code blocks if present
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        return json.loads(content.strip())
         
     except Exception as e:
         print(f"OpenAI generation failed: {e}")
