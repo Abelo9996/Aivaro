@@ -50,3 +50,7 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
+
+
+# Module-level settings instance for convenience
+settings = get_settings()
