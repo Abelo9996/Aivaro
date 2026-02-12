@@ -63,6 +63,10 @@ cors_origins = [
 frontend_url = os.getenv("FRONTEND_URL") or settings.frontend_url
 if frontend_url and frontend_url not in cors_origins:
     cors_origins.append(frontend_url)
+    # Also add without trailing slash and with trailing slash
+    cors_origins.append(frontend_url.rstrip("/"))
+    if not frontend_url.endswith("/"):
+        cors_origins.append(frontend_url + "/")
 
 # Add any additional allowed origins from environment (comma-separated)
 additional_origins = os.getenv("ALLOWED_ORIGINS", "")
@@ -72,11 +76,17 @@ if additional_origins:
         if origin and origin not in cors_origins:
             cors_origins.append(origin)
 
+# Remove duplicates
+cors_origins = list(set(cors_origins))
+
+# Log CORS origins for debugging
+print(f"[CORS] Allowed origins: {cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
