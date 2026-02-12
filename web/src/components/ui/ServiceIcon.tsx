@@ -36,6 +36,10 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   stripe_send_invoice: { src: '/icons/stripe.svg' },
   stripe_create_payment_link: { src: '/icons/stripe.svg' },
   stripe_get_customer: { src: '/icons/stripe.svg' },
+  stripe_check_payment: { src: '/icons/stripe.svg' },
+  
+  // Google Calendar node types
+  google_calendar_create: { src: '/icons/calendar.svg' },
 };
 
 // Fallback emoji icons for types without SVG icons

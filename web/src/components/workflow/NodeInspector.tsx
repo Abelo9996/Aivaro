@@ -95,10 +95,26 @@ const nodeConfigs: Record<string, { fields: { key: string; label: string; type: 
       { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'DELETE'] },
     ],
   },
+  google_calendar_create: {
+    fields: [
+      { key: 'title', label: 'Event Title', type: 'text', placeholder: 'Pickup — {{customer_name}}' },
+      { key: 'date', label: 'Date', type: 'text', placeholder: '{{pickup_date}} or 2025-02-15' },
+      { key: 'start_time', label: 'Start Time', type: 'text', placeholder: '{{pickup_time}} or 10:00' },
+      { key: 'duration', label: 'Duration (hours)', type: 'number', placeholder: '1' },
+      { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Customer: {{customer_name}}\nDeposit: {{deposit_status}}' },
+      { key: 'location', label: 'Location (optional)', type: 'text', placeholder: '{{location}}' },
+    ],
+  },
   stripe_get_customer: {
     fields: [
       { key: 'email', label: 'Customer Email', type: 'text', placeholder: '{{email}} or customer@example.com' },
       { key: 'name', label: 'Customer Name (optional)', type: 'text', placeholder: '{{name}}' },
+    ],
+  },
+  stripe_check_payment: {
+    fields: [
+      { key: 'payment_link_id', label: 'Payment Link ID', type: 'text', placeholder: '{{payment_link_id}} or plink_...' },
+      { key: 'customer_email', label: 'Customer Email (fallback)', type: 'text', placeholder: '{{email}}' },
     ],
   },
   stripe_create_invoice: {
@@ -117,9 +133,9 @@ const nodeConfigs: Record<string, { fields: { key: string; label: string; type: 
   },
   stripe_create_payment_link: {
     fields: [
-      { key: 'amount', label: 'Amount ($)', type: 'number', placeholder: '100.00' },
-      { key: 'product_name', label: 'Product/Service Name', type: 'text', placeholder: 'Consultation Fee' },
-      { key: 'success_message', label: 'Success Message', type: 'textarea', placeholder: 'Thank you for your payment!' },
+      { key: 'amount', label: 'Amount ($)', type: 'number', placeholder: '20.00' },
+      { key: 'product_name', label: 'Product/Service Name', type: 'text', placeholder: 'Deposit - {{service_name}}' },
+      { key: 'success_message', label: 'Success Message', type: 'textarea', placeholder: 'Thank you! Your booking is confirmed.' },
     ],
   },
 };

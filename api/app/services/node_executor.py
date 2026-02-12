@@ -91,11 +91,14 @@ class NodeExecutor:
             "http_request": self._execute_http_request,
             "condition": self._execute_condition,
             "transform": self._execute_transform,
+            # Google Calendar
+            "google_calendar_create": self._execute_google_calendar_create,
             # Stripe integrations
             "stripe_create_invoice": self._execute_stripe_create_invoice,
             "stripe_send_invoice": self._execute_stripe_send_invoice,
             "stripe_create_payment_link": self._execute_stripe_create_payment_link,
             "stripe_get_customer": self._execute_stripe_get_customer,
+            "stripe_check_payment": self._execute_stripe_check_payment,
         }
         
         executor = executors.get(node_type, self._execute_default)
@@ -917,6 +920,201 @@ Generate a {tone} reply:"""
                 "logs": logs
             }
     
+    async def _execute_stripe_check_payment(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Check if a payment has been made (for deposit verification)."""
+        payment_link_id = _interpolate(params.get("payment_link_id", input_data.get("payment_link_id", "")), input_data)
+        customer_email = _interpolate(params.get("customer_email", input_data.get("email", "")), input_data)
+        invoice_id = _interpolate(params.get("invoice_id", input_data.get("invoice_id", "")), input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Checking payment status\n"
+        
+        if is_test:
+            logs += f"  [TEST MODE] Would check payment for: {payment_link_id or invoice_id or customer_email}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "payment_status": "paid",
+                    "deposit_paid": True,
+                    "amount_paid": 2000  # $20.00 in cents
+                },
+                "logs": logs
+            }
+        
+        stripe_service = await self.get_stripe_service()
+        if not stripe_service:
+            return {
+                "success": False,
+                "error": "Stripe not connected. Please connect your Stripe account.",
+                "output": input_data,
+                "logs": logs + "  ERROR: No Stripe connection found\n"
+            }
+        
+        # Check invoice if we have an invoice_id
+        if invoice_id:
+            logs += f"  Checking invoice: {invoice_id}\n"
+            result = await stripe_service.get_invoice(invoice_id)
+            if result["success"]:
+                is_paid = result.get("paid", False)
+                logs += f"  Invoice status: {result['status']}\n"
+                logs += f"  Paid: {is_paid}\n"
+                return {
+                    "success": True,
+                    "output": {
+                        **input_data,
+                        "payment_status": result["status"],
+                        "deposit_paid": is_paid,
+                        "amount_paid": result.get("amount_paid", 0),
+                        "amount_due": result.get("amount_due", 0)
+                    },
+                    "logs": logs
+                }
+        
+        # Otherwise, check recent payments for customer
+        if customer_email:
+            logs += f"  Checking payments for customer: {customer_email}\n"
+            # Get customer by email, then check their invoices
+            customer_result = await stripe_service.get_or_create_customer(email=customer_email)
+            if customer_result["success"]:
+                customer_id = customer_result["customer_id"]
+                invoices = await stripe_service.list_invoices(customer_id=customer_id, status="paid", limit=5)
+                if invoices.get("success") and invoices.get("count", 0) > 0:
+                    latest = invoices["invoices"][0]
+                    logs += f"  Found {invoices['count']} paid invoices\n"
+                    return {
+                        "success": True,
+                        "output": {
+                            **input_data,
+                            "payment_status": "paid",
+                            "deposit_paid": True,
+                            "amount_paid": latest.get("amount_paid", 0)
+                        },
+                        "logs": logs
+                    }
+        
+        logs += f"  No paid invoices found\n"
+        return {
+            "success": True,
+            "output": {
+                **input_data,
+                "payment_status": "unpaid",
+                "deposit_paid": False,
+                "amount_paid": 0
+            },
+            "logs": logs
+        }
+    
+    # ==================== GOOGLE CALENDAR EXECUTORS ====================
+    
+    async def _execute_google_calendar_create(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create a Google Calendar event."""
+        title = _interpolate(params.get("title", "New Event"), input_data)
+        date = _interpolate(params.get("date", ""), input_data)
+        start_time = _interpolate(params.get("start_time", "10:00"), input_data)
+        duration = params.get("duration", 1)  # hours
+        description = _interpolate(params.get("description", ""), input_data)
+        location = _interpolate(params.get("location", ""), input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Creating calendar event\n"
+        logs += f"  Title: {title}\n"
+        logs += f"  Date: {date}\n"
+        logs += f"  Time: {start_time}\n"
+        logs += f"  Duration: {duration}h\n"
+        
+        # Build datetime strings
+        try:
+            if date and start_time:
+                # Parse and build ISO format datetime
+                from datetime import timedelta
+                start_dt = datetime.fromisoformat(f"{date}T{start_time}:00")
+                end_dt = start_dt + timedelta(hours=float(duration))
+                start_iso = start_dt.isoformat()
+                end_iso = end_dt.isoformat()
+            else:
+                # Default to tomorrow at the specified time
+                from datetime import timedelta
+                tomorrow = datetime.utcnow() + timedelta(days=1)
+                start_dt = tomorrow.replace(hour=10, minute=0, second=0, microsecond=0)
+                end_dt = start_dt + timedelta(hours=float(duration))
+                start_iso = start_dt.isoformat()
+                end_iso = end_dt.isoformat()
+        except Exception as e:
+            logs += f"  Warning: Could not parse date/time, using defaults: {e}\n"
+            from datetime import timedelta
+            start_dt = datetime.utcnow() + timedelta(days=1)
+            end_dt = start_dt + timedelta(hours=1)
+            start_iso = start_dt.isoformat()
+            end_iso = end_dt.isoformat()
+        
+        if is_test:
+            logs += f"  [TEST MODE] Would create calendar event: {title}\n"
+            logs += f"  Start: {start_iso}\n"
+            logs += f"  End: {end_iso}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "calendar_event_id": "event_test123",
+                    "calendar_event_url": "https://calendar.google.com/event?eid=test123",
+                    "event_title": title,
+                    "event_start": start_iso,
+                    "event_end": end_iso
+                },
+                "logs": logs
+            }
+        
+        google = await self.get_google_service()
+        if not google:
+            logs += "  ⚠️ Google Calendar not connected - event simulated\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "calendar_event_id": "simulated_event",
+                    "event_title": title,
+                    "event_start": start_iso,
+                    "event_end": end_iso,
+                    "simulated": True
+                },
+                "logs": logs
+            }
+        
+        try:
+            result = await google.create_event(
+                summary=title,
+                start_time=start_iso,
+                end_time=end_iso,
+                description=description
+            )
+            
+            event_id = result.get("id", "")
+            event_link = result.get("htmlLink", "")
+            
+            logs += f"  ✅ Event created\n"
+            logs += f"  Event ID: {event_id}\n"
+            logs += f"  Link: {event_link}\n"
+            
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "calendar_event_id": event_id,
+                    "calendar_event_url": event_link,
+                    "event_title": title,
+                    "event_start": start_iso,
+                    "event_end": end_iso
+                },
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed to create event: {str(e)}\n"
+            return {
+                "success": False,
+                "error": str(e),
+                "output": input_data,
+                "logs": logs
+            }
+
     async def _execute_default(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Default executor for unknown node types."""
         logs = f"[{datetime.utcnow().isoformat()}] Unknown node type\n"
