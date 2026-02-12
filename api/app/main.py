@@ -53,41 +53,47 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS - allow frontend URLs from environment
+# Configure CORS - be permissive for now to debug
+# In production, you should restrict this to specific origins
 cors_origins = [
     "http://localhost:3000",
     "http://localhost:12001",
 ]
 
 # Add production frontend URL from environment
-frontend_url = os.getenv("FRONTEND_URL") or settings.frontend_url
-if frontend_url and frontend_url not in cors_origins:
+frontend_url = os.getenv("FRONTEND_URL", "").strip()
+if frontend_url:
+    # Add both with and without www
     cors_origins.append(frontend_url)
-    # Also add without trailing slash and with trailing slash
     cors_origins.append(frontend_url.rstrip("/"))
-    if not frontend_url.endswith("/"):
-        cors_origins.append(frontend_url + "/")
+    # If it has www, also add without www and vice versa
+    if "://www." in frontend_url:
+        cors_origins.append(frontend_url.replace("://www.", "://"))
+    elif "://" in frontend_url and "://www." not in frontend_url:
+        cors_origins.append(frontend_url.replace("://", "://www."))
 
 # Add any additional allowed origins from environment (comma-separated)
 additional_origins = os.getenv("ALLOWED_ORIGINS", "")
 if additional_origins:
     for origin in additional_origins.split(","):
         origin = origin.strip()
-        if origin and origin not in cors_origins:
+        if origin:
             cors_origins.append(origin)
 
-# Remove duplicates
-cors_origins = list(set(cors_origins))
+# Remove duplicates and empty strings
+cors_origins = list(set([o for o in cors_origins if o]))
 
 # Log CORS origins for debugging
 print(f"[CORS] Allowed origins: {cors_origins}")
 
+# Add CORS middleware BEFORE other middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
