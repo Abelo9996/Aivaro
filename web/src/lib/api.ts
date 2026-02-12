@@ -153,6 +153,96 @@ class ApiClient {
     return this.createExecution(id, isTest, triggerData);
   }
 
+  // Run workflow with streaming progress updates
+  runWorkflowWithProgress(
+    workflowId: string, 
+    isTest: boolean = false, 
+    triggerData?: any,
+    onProgress?: (data: {
+      type: 'start' | 'step' | 'complete';
+      execution_id?: string;
+      total_steps?: number;
+      workflow_name?: string;
+      node_id?: string;
+      node_label?: string;
+      status?: string;
+      completed?: number;
+      total?: number;
+      progress?: number;
+    }) => void
+  ): { abort: () => void; promise: Promise<string> } {
+    const token = this.getToken();
+    const controller = new AbortController();
+    
+    const promise = new Promise<string>(async (resolve, reject) => {
+      try {
+        const response = await fetch(`${API_URL}/api/executions/stream`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            workflow_id: workflowId,
+            is_test: isTest,
+            trigger_data: triggerData,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to start execution');
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let executionId = '';
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const text = decoder.decode(value);
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.execution_id) {
+                    executionId = data.execution_id;
+                  }
+                  onProgress?.(data);
+                  
+                  if (data.type === 'complete') {
+                    resolve(executionId);
+                    return;
+                  }
+                } catch (e) {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        }
+        
+        resolve(executionId);
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          reject(new Error('Execution cancelled'));
+        } else {
+          reject(error);
+        }
+      }
+    });
+
+    return {
+      abort: () => controller.abort(),
+      promise,
+    };
+  }
+
   async createWorkflowFromTemplate(templateId: string) {
     return this.useTemplate(templateId);
   }

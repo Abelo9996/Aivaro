@@ -24,6 +24,7 @@ import TriggerNode from '@/components/workflow/nodes/TriggerNode';
 import ActionNode from '@/components/workflow/nodes/ActionNode';
 import ConditionNode from '@/components/workflow/nodes/ConditionNode';
 import ApprovalNode from '@/components/workflow/nodes/ApprovalNode';
+import ExecutionProgress from '@/components/workflow/ExecutionProgress';
 import type { Workflow, WorkflowNode } from '@/types';
 
 const nodeTypes = {
@@ -32,6 +33,13 @@ const nodeTypes = {
   condition: ConditionNode,
   approval: ApprovalNode,
 };
+
+// Step type for execution progress
+interface ExecutionStep {
+  node_id: string;
+  node_label: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FlowNode = Node<any>;
@@ -51,6 +59,14 @@ export default function WorkflowEditorPage() {
   const [workflowName, setWorkflowName] = useState('New Workflow');
   const [isActive, setIsActive] = useState(false);
   const [activating, setActivating] = useState(false);
+  
+  // Execution progress state
+  const [showProgress, setShowProgress] = useState(false);
+  const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([]);
+  const [executionStatus, setExecutionStatus] = useState<'running' | 'completed' | 'failed'>('running');
+  const [completedSteps, setCompletedSteps] = useState(0);
+  const [currentStep, setCurrentStep] = useState<string | undefined>();
+  const [executionId, setExecutionId] = useState<string | undefined>();
 
   const workflowId = params.id as string;
   const isNew = workflowId === 'new';
@@ -253,11 +269,50 @@ export default function WorkflowEditorPage() {
   };
 
   const handleTestRun = async () => {
+    // Initialize progress UI
+    setShowProgress(true);
+    setExecutionStatus('running');
+    setCompletedSteps(0);
+    setCurrentStep(undefined);
+    setExecutionId(undefined);
+    
+    // Build initial steps from workflow nodes
+    const initialSteps: ExecutionStep[] = nodes.map(n => ({
+      node_id: n.id,
+      node_label: n.data.label || n.data.nodeType || 'Step',
+      status: 'pending' as const,
+    }));
+    setExecutionSteps(initialSteps);
+    
     try {
-      const execution = await api.runWorkflow(workflowId, true); // isTest = true
-      router.push(`/app/executions/${execution.id}`);
+      const { promise } = api.runWorkflowWithProgress(
+        workflowId,
+        true, // isTest = true
+        undefined,
+        (data) => {
+          if (data.type === 'start') {
+            setExecutionId(data.execution_id);
+          } else if (data.type === 'step') {
+            setCompletedSteps(data.completed || 0);
+            setCurrentStep(data.node_label);
+            
+            // Update step status
+            setExecutionSteps(prev => prev.map(step => 
+              step.node_id === data.node_id 
+                ? { ...step, status: data.status as 'completed' | 'failed' }
+                : step
+            ));
+          } else if (data.type === 'complete') {
+            setExecutionStatus(data.status === 'completed' ? 'completed' : 'failed');
+            setExecutionId(data.execution_id);
+          }
+        }
+      );
+      
+      await promise;
     } catch (err) {
       console.error('Failed to run test:', err);
+      setExecutionStatus('failed');
     }
   };
 
@@ -265,11 +320,51 @@ export default function WorkflowEditorPage() {
     if (!confirm('This will run the workflow for real. Emails will be sent, sheets will be modified, etc. Continue?')) {
       return;
     }
+    
+    // Initialize progress UI
+    setShowProgress(true);
+    setExecutionStatus('running');
+    setCompletedSteps(0);
+    setCurrentStep(undefined);
+    setExecutionId(undefined);
+    
+    // Build initial steps from workflow nodes
+    const initialSteps: ExecutionStep[] = nodes.map(n => ({
+      node_id: n.id,
+      node_label: n.data.label || n.data.nodeType || 'Step',
+      status: 'pending' as const,
+    }));
+    setExecutionSteps(initialSteps);
+    
     try {
-      const execution = await api.runWorkflow(workflowId, false); // isTest = false - REAL RUN
-      router.push(`/app/executions/${execution.id}`);
+      const { promise } = api.runWorkflowWithProgress(
+        workflowId,
+        false, // isTest = false - REAL RUN
+        undefined,
+        (data) => {
+          if (data.type === 'start') {
+            setExecutionId(data.execution_id);
+          } else if (data.type === 'step') {
+            setCompletedSteps(data.completed || 0);
+            setCurrentStep(data.node_label);
+            
+            // Update step status
+            setExecutionSteps(prev => prev.map(step => 
+              step.node_id === data.node_id 
+                ? { ...step, status: data.status as 'completed' | 'failed' }
+                : step
+            ));
+          } else if (data.type === 'complete') {
+            setExecutionStatus(data.status === 'completed' ? 'completed' : 'failed');
+            setExecutionId(data.execution_id);
+          }
+        }
+      );
+      
+      await promise;
     } catch (err) {
       console.error('Failed to run workflow:', err);
+      setExecutionStatus('failed');
     }
   };
 
@@ -394,6 +489,25 @@ export default function WorkflowEditorPage() {
           />
         )}
       </div>
+
+      {/* Execution Progress Modal */}
+      <ExecutionProgress
+        isOpen={showProgress}
+        workflowName={workflowName}
+        totalSteps={executionSteps.length}
+        completedSteps={completedSteps}
+        currentStep={currentStep}
+        steps={executionSteps}
+        status={executionStatus}
+        executionId={executionId}
+        onClose={() => setShowProgress(false)}
+        onViewExecution={() => {
+          setShowProgress(false);
+          if (executionId) {
+            router.push(`/app/executions/${executionId}`);
+          }
+        }}
+      />
     </div>
   );
 }

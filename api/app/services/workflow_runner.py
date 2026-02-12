@@ -89,11 +89,22 @@ class WorkflowRunner:
         
         # If we have real trigger data, merge it (trigger data takes precedence)
         if trigger_data and len(trigger_data) > 0:
+            print(f"[WorkflowRunner] Using REAL trigger data with keys: {list(trigger_data.keys())}")
+            print(f"[WorkflowRunner] Trigger data snippet: {trigger_data.get('snippet', 'N/A')[:100] if trigger_data.get('snippet') else 'No snippet'}")
             # Real trigger data - use it, with base data as fallback
             return {**base_data, **trigger_data}
         
-        # No trigger data - this is a manual run, use mock data if needed
-        return self._generate_mock_trigger_data()
+        # No trigger data - check if this is a test run or live run
+        is_test = self.execution.is_test if self.execution else False
+        
+        if is_test:
+            # Test run without trigger data - use mock data for testing
+            print(f"[WorkflowRunner] TEST RUN - using mock data for testing")
+            return self._generate_mock_trigger_data()
+        else:
+            # LIVE run without trigger data - only use base data, no fake content
+            print(f"[WorkflowRunner] LIVE RUN - no trigger data, using only base user data (no mock content)")
+            return base_data
     
     def _execute_from_node(self, node_id: str, input_data: dict):
         """Execute starting from a specific node"""
