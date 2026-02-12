@@ -16,9 +16,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Default port (can be overridden by environment)
 ENV PORT=8000
 EXPOSE 8000
 
-# Run migrations and start server
-CMD sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port \${PORT:-8000}"
+# Run start script
+CMD ["sh", "start.sh"]
