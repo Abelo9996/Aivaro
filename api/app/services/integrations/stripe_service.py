@@ -220,10 +220,14 @@ class StripeService:
             if metadata:
                 link_data["metadata"] = metadata
             
+            # Note: after_completion custom_message requires Stripe API version 2023-10-16+
+            # For compatibility, we'll use hosted_confirmation instead
             if after_completion_message:
                 link_data["after_completion"] = {
-                    "type": "custom_message",
-                    "custom_message": after_completion_message
+                    "type": "hosted_confirmation",
+                    "hosted_confirmation": {
+                        "custom_message": after_completion_message
+                    }
                 }
             
             payment_link = stripe.PaymentLink.create(**link_data)
