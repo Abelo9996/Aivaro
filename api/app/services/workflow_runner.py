@@ -51,9 +51,10 @@ class WorkflowRunner:
                 self.db.commit()
                 return self.execution
             
-            # Start with the first start node
-            current_data = trigger_data or self._generate_mock_trigger_data()
-            print(f"[WorkflowRunner] Starting execution from node {start_nodes[0]['id']} with data: {list(current_data.keys())}")
+            # Build the current data - merge base data with trigger data
+            current_data = self._build_input_data(trigger_data)
+            print(f"[WorkflowRunner] Starting execution from node {start_nodes[0]['id']} with data keys: {list(current_data.keys())}")
+            print(f"[WorkflowRunner] Has real trigger data: {trigger_data is not None and len(trigger_data) > 0}")
             self._execute_from_node(start_nodes[0]["id"], current_data)
             
             return self.execution
@@ -66,6 +67,33 @@ class WorkflowRunner:
             return self.execution
         
         return self.execution
+    
+    def _build_input_data(self, trigger_data: Optional[dict] = None) -> dict:
+        """Build input data by merging base user data with trigger data."""
+        # Get the user's actual info
+        user_email = None
+        user_name = None
+        if self.workflow and self.workflow.user:
+            user_email = self.workflow.user.email
+            user_name = self.workflow.user.full_name or self.workflow.user.email.split('@')[0]
+        
+        # Base data always includes user info and timestamps
+        base_data = {
+            "name": user_name or "User",
+            "email": user_email or "user@example.com",
+            "user_email": user_email or "user@example.com",
+            "today": datetime.utcnow().strftime("%Y-%m-%d"),
+            "date": datetime.utcnow().strftime("%Y-%m-%d"),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        
+        # If we have real trigger data, merge it (trigger data takes precedence)
+        if trigger_data and len(trigger_data) > 0:
+            # Real trigger data - use it, with base data as fallback
+            return {**base_data, **trigger_data}
+        
+        # No trigger data - this is a manual run, use mock data if needed
+        return self._generate_mock_trigger_data()
     
     def _execute_from_node(self, node_id: str, input_data: dict):
         """Execute starting from a specific node"""

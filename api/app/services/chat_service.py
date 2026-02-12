@@ -61,14 +61,49 @@ def build_execution_context(execution: Execution, workflow: Workflow) -> str:
     # Node execution results (from relationship)
     if execution.execution_nodes:
         context_parts.append("\n## Step Results:")
+        spreadsheet_data = []
+        
         for node_exec in execution.execution_nodes:
             node_info = f"- {node_exec.node_label or node_exec.node_id}: {node_exec.status}"
             context_parts.append(node_info)
             
             if node_exec.output_data:
-                context_parts.append(f"  Output: {json.dumps(node_exec.output_data, default=str)[:500]}")
+                # Check for spreadsheet snapshot
+                if "_spreadsheet_snapshot" in node_exec.output_data:
+                    snapshot = node_exec.output_data["_spreadsheet_snapshot"]
+                    spreadsheet_data.append(snapshot)
+                
+                # Show truncated output for regular data
+                output_str = json.dumps(node_exec.output_data, default=str)
+                if len(output_str) > 500:
+                    context_parts.append(f"  Output: {output_str[:500]}...")
+                else:
+                    context_parts.append(f"  Output: {output_str}")
             if node_exec.logs:
                 context_parts.append(f"  Logs: {node_exec.logs[:200]}")
+        
+        # Add full spreadsheet data section for chat queries
+        if spreadsheet_data:
+            context_parts.append("\n## Spreadsheet Data (Full):")
+            for ss in spreadsheet_data:
+                context_parts.append(f"\n### {ss.get('name', 'Sheet')}")
+                context_parts.append(f"Read at: {ss.get('read_at', 'unknown')}")
+                context_parts.append(f"Rows: {ss.get('row_count', 0)}, Columns: {ss.get('column_count', 0)}")
+                
+                data = ss.get("data", [])
+                if data:
+                    headers = data[0] if data else []
+                    context_parts.append(f"Headers: {', '.join(str(h) for h in headers)}")
+                    context_parts.append("\nData rows:")
+                    
+                    # Include all rows (up to reasonable limit for LLM context)
+                    max_rows = 500  # Limit to prevent context overflow
+                    for i, row in enumerate(data[1:max_rows+1], 1):
+                        row_str = " | ".join(str(cell) for cell in row)
+                        context_parts.append(f"  {i}. {row_str}")
+                    
+                    if len(data) > max_rows + 1:
+                        context_parts.append(f"  ... and {len(data) - max_rows - 1} more rows")
     
     return "\n".join(context_parts)
 
@@ -167,10 +202,12 @@ You have access to the following execution context:
 Guidelines:
 - Be helpful and explain results in plain English
 - If asked about data, reference specific values from the execution
+- **If the context includes Spreadsheet Data, you have access to the FULL spreadsheet contents.** You can answer questions about any data in the spreadsheet, perform calculations, find specific entries, summarize trends, etc.
 - Suggest improvements or next steps based on the results
 - If something failed, explain possible causes and fixes
 - Keep responses concise but informative
-- Use friendly, non-technical language when possible"""
+- Use friendly, non-technical language when possible
+- When discussing spreadsheet data, you can reference specific rows, columns, and values"""
 
     messages = [{"role": "system", "content": system_prompt}]
     

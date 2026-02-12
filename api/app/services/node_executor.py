@@ -427,13 +427,41 @@ Extract: {fields_to_extract}"""
         
         # Build row data
         row_data = []
-        for col in columns:
-            value = _interpolate(str(col.get("value", "")), input_data)
-            row_data.append(value)
+        
+        if columns and len(columns) > 0:
+            # Use specified columns
+            for col in columns:
+                value = _interpolate(str(col.get("value", "")), input_data)
+                row_data.append(value)
+        else:
+            # Auto-detect: if no columns specified, use common booking/business fields from input_data
+            auto_fields = [
+                ("Date", input_data.get("pickup_date") or input_data.get("date") or input_data.get("today", "")),
+                ("Time", input_data.get("pickup_time") or input_data.get("time", "")),
+                ("Name", input_data.get("customer_name") or input_data.get("name", "")),
+                ("Email", input_data.get("customer_email") or input_data.get("email", "")),
+                ("Phone", input_data.get("phone", "")),
+                ("Service", input_data.get("service", "")),
+                ("Status", "Pending"),
+                ("Payment Link", input_data.get("payment_link_url", "")),
+                ("Notes", input_data.get("notes") or input_data.get("description", ""))
+            ]
+            # Only add fields that have values
+            row_data = [value for _, value in auto_fields if value]
+            
+            # If still empty, add basic timestamp row
+            if not row_data:
+                row_data = [
+                    datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+                    input_data.get("name", ""),
+                    input_data.get("email", ""),
+                    "Auto-logged"
+                ]
         
         logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Adding row to spreadsheet\n"
         logs += f"  Spreadsheet: {spreadsheet}\n"
-        logs += f"  Row data: {row_data}\n"
+        logs += f"  Columns configured: {len(columns)}\n"
+        logs += f"  Row data ({len(row_data)} fields): {row_data}\n"
         
         if is_test:
             logs += "  Row NOT added (test mode)\n"
@@ -479,7 +507,7 @@ Extract: {fields_to_extract}"""
         """Read data from Google Sheets."""
         spreadsheet_id = params.get("spreadsheet_id")
         spreadsheet_name = params.get("spreadsheet") or params.get("spreadsheet_name")
-        range_name = params.get("range", "Sheet1!A1:Z100")
+        range_name = params.get("range", "Sheet1!A1:Z1000")  # Increased default range
         
         logs = f"[{datetime.utcnow().isoformat()}] Reading from spreadsheet\n"
         logs += f"  Spreadsheet ID/Name: {spreadsheet_id or spreadsheet_name}\n"
@@ -494,7 +522,18 @@ Extract: {fields_to_extract}"""
             ]
             return {
                 "success": True,
-                "output": {**input_data, "sheet_data": mock_data, "row_count": len(mock_data)},
+                "output": {
+                    **input_data, 
+                    "sheet_data": mock_data, 
+                    "row_count": len(mock_data),
+                    "_spreadsheet_snapshot": {
+                        "name": spreadsheet_name or spreadsheet_id,
+                        "data": mock_data,
+                        "headers": mock_data[0] if mock_data else [],
+                        "row_count": len(mock_data),
+                        "read_at": datetime.utcnow().isoformat()
+                    }
+                },
                 "logs": logs
             }
         
@@ -525,9 +564,27 @@ Extract: {fields_to_extract}"""
         try:
             values = await google.get_sheet_values(spreadsheet_id, range_name)
             logs += f"  ✅ Read {len(values)} rows\n"
+            
+            # Store full spreadsheet snapshot for chat context
+            headers = values[0] if values else []
+            spreadsheet_snapshot = {
+                "spreadsheet_id": spreadsheet_id,
+                "name": spreadsheet_name or spreadsheet_id,
+                "data": values,
+                "headers": headers,
+                "row_count": len(values),
+                "column_count": len(headers),
+                "read_at": datetime.utcnow().isoformat()
+            }
+            
             return {
                 "success": True,
-                "output": {**input_data, "sheet_data": values, "row_count": len(values)},
+                "output": {
+                    **input_data, 
+                    "sheet_data": values, 
+                    "row_count": len(values),
+                    "_spreadsheet_snapshot": spreadsheet_snapshot
+                },
                 "logs": logs
             }
         except Exception as e:
