@@ -116,6 +116,21 @@ class GoogleService:
         else:
             raise Exception(f"Failed to get sheet values: {response.text}")
     
+    async def get_header_row(
+        self,
+        spreadsheet_id: str,
+        sheet_name: str = "Sheet1"
+    ) -> List[str]:
+        """Get the header row (first row) from a spreadsheet."""
+        try:
+            values = await self.get_sheet_values(spreadsheet_id, f"{sheet_name}!A1:ZZ1")
+            if values and len(values) > 0:
+                return [str(h).strip() for h in values[0]]
+            return []
+        except Exception as e:
+            print(f"[GoogleService] Failed to get header row: {e}")
+            return []
+    
     async def append_row(
         self, 
         spreadsheet_id: str, 
@@ -140,6 +155,67 @@ class GoogleService:
             return response.json()
         else:
             raise Exception(f"Failed to append row: {response.text}")
+    
+    async def append_row_with_schema(
+        self,
+        spreadsheet_id: str,
+        data: dict,
+        sheet_name: str = "Sheet1"
+    ) -> dict:
+        """Append a row matching the spreadsheet's column schema.
+        
+        This reads the header row first, then orders the data values
+        to match the column positions in the sheet.
+        """
+        # Get the header row to understand column order
+        headers = await self.get_header_row(spreadsheet_id, sheet_name)
+        
+        if not headers:
+            # No headers found - just append the values as a list
+            values = list(data.values()) if isinstance(data, dict) else data
+            return await self.append_row(spreadsheet_id, values, sheet_name)
+        
+        # Build row matching header order
+        row_values = []
+        for header in headers:
+            # Try exact match first
+            value = data.get(header, "")
+            
+            # If not found, try case-insensitive match
+            if not value:
+                header_lower = header.lower()
+                for key, val in data.items():
+                    if key.lower() == header_lower:
+                        value = val
+                        break
+            
+            # Try common aliases
+            if not value:
+                aliases = {
+                    "date": ["pickup_date", "appointment_date", "booking_date", "event_date", "today"],
+                    "time": ["pickup_time", "appointment_time", "booking_time", "event_time", "start_time"],
+                    "name": ["customer_name", "client_name", "full_name"],
+                    "email": ["customer_email", "client_email", "user_email"],
+                    "phone": ["phone_number", "mobile", "cell", "tel"],
+                    "service": ["service_type", "service_name", "type"],
+                    "status": ["booking_status", "payment_status", "state"],
+                    "notes": ["description", "comments", "message", "details"],
+                    "amount": ["price", "cost", "total", "fee", "payment_amount"],
+                    "link": ["payment_link", "payment_link_url", "url"],
+                }
+                header_lower = header.lower()
+                if header_lower in aliases:
+                    for alias in aliases[header_lower]:
+                        if alias in data:
+                            value = data[alias]
+                            break
+            
+            row_values.append(str(value) if value else "")
+        
+        print(f"[GoogleService] Appending row with schema-matched columns: {headers}")
+        print(f"[GoogleService] Row values: {row_values}")
+        
+        return await self.append_row(spreadsheet_id, row_values, sheet_name)
     
     async def create_spreadsheet(self, title: str) -> dict:
         """Create a new spreadsheet."""

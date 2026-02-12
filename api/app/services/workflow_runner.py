@@ -100,16 +100,21 @@ class WorkflowRunner:
             # Real trigger data - use it, with base data as fallback
             return {**base_data, **trigger_data}
         
-        # No trigger data - check if this is a test run or live run
+        # No trigger data - check if this is a test run or MANUAL run
+        # For both test runs AND manual runs (without real trigger data), use mock data
+        # This allows users to "preview" the workflow behavior
         is_test = self.execution.is_test if self.execution else False
+        is_manual = self.execution.trigger_data is None or len(self.execution.trigger_data or {}) == 0
         
-        if is_test:
-            # Test run without trigger data - use mock data for testing
-            print(f"[WorkflowRunner] TEST RUN - using mock data for testing")
+        if is_test or is_manual:
+            # Test run OR manual run without trigger data - use mock data
+            run_type = "TEST RUN" if is_test else "MANUAL RUN (no trigger data)"
+            print(f"[WorkflowRunner] {run_type} - using mock data for demonstration")
             return self._generate_mock_trigger_data()
         else:
-            # LIVE run without trigger data - only use base data, no fake content
-            print(f"[WorkflowRunner] LIVE RUN - no trigger data, using only base user data (no mock content)")
+            # LIVE run with real trigger data would have been caught above
+            # This branch shouldn't normally be reached
+            print(f"[WorkflowRunner] LIVE RUN - no trigger data, using only base user data")
             return base_data
     
     def _execute_from_node(self, node_id: str, input_data: dict):

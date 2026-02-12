@@ -422,39 +422,58 @@ Extract: {fields_to_extract}"""
         }
 
     async def _execute_append_row(self, params: dict, input_data: dict, is_test: bool) -> dict:
-        """Append row to Google Sheets."""
+        """Append row to Google Sheets, matching the sheet's column schema."""
         spreadsheet = params.get("spreadsheet", "Untitled Spreadsheet")
         spreadsheet_id = params.get("spreadsheet_id")
         sheet_name = params.get("sheet_name", "Sheet1")
         columns = params.get("columns", [])
+        use_schema = params.get("use_schema", True)  # Default to schema-aware appending
         
-        # Build row data
-        row_data = []
+        # Build row data dict for schema-aware appending
+        row_data_dict = {}
+        row_data_list = []
         
         if columns and len(columns) > 0:
-            # Use specified columns
+            # Use explicitly specified columns
             for col in columns:
+                col_name = col.get("name", col.get("header", f"Column{len(row_data_list)+1}"))
                 value = _interpolate(str(col.get("value", "")), input_data)
-                row_data.append(value)
+                row_data_dict[col_name] = value
+                row_data_list.append(value)
         else:
-            # Auto-detect: if no columns specified, use common booking/business fields from input_data
-            auto_fields = [
-                ("Date", input_data.get("pickup_date") or input_data.get("date") or input_data.get("today", "")),
-                ("Time", input_data.get("pickup_time") or input_data.get("time", "")),
-                ("Name", input_data.get("customer_name") or input_data.get("name", "")),
-                ("Email", input_data.get("customer_email") or input_data.get("email", "")),
-                ("Phone", input_data.get("phone", "")),
-                ("Service", input_data.get("service", "")),
-                ("Status", "Pending"),
-                ("Payment Link", input_data.get("payment_link_url", "")),
-                ("Notes", input_data.get("notes") or input_data.get("description", ""))
-            ]
-            # Only add fields that have values
-            row_data = [value for _, value in auto_fields if value]
+            # Auto-build data dict from input_data for schema matching
+            # Include all relevant fields that might map to spreadsheet columns
+            row_data_dict = {
+                "Date": input_data.get("pickup_date") or input_data.get("date") or input_data.get("today", ""),
+                "Time": input_data.get("pickup_time") or input_data.get("time", ""),
+                "Name": input_data.get("customer_name") or input_data.get("name", ""),
+                "Email": input_data.get("customer_email") or input_data.get("email", ""),
+                "Phone": input_data.get("phone", ""),
+                "Service": input_data.get("service", ""),
+                "Status": input_data.get("status", "Pending"),
+                "Payment Link": input_data.get("payment_link_url", ""),
+                "Notes": input_data.get("notes") or input_data.get("description", ""),
+                "Amount": input_data.get("amount") or input_data.get("price", ""),
+                # Also include raw keys from input_data for direct matching
+                **{k: str(v) for k, v in input_data.items() if isinstance(v, (str, int, float, bool))}
+            }
             
-            # If still empty, add basic timestamp row
-            if not row_data:
-                row_data = [
+            # Build fallback list (for non-schema mode)
+            auto_fields = [
+                input_data.get("pickup_date") or input_data.get("date") or input_data.get("today", ""),
+                input_data.get("pickup_time") or input_data.get("time", ""),
+                input_data.get("customer_name") or input_data.get("name", ""),
+                input_data.get("customer_email") or input_data.get("email", ""),
+                input_data.get("phone", ""),
+                input_data.get("service", ""),
+                "Pending",
+                input_data.get("payment_link_url", ""),
+                input_data.get("notes") or input_data.get("description", "")
+            ]
+            row_data_list = [v for v in auto_fields if v]
+            
+            if not row_data_list:
+                row_data_list = [
                     datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
                     input_data.get("name", ""),
                     input_data.get("email", ""),
@@ -463,14 +482,15 @@ Extract: {fields_to_extract}"""
         
         logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Adding row to spreadsheet\n"
         logs += f"  Spreadsheet: {spreadsheet}\n"
-        logs += f"  Columns configured: {len(columns)}\n"
-        logs += f"  Row data ({len(row_data)} fields): {row_data}\n"
+        logs += f"  Sheet: {sheet_name}\n"
+        logs += f"  Use schema matching: {use_schema}\n"
+        logs += f"  Data fields: {list(row_data_dict.keys())[:10]}...\n"
         
         if is_test:
             logs += "  Row NOT added (test mode)\n"
             return {
                 "success": True,
-                "output": {**input_data, "row_added": False, "spreadsheet": spreadsheet, "row_data": row_data},
+                "output": {**input_data, "row_added": False, "spreadsheet": spreadsheet, "row_data": row_data_list},
                 "logs": logs
             }
         
@@ -482,11 +502,17 @@ Extract: {fields_to_extract}"""
                     spreadsheet_id = await google.find_or_create_spreadsheet(spreadsheet)
                     logs += f"  Found/created spreadsheet ID: {spreadsheet_id}\n"
                 
-                result = await google.append_row(spreadsheet_id, row_data, sheet_name)
+                # Use schema-aware appending (matches column headers)
+                if use_schema:
+                    logs += "  Using schema-aware append (matching column headers)\n"
+                    result = await google.append_row_with_schema(spreadsheet_id, row_data_dict, sheet_name)
+                else:
+                    result = await google.append_row(spreadsheet_id, row_data_list, sheet_name)
+                
                 logs += f"  ✅ Row added successfully\n"
                 return {
                     "success": True,
-                    "output": {**input_data, "row_added": True, "spreadsheet": spreadsheet, "spreadsheet_id": spreadsheet_id, "row_data": row_data},
+                    "output": {**input_data, "row_added": True, "spreadsheet": spreadsheet, "spreadsheet_id": spreadsheet_id, "row_data": row_data_dict if use_schema else row_data_list},
                     "logs": logs
                 }
             except Exception as e:
@@ -502,10 +528,10 @@ Extract: {fields_to_extract}"""
         logs += "  ⚠️ Google Sheets not connected - row simulated\n"
         return {
             "success": True,
-            "output": {**input_data, "row_added": True, "spreadsheet": spreadsheet, "row_data": row_data, "simulated": True},
+            "output": {**input_data, "row_added": True, "spreadsheet": spreadsheet, "row_data": row_data_dict if use_schema else row_data_list, "simulated": True},
             "logs": logs
         }
-    
+
     async def _execute_read_sheet(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Read data from Google Sheets."""
         spreadsheet_id = params.get("spreadsheet_id")
