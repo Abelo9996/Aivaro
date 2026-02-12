@@ -148,6 +148,26 @@ function Header() {
                     {item.replace('-', ' ')}
                   </motion.a>
                 ))}
+                <Link href="/demo" style={{ textDecoration: 'none' }}>
+                  <motion.span 
+                    style={{
+                      color: styles.primary,
+                      fontSize: 15,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    whileHover={{ 
+                      scale: 1.05
+                    }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Play size={14} />
+                    Demo
+                  </motion.span>
+                </Link>
               </div>
             )}
             
@@ -261,6 +281,27 @@ function Header() {
                 {item.replace('-', ' ')}
               </motion.a>
             ))}
+            <Link 
+              href="/demo" 
+              style={{ textDecoration: 'none' }}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <div
+                style={{
+                  color: styles.primary,
+                  fontSize: 18,
+                  fontWeight: 600,
+                  padding: '12px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}
+              >
+                <Play size={18} />
+                Watch Demo
+              </div>
+            </Link>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
               <Link href="/login" style={{ textDecoration: 'none' }}>
                 <div
@@ -411,32 +452,34 @@ function HeroSection() {
                 <ArrowRight size={20} />
               </motion.div>
             </Link>
-            <motion.div
-              style={{
-                background: 'transparent',
-                color: styles.primary,
-                padding: isMobile ? '14px 24px' : '16px 32px',
-                borderRadius: 8,
-                fontSize: isMobile ? 16 : 18,
-                fontWeight: 600,
-                border: `2px solid ${styles.primary}`,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                width: isMobile ? '100%' : 'auto'
-              }}
-              whileHover={{ 
-                scale: 1.05,
-                background: 'rgba(139, 92, 246, 0.1)',
-                boxShadow: '0 4px 20px rgba(139, 92, 246, 0.3)'
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Play size={20} />
-              Watch Demo
-            </motion.div>
+            <Link href="/demo" style={{ textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
+              <motion.div
+                style={{
+                  background: 'transparent',
+                  color: styles.primary,
+                  padding: isMobile ? '14px 24px' : '16px 32px',
+                  borderRadius: 8,
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: 600,
+                  border: `2px solid ${styles.primary}`,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%'
+                }}
+                whileHover={{ 
+                  scale: 1.05,
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  boxShadow: '0 4px 20px rgba(139, 92, 246, 0.3)'
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Play size={20} />
+                Watch Demo
+              </motion.div>
+            </Link>
           </motion.div>
 
           <motion.p
