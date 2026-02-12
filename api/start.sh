@@ -5,6 +5,10 @@
 echo "Running database migrations..."
 alembic upgrade head
 
+# Seed templates (only adds if not already present)
+echo "Seeding templates..."
+python -c "from app.seed.templates import seed_templates; seed_templates()"
+
 # Start the server
 # Use PORT from environment, default to 8000
 PORT="${PORT:-8000}"
