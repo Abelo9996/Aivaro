@@ -2,9 +2,11 @@
 Node Executor - Executes individual workflow nodes using real integrations.
 """
 from typing import Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 import json
+
+from app.utils.timezone import now_local, parse_datetime, format_iso, get_default_timezone
 
 
 class NodeExecutor:
@@ -358,6 +360,7 @@ Instructions: {context}
 
 Return your response as a valid JSON object with the field names as keys. 
 For dates, use YYYY-MM-DD format. For times, use HH:MM format (24-hour).
+IMPORTANT: If no timezone is mentioned, assume Pacific Time (America/Los_Angeles).
 If a field cannot be found, use null or a reasonable default.
 Return ONLY the JSON object, no explanation."""
 
@@ -1192,27 +1195,43 @@ Extract: {fields_to_extract}"""
         logs += f"  Time: {start_time}\n"
         logs += f"  Duration: {duration}h\n"
         
-        # Build datetime strings
+        # Build datetime strings with timezone awareness (Pacific Time default)
+        tz = get_default_timezone()
         try:
             if date and start_time:
-                # Parse and build ISO format datetime
-                from datetime import timedelta
-                start_dt = datetime.fromisoformat(f"{date}T{start_time}:00")
+                # Parse date and time - assume Pacific Time if no timezone specified
+                try:
+                    # Try parsing with our timezone-aware parser
+                    start_dt = parse_datetime(date, start_time)
+                except:
+                    # Fallback to basic parsing
+                    start_dt = datetime.fromisoformat(f"{date}T{start_time}:00")
+                    # Add Pacific timezone if naive
+                    if start_dt.tzinfo is None:
+                        try:
+                            import pytz
+                            start_dt = tz.localize(start_dt)
+                        except:
+                            pass
+                
                 end_dt = start_dt + timedelta(hours=float(duration))
                 start_iso = start_dt.isoformat()
                 end_iso = end_dt.isoformat()
+                logs += f"  Timezone: Pacific Time (America/Los_Angeles)\n"
             else:
-                # Default to tomorrow at the specified time
-                from datetime import timedelta
-                tomorrow = datetime.utcnow() + timedelta(days=1)
+                # Default to tomorrow at the specified time in Pacific
+                local_now = now_local()
+                tomorrow = local_now + timedelta(days=1)
                 start_dt = tomorrow.replace(hour=10, minute=0, second=0, microsecond=0)
                 end_dt = start_dt + timedelta(hours=float(duration))
                 start_iso = start_dt.isoformat()
                 end_iso = end_dt.isoformat()
+                logs += f"  Using default: tomorrow at 10:00 AM Pacific\n"
         except Exception as e:
             logs += f"  Warning: Could not parse date/time, using defaults: {e}\n"
-            from datetime import timedelta
-            start_dt = datetime.utcnow() + timedelta(days=1)
+            local_now = now_local()
+            start_dt = local_now + timedelta(days=1)
+            start_dt = start_dt.replace(hour=10, minute=0, second=0, microsecond=0)
             end_dt = start_dt + timedelta(hours=1)
             start_iso = start_dt.isoformat()
             end_iso = end_dt.isoformat()

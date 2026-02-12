@@ -5,6 +5,7 @@ from typing import Optional
 
 from app.models import Workflow, Execution, ExecutionNode, Approval, Connection
 from app.services.node_executor import execute_node
+from app.utils.timezone import now_local, now_utc, today_local, current_time_local
 
 
 class WorkflowRunner:
@@ -77,14 +78,19 @@ class WorkflowRunner:
             user_email = self.workflow.user.email
             user_name = self.workflow.user.full_name or self.workflow.user.email.split('@')[0]
         
-        # Base data always includes user info and timestamps
+        # Get timezone-aware current time (Pacific Time by default)
+        local_now = now_local()
+        
+        # Base data always includes user info and timestamps (in Pacific Time)
         base_data = {
             "name": user_name or "User",
             "email": user_email or "user@example.com",
             "user_email": user_email or "user@example.com",
-            "today": datetime.utcnow().strftime("%Y-%m-%d"),
-            "date": datetime.utcnow().strftime("%Y-%m-%d"),
-            "timestamp": datetime.utcnow().isoformat(),
+            "today": local_now.strftime("%Y-%m-%d"),
+            "date": local_now.strftime("%Y-%m-%d"),
+            "current_time": local_now.strftime("%H:%M"),
+            "timestamp": local_now.isoformat(),
+            "timezone": "America/Los_Angeles",
         }
         
         # If we have real trigger data, merge it (trigger data takes precedence)

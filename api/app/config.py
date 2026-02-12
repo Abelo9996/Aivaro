@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"  # development, staging, production
     
+    # Timezone - default to Pacific Time if not specified
+    default_timezone: str = "America/Los_Angeles"
+    
     class Config:
         env_file = ".env"
         extra = "ignore"

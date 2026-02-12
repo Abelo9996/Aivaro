@@ -5,7 +5,7 @@ from typing import List, Optional
 import asyncio
 import json
 
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import Execution, ExecutionNode, Workflow, User
 from app.schemas import ExecutionCreate, ExecutionResponse
 from app.routers.auth import get_current_user
@@ -91,49 +91,83 @@ async def create_execution_stream(
     db.refresh(execution)
     
     execution_id = str(execution.id)
+    execution_uuid = execution.id  # Keep UUID for thread
     total_nodes = len(workflow.nodes or [])
+    trigger_data = execution_data.trigger_data  # Capture for thread
     
     async def generate_progress():
         # Send initial event with execution info
         yield f"data: {json.dumps({'type': 'start', 'execution_id': execution_id, 'total_steps': total_nodes, 'workflow_name': workflow.name})}\n\n"
         
-        # Run workflow in background and poll for progress
+        # Run workflow in background thread with its OWN database session
         import threading
+        thread_error = [None]  # Use list to capture error from thread
         
         def run_workflow():
-            runner = WorkflowRunner(db, execution.id)
-            runner.run(execution_data.trigger_data)
+            # Create a NEW session for this thread - sessions are NOT thread-safe
+            thread_db = SessionLocal()
+            try:
+                runner = WorkflowRunner(thread_db, execution_uuid)
+                runner.run(trigger_data)
+            except Exception as e:
+                import traceback
+                thread_error[0] = f"{str(e)}\n{traceback.format_exc()}"
+                print(f"[StreamExecution] Thread error: {thread_error[0]}")
+            finally:
+                thread_db.close()
         
         thread = threading.Thread(target=run_workflow)
         thread.start()
         
         completed_nodes = set()
         last_status = None
+        poll_count = 0
+        max_polls = 600  # 3 minutes max (600 * 0.3s)
         
-        while thread.is_alive() or last_status not in ['completed', 'failed']:
-            await asyncio.sleep(0.3)  # Poll every 300ms
+        # Create a separate session for polling - don't use the request's db session
+        poll_db = SessionLocal()
+        try:
+            while (thread.is_alive() or last_status not in ['completed', 'failed']) and poll_count < max_polls:
+                await asyncio.sleep(0.3)  # Poll every 300ms
+                poll_count += 1
+                
+                try:
+                    # Query with fresh session
+                    poll_execution = poll_db.query(Execution).filter(Execution.id == execution_uuid).first()
+                    if not poll_execution:
+                        break
+                    
+                    exec_nodes = poll_db.query(ExecutionNode).filter(
+                        ExecutionNode.execution_id == execution_uuid
+                    ).all()
+                    
+                    # Send updates for newly completed nodes
+                    for node in exec_nodes:
+                        if node.id not in completed_nodes and node.status in ['completed', 'failed']:
+                            completed_nodes.add(node.id)
+                            progress = len(completed_nodes) / total_nodes if total_nodes > 0 else 1
+                            yield f"data: {json.dumps({'type': 'step', 'node_id': node.node_id, 'node_label': node.node_label, 'status': node.status, 'completed': len(completed_nodes), 'total': total_nodes, 'progress': progress})}\n\n"
+                    
+                    last_status = poll_execution.status
+                    
+                    # Expire objects so next query gets fresh data
+                    poll_db.expire_all()
+                except Exception as e:
+                    print(f"[StreamExecution] Poll error: {e}")
+                    break
             
-            # Refresh execution and nodes
-            db.refresh(execution)
-            exec_nodes = db.query(ExecutionNode).filter(
-                ExecutionNode.execution_id == execution.id
-            ).all()
+            # Wait for thread to finish
+            thread.join(timeout=5.0)
             
-            # Send updates for newly completed nodes
-            for node in exec_nodes:
-                if node.id not in completed_nodes and node.status in ['completed', 'failed']:
-                    completed_nodes.add(node.id)
-                    progress = len(completed_nodes) / total_nodes if total_nodes > 0 else 1
-                    yield f"data: {json.dumps({'type': 'step', 'node_id': node.node_id, 'node_label': node.node_label, 'status': node.status, 'completed': len(completed_nodes), 'total': total_nodes, 'progress': progress})}\n\n"
+            # Get final status
+            poll_db.expire_all()
+            final_execution = poll_db.query(Execution).filter(Execution.id == execution_uuid).first()
+            final_status = final_execution.status if final_execution else "failed"
             
-            last_status = execution.status
-        
-        # Wait for thread to finish
-        thread.join()
-        
-        # Send final completion event
-        db.refresh(execution)
-        yield f"data: {json.dumps({'type': 'complete', 'execution_id': execution_id, 'status': execution.status})}\n\n"
+            # Send final completion event
+            yield f"data: {json.dumps({'type': 'complete', 'execution_id': execution_id, 'status': final_status})}\n\n"
+        finally:
+            poll_db.close()
     
     return StreamingResponse(
         generate_progress(),
