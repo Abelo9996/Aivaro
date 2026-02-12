@@ -3,9 +3,87 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Zap } from 'lucide-react';
+import { 
+  Target, 
+  TrendingUp, 
+  Users, 
+  Mail, 
+  ShoppingCart, 
+  Calendar, 
+  FileText, 
+  MessageSquare, 
+  Bell, 
+  CreditCard,
+  Briefcase,
+  Clock,
+  Star,
+  Gift,
+  Megaphone,
+  BarChart3,
+  Zap,
+  type LucideIcon
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Template } from '@/types';
+
+// Map categories and template names to appropriate icons
+const getTemplateIcon = (template: Template): LucideIcon => {
+  const category = template.category?.toLowerCase() || '';
+  const name = template.name?.toLowerCase() || '';
+  
+  // Check by category first
+  if (category.includes('lead') || category.includes('sales')) {
+    if (name.includes('pipeline') || name.includes('tracker')) return TrendingUp;
+    if (name.includes('referral')) return Users;
+    return Target;
+  }
+  if (category.includes('customer') || category.includes('retention')) {
+    if (name.includes('feedback') || name.includes('review')) return Star;
+    if (name.includes('birthday') || name.includes('loyalty')) return Gift;
+    return Users;
+  }
+  if (category.includes('email') || category.includes('newsletter')) return Mail;
+  if (category.includes('ecommerce') || category.includes('order')) return ShoppingCart;
+  if (category.includes('booking') || category.includes('appointment') || category.includes('scheduling')) return Calendar;
+  if (category.includes('invoice') || category.includes('payment')) return CreditCard;
+  if (category.includes('onboarding')) return Briefcase;
+  if (category.includes('notification') || category.includes('alert')) return Bell;
+  if (category.includes('support') || category.includes('chat')) return MessageSquare;
+  if (category.includes('content') || category.includes('social')) return Megaphone;
+  if (category.includes('report') || category.includes('analytics')) return BarChart3;
+  if (category.includes('reminder') || category.includes('follow')) return Clock;
+  if (category.includes('document') || category.includes('contract')) return FileText;
+  
+  // Check by name keywords
+  if (name.includes('lead') || name.includes('capture')) return Target;
+  if (name.includes('sales') || name.includes('pipeline')) return TrendingUp;
+  if (name.includes('email') || name.includes('newsletter')) return Mail;
+  if (name.includes('order') || name.includes('cart') || name.includes('purchase')) return ShoppingCart;
+  if (name.includes('booking') || name.includes('appointment') || name.includes('calendar')) return Calendar;
+  if (name.includes('invoice') || name.includes('payment')) return CreditCard;
+  if (name.includes('onboard') || name.includes('welcome')) return Briefcase;
+  if (name.includes('notify') || name.includes('alert')) return Bell;
+  if (name.includes('support') || name.includes('ticket')) return MessageSquare;
+  if (name.includes('review') || name.includes('feedback')) return Star;
+  if (name.includes('referral')) return Users;
+  if (name.includes('reminder') || name.includes('follow')) return Clock;
+  
+  // Default
+  return Zap;
+};
+
+// Get icon background color based on category
+const getIconColors = (category: string): string => {
+  const cat = category?.toLowerCase() || '';
+  if (cat.includes('lead') || cat.includes('sales')) return 'from-orange-100 to-red-100 text-orange-600';
+  if (cat.includes('customer') || cat.includes('retention')) return 'from-pink-100 to-rose-100 text-pink-600';
+  if (cat.includes('email') || cat.includes('newsletter')) return 'from-blue-100 to-indigo-100 text-blue-600';
+  if (cat.includes('ecommerce') || cat.includes('order')) return 'from-green-100 to-emerald-100 text-green-600';
+  if (cat.includes('booking') || cat.includes('scheduling')) return 'from-purple-100 to-violet-100 text-purple-600';
+  if (cat.includes('onboarding')) return 'from-cyan-100 to-teal-100 text-cyan-600';
+  if (cat.includes('support')) return 'from-amber-100 to-yellow-100 text-amber-600';
+  return 'from-primary-100 to-purple-100 text-primary-600';
+};
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -109,46 +187,51 @@ export default function TemplatesPage() {
         data-walkthrough="templates-grid"
         className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        {filteredTemplates.map((template, index) => (
-          <div
-            key={template.id}
-            data-walkthrough={index === 0 ? "template-card" : undefined}
-            className="bg-white rounded-xl border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition group overflow-hidden"
-          >
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition">
-              <Zap className="w-6 h-6 text-primary-600" />
-            </div>
-            <h3 className="font-semibold mb-2 text-gray-900 truncate">{template.name}</h3>
-            <p className="text-sm text-gray-500 mb-4 line-clamp-2">
-              {template.description}
-            </p>
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full truncate max-w-[120px]">
-                {template.category}
-              </span>
-              <span className="text-xs text-gray-400">
-                {template.definition?.nodes?.length || 0} steps
-              </span>
-            </div>
-            <button
-              onClick={() => handleUseTemplate(template)}
-              disabled={creatingId === template.id}
-              className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        {filteredTemplates.map((template, index) => {
+          const IconComponent = getTemplateIcon(template);
+          const iconColors = getIconColors(template.category || '');
+          
+          return (
+            <div
+              key={template.id}
+              data-walkthrough={index === 0 ? "template-card" : undefined}
+              className="bg-white rounded-xl border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition group overflow-hidden"
             >
-              {creatingId === template.id ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Creating...
-                </>
-              ) : (
-                'Use Template'
-              )}
-            </button>
-          </div>
-        ))}
+              <div className={`w-12 h-12 bg-gradient-to-br ${iconColors} rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition`}>
+                <IconComponent className="w-6 h-6" />
+              </div>
+              <h3 className="font-semibold mb-2 text-gray-900 truncate">{template.name}</h3>
+              <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                {template.description}
+              </p>
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full truncate max-w-[120px]">
+                  {template.category}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {template.definition?.nodes?.length || 0} steps
+                </span>
+              </div>
+              <button
+                onClick={() => handleUseTemplate(template)}
+                disabled={creatingId === template.id}
+                className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {creatingId === template.id ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  'Use Template'
+                )}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {filteredTemplates.length === 0 && (
