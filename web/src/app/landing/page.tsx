@@ -848,14 +848,14 @@ function FeatureShowcaseSection() {
     },
     {
       id: 3,
-      title: 'Human-in-the-Loop Approvals',
-      description: 'Add approval checkpoints for sensitive actions. Get notified when decisions need your input, then approve or reject with one click.',
+      title: 'Pre-Built Workflow Templates',
+      description: 'Get started instantly with ready-to-use workflow templates. From booking confirmations to invoice processing — just customize and deploy.',
       image: '/images/example_tool_3.png',
       gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
       metrics: [
-        { label: 'Notification', value: 'Instant', color: '#10b981' },
-        { label: 'Response', value: '1-click', color: '#059669' },
-        { label: 'Audit Log', value: 'Full', color: '#10b981' },
+        { label: 'Templates', value: '10+', color: '#10b981' },
+        { label: 'Setup', value: '< 2min', color: '#059669' },
+        { label: 'Customizable', value: '100%', color: '#10b981' },
       ]
     },
     {
