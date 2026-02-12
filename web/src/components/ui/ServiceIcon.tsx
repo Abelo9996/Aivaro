@@ -30,6 +30,12 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   send_slack: { src: '/icons/slack.svg' },
   ai_reply: { src: '/icons/openai.svg' },
   ai_summarize: { src: '/icons/openai.svg' },
+  
+  // Stripe node types
+  stripe_create_invoice: { src: '/icons/stripe.svg' },
+  stripe_send_invoice: { src: '/icons/stripe.svg' },
+  stripe_create_payment_link: { src: '/icons/stripe.svg' },
+  stripe_get_customer: { src: '/icons/stripe.svg' },
 };
 
 // Fallback emoji icons for types without SVG icons

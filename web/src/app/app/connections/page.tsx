@@ -2,20 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Key, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import ServiceIcon from '@/components/ui/ServiceIcon';
 import type { Connection } from '@/types';
 
 const availableConnections = [
-  { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar' },
-  { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing' },
-  { type: 'slack', name: 'Slack', description: 'Team messaging' },
-  { type: 'notion', name: 'Notion', description: 'Notes and databases' },
-  { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings' },
-  { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases' },
-  { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing' },
-  { type: 'twilio', name: 'Twilio', description: 'SMS and voice' },
+  { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar', authType: 'oauth' },
+  { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing', authType: 'api_key' },
+  { type: 'slack', name: 'Slack', description: 'Team messaging', authType: 'oauth' },
+  { type: 'notion', name: 'Notion', description: 'Notes and databases', authType: 'oauth' },
+  { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings', authType: 'oauth' },
+  { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases', authType: 'api_key' },
+  { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing', authType: 'api_key' },
+  { type: 'twilio', name: 'Twilio', description: 'SMS and voice', authType: 'api_key' },
 ];
 
 export default function ConnectionsPage() {
@@ -23,6 +24,8 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [apiKeyModal, setApiKeyModal] = useState<{ type: string; name: string } | null>(null);
+  const [apiKey, setApiKey] = useState('');
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -54,6 +57,16 @@ export default function ConnectionsPage() {
   };
 
   const handleConnect = async (type: string) => {
+    const service = availableConnections.find(s => s.type === type);
+    
+    // For API key auth types, show the modal
+    if (service?.authType === 'api_key') {
+      setApiKeyModal({ type, name: service.name });
+      setApiKey('');
+      return;
+    }
+    
+    // For OAuth, proceed with the existing flow
     setConnecting(type);
     setMessage(null);
     
@@ -94,6 +107,73 @@ export default function ConnectionsPage() {
       loadConnections();
     } catch (err) {
       console.error('Failed to disconnect:', err);
+    }
+  };
+
+  const handleApiKeySubmit = async () => {
+    if (!apiKeyModal || !apiKey.trim()) return;
+    
+    setConnecting(apiKeyModal.type);
+    setMessage(null);
+    
+    try {
+      await api.createConnection({
+        name: apiKeyModal.name,
+        type: apiKeyModal.type,
+        credentials: { api_key: apiKey.trim() },
+      });
+      setMessage({ 
+        type: 'success', 
+        text: `${apiKeyModal.name} connected successfully!` 
+      });
+      setApiKeyModal(null);
+      setApiKey('');
+      loadConnections();
+    } catch (err: any) {
+      console.error('Failed to connect:', err);
+      setMessage({ type: 'error', text: err.message || 'Failed to connect' });
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  const getApiKeyPlaceholder = (type: string) => {
+    switch (type) {
+      case 'stripe':
+        return 'sk_live_... or sk_test_...';
+      case 'airtable':
+        return 'pat... or key...';
+      case 'mailchimp':
+        return 'Your Mailchimp API key';
+      case 'twilio':
+        return 'Your Twilio Auth Token';
+      default:
+        return 'Enter your API key';
+    }
+  };
+
+  const getApiKeyInstructions = (type: string) => {
+    switch (type) {
+      case 'stripe':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Find your API key in{' '}
+            <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Stripe Dashboard → Developers → API keys
+            </a>
+          </p>
+        );
+      case 'airtable':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Generate a token at{' '}
+            <a href="https://airtable.com/create/tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Airtable → Account → Developer hub
+            </a>
+          </p>
+        );
+      default:
+        return null;
     }
   };
 
@@ -196,6 +276,64 @@ export default function ConnectionsPage() {
           or from this page.
         </p>
       </div>
+
+      {/* API Key Modal */}
+      {apiKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <ServiceIcon type={apiKeyModal.type} size={32} />
+                <h2 className="text-lg font-semibold">Connect {apiKeyModal.name}</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setApiKeyModal(null);
+                  setApiKey('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Key className="w-4 h-4 inline mr-1" />
+                API Key
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={getApiKeyPlaceholder(apiKeyModal.type)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+                autoFocus
+              />
+              {getApiKeyInstructions(apiKeyModal.type)}
+              
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    setApiKeyModal(null);
+                    setApiKey('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApiKeySubmit}
+                  disabled={!apiKey.trim() || connecting === apiKeyModal.type}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {connecting === apiKeyModal.type ? 'Connecting...' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

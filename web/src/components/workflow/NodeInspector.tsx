@@ -95,6 +95,33 @@ const nodeConfigs: Record<string, { fields: { key: string; label: string; type: 
       { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'DELETE'] },
     ],
   },
+  stripe_get_customer: {
+    fields: [
+      { key: 'email', label: 'Customer Email', type: 'text', placeholder: '{{email}} or customer@example.com' },
+      { key: 'name', label: 'Customer Name (optional)', type: 'text', placeholder: '{{name}}' },
+    ],
+  },
+  stripe_create_invoice: {
+    fields: [
+      { key: 'customer_email', label: 'Customer Email', type: 'text', placeholder: '{{email}} or customer@example.com' },
+      { key: 'amount', label: 'Amount ($)', type: 'number', placeholder: '100.00' },
+      { key: 'description', label: 'Description', type: 'text', placeholder: 'Service - {{service_name}}' },
+      { key: 'due_days', label: 'Due in (days)', type: 'number', placeholder: '30' },
+      { key: 'auto_send', label: 'Auto-send', type: 'select', options: ['true', 'false'] },
+    ],
+  },
+  stripe_send_invoice: {
+    fields: [
+      { key: 'invoice_id', label: 'Invoice ID', type: 'text', placeholder: '{{invoice_id}} or inv_...' },
+    ],
+  },
+  stripe_create_payment_link: {
+    fields: [
+      { key: 'amount', label: 'Amount ($)', type: 'number', placeholder: '100.00' },
+      { key: 'product_name', label: 'Product/Service Name', type: 'text', placeholder: 'Consultation Fee' },
+      { key: 'success_message', label: 'Success Message', type: 'textarea', placeholder: 'Thank you for your payment!' },
+    ],
+  },
 };
 
 export default function NodeInspector({

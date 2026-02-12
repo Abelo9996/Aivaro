@@ -44,12 +44,27 @@ class NodeExecutor:
             )
         return self._slack_service
     
+    async def get_stripe_service(self):
+        """Get or create Stripe service instance."""
+        if not hasattr(self, '_stripe_service'):
+            self._stripe_service = None
+        if self._stripe_service is None and "stripe" in self.connections:
+            from app.services.integrations.stripe_service import StripeService
+            creds = self.connections["stripe"]
+            # Stripe uses API key authentication
+            api_key = creds.get("api_key") or creds.get("access_token")
+            if api_key:
+                self._stripe_service = StripeService(api_key=api_key)
+        return self._stripe_service
+    
     async def close(self):
         """Close all service connections."""
         if self._google_service:
             await self._google_service.close()
         if self._slack_service:
             await self._slack_service.close()
+        if hasattr(self, '_stripe_service') and self._stripe_service:
+            await self._stripe_service.close()
     
     async def execute(
         self,
@@ -76,6 +91,11 @@ class NodeExecutor:
             "http_request": self._execute_http_request,
             "condition": self._execute_condition,
             "transform": self._execute_transform,
+            # Stripe integrations
+            "stripe_create_invoice": self._execute_stripe_create_invoice,
+            "stripe_send_invoice": self._execute_stripe_send_invoice,
+            "stripe_create_payment_link": self._execute_stripe_create_payment_link,
+            "stripe_get_customer": self._execute_stripe_get_customer,
         }
         
         executor = executors.get(node_type, self._execute_default)
@@ -590,6 +610,312 @@ Generate a {tone} reply:"""
                 logs += f"  {target} = {output[target]}\n"
         
         return {"success": True, "output": output, "logs": logs}
+    
+    # ==================== STRIPE EXECUTORS ====================
+    
+    async def _execute_stripe_get_customer(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Get or create a Stripe customer."""
+        email = _interpolate(params.get("email", input_data.get("email", "")), input_data)
+        name = _interpolate(params.get("name", input_data.get("name", "")), input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Getting/creating Stripe customer\n"
+        logs += f"  Email: {email}\n"
+        
+        if is_test:
+            # Simulate in test mode
+            logs += f"  [TEST MODE] Would look up or create customer for: {email}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "customer_id": "cus_test123",
+                    "customer_email": email,
+                    "customer_created": False
+                },
+                "logs": logs
+            }
+        
+        stripe_service = await self.get_stripe_service()
+        if not stripe_service:
+            return {
+                "success": False,
+                "error": "Stripe not connected. Please connect your Stripe account.",
+                "output": input_data,
+                "logs": logs + "  ERROR: No Stripe connection found\n"
+            }
+        
+        result = await stripe_service.get_or_create_customer(email=email, name=name)
+        
+        if result["success"]:
+            logs += f"  Customer ID: {result['customer_id']}\n"
+            logs += f"  Created new: {result['created']}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "customer_id": result["customer_id"],
+                    "customer_email": email,
+                    "customer_created": result["created"]
+                },
+                "logs": logs
+            }
+        else:
+            logs += f"  ERROR: {result['error']}\n"
+            return {
+                "success": False,
+                "error": result["error"],
+                "output": input_data,
+                "logs": logs
+            }
+    
+    async def _execute_stripe_create_invoice(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create and optionally send a Stripe invoice."""
+        customer_id = _interpolate(params.get("customer_id", input_data.get("customer_id", "")), input_data)
+        customer_email = _interpolate(params.get("customer_email", input_data.get("email", "")), input_data)
+        
+        # Get items from params or create from amount
+        items = params.get("items", [])
+        if not items:
+            # Create single item from amount parameter
+            amount = params.get("amount", input_data.get("amount", 0))
+            if isinstance(amount, str):
+                amount = float(amount.replace("$", "").replace(",", ""))
+            amount_cents = int(float(amount) * 100)  # Convert to cents
+            
+            items = [{
+                "description": _interpolate(params.get("description", "Invoice"), input_data),
+                "amount": amount_cents,
+                "quantity": 1
+            }]
+        else:
+            # Process items with interpolation
+            items = [
+                {
+                    "description": _interpolate(item.get("description", "Item"), input_data),
+                    "amount": int(float(item.get("amount", 0)) * 100) if isinstance(item.get("amount"), (int, float, str)) else 0,
+                    "quantity": item.get("quantity", 1)
+                }
+                for item in items
+            ]
+        
+        description = _interpolate(params.get("memo", params.get("description", "")), input_data)
+        due_days = params.get("due_days", 30)
+        auto_send = params.get("auto_send", True)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Creating Stripe invoice\n"
+        logs += f"  Customer: {customer_id or customer_email}\n"
+        logs += f"  Items: {len(items)}\n"
+        logs += f"  Auto-send: {auto_send}\n"
+        
+        if is_test:
+            total_amount = sum(item.get("amount", 0) for item in items)
+            logs += f"  [TEST MODE] Would create invoice for ${total_amount/100:.2f}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "invoice_id": "inv_test123",
+                    "invoice_url": "https://invoice.stripe.com/test/inv_test123",
+                    "invoice_amount": total_amount,
+                    "invoice_status": "sent" if auto_send else "draft"
+                },
+                "logs": logs
+            }
+        
+        stripe_service = await self.get_stripe_service()
+        if not stripe_service:
+            return {
+                "success": False,
+                "error": "Stripe not connected. Please connect your Stripe account.",
+                "output": input_data,
+                "logs": logs + "  ERROR: No Stripe connection found\n"
+            }
+        
+        # If no customer_id, try to get/create by email
+        if not customer_id and customer_email:
+            customer_result = await stripe_service.get_or_create_customer(email=customer_email)
+            if customer_result["success"]:
+                customer_id = customer_result["customer_id"]
+            else:
+                return {
+                    "success": False,
+                    "error": f"Failed to find/create customer: {customer_result['error']}",
+                    "output": input_data,
+                    "logs": logs + f"  ERROR: {customer_result['error']}\n"
+                }
+        
+        result = await stripe_service.create_invoice(
+            customer_id=customer_id,
+            items=items,
+            description=description,
+            due_days=due_days,
+            auto_send=auto_send
+        )
+        
+        if result["success"]:
+            logs += f"  Invoice ID: {result['invoice_id']}\n"
+            logs += f"  Invoice URL: {result['invoice_url']}\n"
+            logs += f"  Status: {result['status']}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "invoice_id": result["invoice_id"],
+                    "invoice_url": result["invoice_url"],
+                    "invoice_pdf": result.get("invoice_pdf"),
+                    "invoice_amount": result["amount_due"],
+                    "invoice_status": result["status"]
+                },
+                "logs": logs
+            }
+        else:
+            logs += f"  ERROR: {result['error']}\n"
+            return {
+                "success": False,
+                "error": result["error"],
+                "output": input_data,
+                "logs": logs
+            }
+    
+    async def _execute_stripe_send_invoice(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Send an existing Stripe invoice."""
+        invoice_id = _interpolate(params.get("invoice_id", input_data.get("invoice_id", "")), input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Sending Stripe invoice\n"
+        logs += f"  Invoice ID: {invoice_id}\n"
+        
+        if not invoice_id:
+            return {
+                "success": False,
+                "error": "No invoice_id provided",
+                "output": input_data,
+                "logs": logs + "  ERROR: Missing invoice_id\n"
+            }
+        
+        if is_test:
+            logs += f"  [TEST MODE] Would send invoice: {invoice_id}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "invoice_sent": True,
+                    "invoice_status": "sent"
+                },
+                "logs": logs
+            }
+        
+        stripe_service = await self.get_stripe_service()
+        if not stripe_service:
+            return {
+                "success": False,
+                "error": "Stripe not connected. Please connect your Stripe account.",
+                "output": input_data,
+                "logs": logs + "  ERROR: No Stripe connection found\n"
+            }
+        
+        result = await stripe_service.send_invoice(invoice_id)
+        
+        if result["success"]:
+            logs += f"  Sent successfully\n"
+            logs += f"  Status: {result['status']}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "invoice_sent": True,
+                    "invoice_status": result["status"],
+                    "invoice_url": result["invoice_url"]
+                },
+                "logs": logs
+            }
+        else:
+            logs += f"  ERROR: {result['error']}\n"
+            return {
+                "success": False,
+                "error": result["error"],
+                "output": input_data,
+                "logs": logs
+            }
+    
+    async def _execute_stripe_create_payment_link(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create a Stripe payment link."""
+        # Get items from params or create from amount
+        items = params.get("items", [])
+        if not items:
+            # Create single item from amount parameter
+            amount = params.get("amount", input_data.get("amount", 0))
+            if isinstance(amount, str):
+                amount = float(amount.replace("$", "").replace(",", ""))
+            amount_cents = int(float(amount) * 100)  # Convert to cents
+            
+            items = [{
+                "name": _interpolate(params.get("product_name", params.get("description", "Payment")), input_data),
+                "amount": amount_cents,
+                "quantity": 1
+            }]
+        else:
+            # Process items with interpolation
+            items = [
+                {
+                    "name": _interpolate(item.get("name", item.get("description", "Item")), input_data),
+                    "amount": int(float(item.get("amount", 0)) * 100) if isinstance(item.get("amount"), (int, float, str)) else 0,
+                    "quantity": item.get("quantity", 1)
+                }
+                for item in items
+            ]
+        
+        message = _interpolate(params.get("success_message", "Thank you for your payment!"), input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Creating Stripe payment link\n"
+        logs += f"  Items: {len(items)}\n"
+        
+        if is_test:
+            total_amount = sum(item.get("amount", 0) for item in items)
+            logs += f"  [TEST MODE] Would create payment link for ${total_amount/100:.2f}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "payment_link_url": "https://buy.stripe.com/test_123",
+                    "payment_link_id": "plink_test123",
+                    "payment_amount": total_amount
+                },
+                "logs": logs
+            }
+        
+        stripe_service = await self.get_stripe_service()
+        if not stripe_service:
+            return {
+                "success": False,
+                "error": "Stripe not connected. Please connect your Stripe account.",
+                "output": input_data,
+                "logs": logs + "  ERROR: No Stripe connection found\n"
+            }
+        
+        result = await stripe_service.create_payment_link(
+            items=items,
+            after_completion_message=message
+        )
+        
+        if result["success"]:
+            logs += f"  Payment Link: {result['url']}\n"
+            return {
+                "success": True,
+                "output": {
+                    **input_data,
+                    "payment_link_url": result["url"],
+                    "payment_link_id": result["payment_link_id"]
+                },
+                "logs": logs
+            }
+        else:
+            logs += f"  ERROR: {result['error']}\n"
+            return {
+                "success": False,
+                "error": result["error"],
+                "output": input_data,
+                "logs": logs
+            }
     
     async def _execute_default(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Default executor for unknown node types."""

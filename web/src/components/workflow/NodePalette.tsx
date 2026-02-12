@@ -31,6 +31,15 @@ const simpleNodes = [
     ],
   },
   {
+    category: 'Payments (Stripe)',
+    items: [
+      { type: 'action', nodeType: 'stripe_create_invoice', label: 'Create Invoice' },
+      { type: 'action', nodeType: 'stripe_send_invoice', label: 'Send Invoice' },
+      { type: 'action', nodeType: 'stripe_create_payment_link', label: 'Payment Link' },
+      { type: 'action', nodeType: 'stripe_get_customer', label: 'Get/Create Customer' },
+    ],
+  },
+  {
     category: 'Logic',
     items: [
       { type: 'condition', nodeType: 'condition', label: 'If/Else' },
