@@ -34,28 +34,11 @@ const smoothScrollTo = (elementId: string) => {
 function Logo() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{
-        width: 36,
-        height: 36,
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-        borderRadius: 10,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
-      }}>
-        <Workflow size={22} color="white" />
-      </div>
-      <span style={{ 
-        fontSize: 24, 
-        fontWeight: 800, 
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        letterSpacing: '-0.5px'
-      }}>
-        Aivaro
-      </span>
+      <img 
+        src="/logo.png" 
+        alt="Aivaro" 
+        style={{ height: 40, width: 'auto' }}
+      />
     </div>
   );
 }
@@ -212,7 +195,7 @@ function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <span style={{ fontSize: 14, color: styles.primary, fontWeight: 600 }}>✨ AI-Powered Workflow Automation</span>
+            <span style={{ fontSize: 14, color: styles.primary, fontWeight: 600 }}>✨ Your Personalized AI Co-Founder</span>
           </motion.div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', maxWidth: 900 }}>
@@ -230,13 +213,13 @@ function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              Automate Your Business Like{' '}
+              Tell Us What You Need.{' '}
               <span style={{ 
                 background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                Magic
+                We Execute.
               </span>
             </motion.h1>
             <motion.p
@@ -252,7 +235,7 @@ function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Build powerful automations with a visual editor. Connect your apps, let AI suggest workflows, and save hours every week.
+              Describe your business workflow in plain English. Aivaro builds and runs it automatically. Not suggestions. Not drafts. Execution.
             </motion.p>
           </div>
 
@@ -450,10 +433,10 @@ function StatsSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const stats = [
-    { icon: <Clock size={32} />, value: '10x', label: 'Faster workflow creation' },
-    { icon: <Shield size={32} />, value: '50+', label: 'App integrations' },
-    { icon: <TrendingUp size={32} />, value: '40hrs', label: 'Saved per month' },
-    { icon: <Zap size={32} />, value: '99.9%', label: 'Uptime guaranteed' }
+    { icon: <TrendingUp size={32} />, value: '68%', label: 'Fewer no-shows' },
+    { icon: <Clock size={32} />, value: '5hrs', label: 'Saved per week' },
+    { icon: <Shield size={32} />, value: '100%', label: 'Approval control' },
+    { icon: <Zap size={32} />, value: '24/7', label: 'Always running' }
   ];
 
   return (
@@ -492,39 +475,39 @@ function FeaturesSection() {
 
   const features = [
     {
-      icon: <Workflow size={32} />,
-      title: 'Visual Workflow Builder',
-      description: 'Drag-and-drop interface to create complex automations without any coding. See your logic flow in real-time.',
+      icon: <Bot size={32} />,
+      title: 'Plain-English to Workflow',
+      description: 'Describe what you need in plain English, and Aivaro builds the entire workflow for you. No technical knowledge required.',
       gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
     },
     {
-      icon: <Bot size={32} />,
-      title: 'AI-Powered Suggestions',
-      description: 'Describe what you want in plain English, and AI builds the workflow for you. Smart recommendations as you build.',
+      icon: <Zap size={32} />,
+      title: 'Automatic Execution',
+      description: 'Your workflows run 24/7 without babysitting. Bookings, reminders, follow-ups, reports — all on autopilot.',
       gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
     },
     {
       icon: <Globe size={32} />,
-      title: '50+ Integrations',
-      description: 'Connect Google, Slack, Stripe, Notion, and dozens more. OAuth-based secure connections.',
+      title: 'Core Integrations',
+      description: 'Connect Gmail, Google Sheets, Calendar, and Stripe. The tools you already use, working together automatically.',
       gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     },
     {
       icon: <Users size={32} />,
-      title: 'Human-in-the-Loop',
-      description: 'Add approval steps for sensitive actions. Get notified and approve via email, Slack, or the dashboard.',
+      title: 'Approval Guardrails',
+      description: 'High-risk actions like refunds or mass messages require your approval first. Trust built into every workflow.',
       gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
     },
     {
-      icon: <GitBranch size={32} />,
-      title: 'Conditional Logic',
-      description: 'Build branching workflows with if/then logic. Filter, transform, and route data automatically.',
+      icon: <TrendingUp size={32} />,
+      title: 'Revenue Loops',
+      description: 'Pre-built workflows for booking deposits, follow-up sequences, profit tracking, and more. Real ROI, not just automation.',
       gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
     },
     {
       icon: <Sparkles size={32} />,
-      title: 'Ready-Made Templates',
-      description: 'Start from 100+ pre-built templates for common use cases. Customize to fit your exact needs.',
+      title: 'Run History & Logs',
+      description: 'See every execution, every decision, every result. Full transparency and audit trails for your business.',
       gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
     },
   ];
@@ -572,10 +555,10 @@ function FeaturesSection() {
             </span>
           </motion.div>
           <h2 style={{ fontSize: 56, fontWeight: 800, color: styles.textPrimary, marginBottom: 20, lineHeight: 1.1 }}>
-            Everything You Need to Automate
+            Everything You Need to Execute
           </h2>
           <p style={{ fontSize: 20, color: styles.textSecondary, maxWidth: 800, margin: '0 auto', lineHeight: 1.7 }}>
-            Build, deploy, and manage workflows that run your business on autopilot
+            Revenue loops that run without babysitting. Built for founders, not engineers.
           </p>
         </motion.div>
 
@@ -1076,18 +1059,14 @@ function IntegrationsSection() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const integrations = [
-    { name: 'Google', icon: '📧' },
-    { name: 'Slack', icon: '💬' },
-    { name: 'Stripe', icon: '💳' },
-    { name: 'Notion', icon: '📝' },
-    { name: 'Calendly', icon: '📅' },
-    { name: 'Airtable', icon: '📊' },
-    { name: 'Mailchimp', icon: '✉️' },
-    { name: 'Twilio', icon: '📱' },
-    { name: 'GitHub', icon: '🐙' },
-    { name: 'Shopify', icon: '🛒' },
-    { name: 'HubSpot', icon: '🎯' },
-    { name: 'Salesforce', icon: '☁️' },
+    { name: 'Gmail', icon: '/icons/gmail.svg' },
+    { name: 'Google Sheets', icon: '/icons/sheets.svg' },
+    { name: 'Google Calendar', icon: '/icons/calendar.svg' },
+    { name: 'Stripe', icon: '/icons/stripe.svg' },
+    { name: 'Slack', icon: '/icons/slack.svg' },
+    { name: 'Notion', icon: '/icons/notion.svg' },
+    { name: 'Calendly', icon: '/icons/calendly.svg' },
+    { name: 'Airtable', icon: '/icons/airtable.svg' },
   ];
 
   return (
@@ -1100,10 +1079,10 @@ function IntegrationsSection() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
         >
           <h2 style={{ fontSize: 48, fontWeight: 800, marginBottom: 16, color: styles.textPrimary }}>
-            Connect Your Favorite Apps
+            Connect the Tools You Already Use
           </h2>
           <p style={{ fontSize: 20, color: styles.textSecondary }}>
-            50+ integrations and growing. One-click OAuth connection.
+            Core integrations ready. More coming soon.
           </p>
         </motion.div>
 
@@ -1137,7 +1116,11 @@ function IntegrationsSection() {
               animate={isInView ? { opacity: 1, scale: 1 } : {}}
               transition={{ duration: 0.5, delay: i * 0.05 }}
             >
-              <span style={{ fontSize: 28 }}>{integration.icon}</span>
+              <img 
+                src={integration.icon} 
+                alt={integration.name} 
+                style={{ width: 28, height: 28, objectFit: 'contain' }} 
+              />
               <span style={{ fontSize: 16, fontWeight: 600, color: styles.textPrimary }}>
                 {integration.name}
               </span>
@@ -1153,9 +1136,9 @@ function PricingSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const plans = [
-    { name: 'Starter', price: 'Free', description: 'For individuals getting started', features: ['5 active workflows', '1,000 executions/mo', 'Core integrations', 'Email support'] },
-    { name: 'Pro', price: '$29', description: 'For growing teams', features: ['Unlimited workflows', '50,000 executions/mo', 'All integrations', 'Priority support', 'Team collaboration'], popular: true },
-    { name: 'Enterprise', price: 'Custom', description: 'For large organizations', features: ['Everything in Pro', 'Unlimited executions', 'Custom integrations', 'Dedicated support', 'SLA guarantees', 'SSO & audit logs'] }
+    { name: 'Starter', price: '$49', description: 'For solo founders getting started', features: ['1 active workflow loop', '1,000 executions/mo', 'Core integrations', 'Email support'] },
+    { name: 'Growth', price: '$99', description: 'For growing businesses', features: ['3 active workflow loops', '10,000 executions/mo', 'All integrations', 'Priority support', 'Approval workflows'], popular: true },
+    { name: 'Pro', price: '$249', description: 'For scaling operations', features: ['Unlimited workflow loops', 'Unlimited executions', 'Premium connectors', 'Dedicated support', 'Custom integrations', 'Audit logs'] }
   ];
 
   return (
@@ -1167,8 +1150,8 @@ function PricingSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
         >
-          <h2 style={{ fontSize: 48, fontWeight: 800, marginBottom: 16, color: styles.textPrimary }}>Simple, Transparent Pricing</h2>
-          <p style={{ fontSize: 20, color: styles.textSecondary }}>Start free, scale as you grow</p>
+          <h2 style={{ fontSize: 48, fontWeight: 800, marginBottom: 16, color: styles.textPrimary }}>Simple, Flat Pricing</h2>
+          <p style={{ fontSize: 20, color: styles.textSecondary }}>Per business, not per seat. No complexity.</p>
         </motion.div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
           {plans.map((plan, i) => (
@@ -1275,10 +1258,10 @@ function CTASection() {
           transition={{ duration: 0.8 }}
         >
           <h2 style={{ fontSize: 48, fontWeight: 800, marginBottom: 16, color: styles.textPrimary }}>
-            Ready to Automate Your Business?
+            Ready to Stop Doing It Manually?
           </h2>
           <p style={{ fontSize: 20, color: styles.textSecondary, marginBottom: 40, maxWidth: 600, margin: '0 auto 40px' }}>
-            Join thousands of teams saving 40+ hours every month with Aivaro
+            Join founders saving 5+ hours every week with Aivaro
           </p>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
             <Link href="/signup" style={{ textDecoration: 'none' }}>
@@ -1320,7 +1303,7 @@ function Footer() {
               <Logo />
             </div>
             <p style={{ fontSize: 15, color: styles.textSecondary, lineHeight: 1.6, margin: 0 }}>
-              AI-powered workflow automation for modern businesses. Build, automate, and scale without code.
+              Your personalized AI co-founder. Describe what you need in plain English, and we execute it automatically.
             </p>
           </div>
 

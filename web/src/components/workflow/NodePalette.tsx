@@ -1,5 +1,7 @@
 'use client';
 
+import ServiceIcon from '@/components/ui/ServiceIcon';
+
 interface NodePaletteProps {
   onClose: () => void;
   onAddNode: (type: string, nodeType: string, label: string) => void;
@@ -10,28 +12,29 @@ const simpleNodes = [
   {
     category: 'Start',
     items: [
-      { type: 'trigger', nodeType: 'form_submit', label: 'Form Submitted', icon: '📝' },
-      { type: 'trigger', nodeType: 'schedule', label: 'On a Schedule', icon: '⏰' },
-      { type: 'trigger', nodeType: 'email_received', label: 'Email Received', icon: '📧' },
-      { type: 'trigger', nodeType: 'manual_trigger', label: 'Manual Start', icon: '👆' },
+      { type: 'trigger', nodeType: 'start_form', label: 'Form Submitted' },
+      { type: 'trigger', nodeType: 'start_schedule', label: 'On a Schedule' },
+      { type: 'trigger', nodeType: 'start_email', label: 'Email Received' },
+      { type: 'trigger', nodeType: 'start_manual', label: 'Manual Start' },
     ],
   },
   {
     category: 'Actions',
     items: [
-      { type: 'action', nodeType: 'send_email', label: 'Send Email', icon: '✉️' },
-      { type: 'action', nodeType: 'send_sms', label: 'Send SMS', icon: '📱' },
-      { type: 'action', nodeType: 'update_spreadsheet', label: 'Update Spreadsheet', icon: '📊' },
-      { type: 'action', nodeType: 'create_task', label: 'Create Task', icon: '✅' },
-      { type: 'action', nodeType: 'send_notification', label: 'Send Notification', icon: '🔔' },
-      { type: 'action', nodeType: 'wait', label: 'Wait', icon: '⏳' },
+      { type: 'action', nodeType: 'send_email', label: 'Send Email' },
+      { type: 'action', nodeType: 'ai_reply', label: 'AI Reply' },
+      { type: 'action', nodeType: 'ai_summarize', label: 'AI Summarize' },
+      { type: 'action', nodeType: 'append_row', label: 'Add to Spreadsheet' },
+      { type: 'action', nodeType: 'send_slack', label: 'Send Slack' },
+      { type: 'action', nodeType: 'send_notification', label: 'Send Notification' },
+      { type: 'action', nodeType: 'delay', label: 'Wait / Delay' },
     ],
   },
   {
     category: 'Logic',
     items: [
-      { type: 'condition', nodeType: 'if_else', label: 'If/Else', icon: '🔀' },
-      { type: 'approval', nodeType: 'approval', label: 'Wait for Approval', icon: '✋' },
+      { type: 'condition', nodeType: 'condition', label: 'If/Else' },
+      { type: 'approval', nodeType: 'approval', label: 'Wait for Approval' },
     ],
   },
 ];
@@ -41,11 +44,10 @@ const advancedNodes = [
   {
     category: 'Advanced',
     items: [
-      { type: 'trigger', nodeType: 'webhook', label: 'Webhook', icon: '🔗' },
-      { type: 'action', nodeType: 'http_request', label: 'HTTP Request', icon: '🌐' },
-      { type: 'action', nodeType: 'javascript', label: 'Run Code', icon: '💻' },
-      { type: 'action', nodeType: 'filter', label: 'Filter', icon: '🔍' },
-      { type: 'action', nodeType: 'transform', label: 'Transform Data', icon: '🔄' },
+      { type: 'trigger', nodeType: 'start_webhook', label: 'Webhook' },
+      { type: 'action', nodeType: 'http_request', label: 'HTTP Request' },
+      { type: 'action', nodeType: 'read_sheet', label: 'Read Spreadsheet' },
+      { type: 'action', nodeType: 'transform', label: 'Transform Data' },
     ],
   },
 ];
@@ -81,7 +83,7 @@ export default function NodePalette({
                   onClick={() => onAddNode(item.type, item.nodeType, item.label)}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-left transition"
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <ServiceIcon type={item.nodeType} size={20} />
                   <span className="text-sm">{item.label}</span>
                 </button>
               ))}

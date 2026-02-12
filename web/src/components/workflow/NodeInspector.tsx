@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Node } from '@xyflow/react';
 
 interface NodeInspectorProps {
@@ -13,47 +13,86 @@ interface NodeInspectorProps {
 
 // Field configurations for different node types
 const nodeConfigs: Record<string, { fields: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] }> = {
+  start_email: {
+    fields: [
+      { key: 'from', label: 'From Email', type: 'text', placeholder: 'sender@example.com' },
+      { key: 'subject', label: 'Subject Contains (optional)', type: 'text', placeholder: 'Leave empty for all emails' },
+    ],
+  },
+  start_schedule: {
+    fields: [
+      { key: 'time', label: 'Time', type: 'text', placeholder: '09:00' },
+      { key: 'frequency', label: 'Frequency', type: 'select', options: ['daily', 'weekly', 'monthly'] },
+    ],
+  },
+  start_form: {
+    fields: [
+      { key: 'form_name', label: 'Form Name', type: 'text', placeholder: 'Contact Form' },
+    ],
+  },
   send_email: {
     fields: [
-      { key: 'to', label: 'To', type: 'text', placeholder: 'email@example.com' },
-      { key: 'subject', label: 'Subject', type: 'text', placeholder: 'Email subject' },
-      { key: 'body', label: 'Message', type: 'textarea', placeholder: 'Write your email...' },
+      { key: 'to', label: 'To', type: 'text', placeholder: '{{from}} or email@example.com' },
+      { key: 'subject', label: 'Subject', type: 'text', placeholder: 'Re: {{subject}}' },
+      { key: 'body', label: 'Message', type: 'textarea', placeholder: 'Write your email or use {{ai_response}}...' },
     ],
   },
-  send_sms: {
+  ai_reply: {
     fields: [
-      { key: 'phone', label: 'Phone Number', type: 'text', placeholder: '+1234567890' },
-      { key: 'message', label: 'Message', type: 'textarea', placeholder: 'SMS message...' },
+      { key: 'tone', label: 'Tone', type: 'select', options: ['professional', 'friendly', 'casual', 'formal'] },
+      { key: 'context', label: 'Instructions', type: 'textarea', placeholder: 'Reply helpfully and offer to schedule a call...' },
     ],
   },
-  update_spreadsheet: {
+  ai_summarize: {
     fields: [
-      { key: 'spreadsheet', label: 'Spreadsheet', type: 'select', options: ['My Sales Log', 'Customer List', 'Inventory'] },
-      { key: 'action', label: 'Action', type: 'select', options: ['Add Row', 'Update Row', 'Delete Row'] },
+      { key: 'source', label: 'What to summarize', type: 'text', placeholder: 'the email content' },
+      { key: 'format', label: 'Format', type: 'select', options: ['paragraph', 'bullet_points'] },
     ],
   },
-  wait: {
+  append_row: {
+    fields: [
+      { key: 'spreadsheet', label: 'Spreadsheet Name', type: 'text', placeholder: 'My Sales Log' },
+      { key: 'sheet_name', label: 'Sheet Name', type: 'text', placeholder: 'Sheet1' },
+    ],
+  },
+  read_sheet: {
+    fields: [
+      { key: 'spreadsheet_id', label: 'Spreadsheet ID', type: 'text', placeholder: '1BxiMVs0XRA5nFMd... (from URL)' },
+      { key: 'range', label: 'Range', type: 'text', placeholder: 'Sheet1!A1:D10' },
+    ],
+  },
+  send_slack: {
+    fields: [
+      { key: 'channel', label: 'Channel', type: 'text', placeholder: '#general' },
+      { key: 'message', label: 'Message', type: 'textarea', placeholder: 'New email from {{from}}...' },
+    ],
+  },
+  send_notification: {
+    fields: [
+      { key: 'message', label: 'Notification Message', type: 'textarea', placeholder: 'You have a new message...' },
+    ],
+  },
+  delay: {
     fields: [
       { key: 'duration', label: 'Wait for', type: 'number', placeholder: '1' },
       { key: 'unit', label: 'Unit', type: 'select', options: ['minutes', 'hours', 'days'] },
     ],
   },
-  schedule: {
+  condition: {
     fields: [
-      { key: 'cron', label: 'Schedule', type: 'select', options: ['Every day at 9am', 'Every Monday', 'Every hour', 'Custom'] },
-    ],
-  },
-  if_else: {
-    fields: [
-      { key: 'field', label: 'Check if', type: 'text', placeholder: 'Field name' },
-      { key: 'operator', label: 'Is', type: 'select', options: ['equals', 'not equals', 'contains', 'greater than', 'less than'] },
-      { key: 'value', label: 'Value', type: 'text', placeholder: 'Value to compare' },
+      { key: 'condition', label: 'Condition', type: 'text', placeholder: 'if {{status}} == "approved"' },
     ],
   },
   approval: {
     fields: [
       { key: 'message', label: 'Approval Message', type: 'textarea', placeholder: 'Describe what needs approval...' },
       { key: 'timeout', label: 'Timeout (hours)', type: 'number', placeholder: '24' },
+    ],
+  },
+  http_request: {
+    fields: [
+      { key: 'url', label: 'URL', type: 'text', placeholder: 'https://api.example.com/endpoint' },
+      { key: 'method', label: 'Method', type: 'select', options: ['GET', 'POST', 'PUT', 'DELETE'] },
     ],
   },
 };
@@ -65,16 +104,35 @@ export default function NodeInspector({
   onClose,
   isAdvancedMode,
 }: NodeInspectorProps) {
-  const [config, setConfig] = useState(node.data.config || {});
-  const [label, setLabel] = useState(node.data.label || '');
+  const [config, setConfig] = useState<Record<string, any>>(node.data.config || {});
+  const [label, setLabel] = useState<string>(typeof node.data.label === 'string' ? node.data.label : '');
 
-  const nodeType = node.data.nodeType;
+  // Re-sync when node changes
+  useEffect(() => {
+    setConfig(node.data.config || {});
+    setLabel(typeof node.data.label === 'string' ? node.data.label : '');
+  }, [node.id, node.data.config, node.data.label]);
+
+  const nodeType = node.data.nodeType as string;
   const fieldConfig = nodeConfigs[nodeType] || { fields: [] };
 
   const handleFieldChange = (key: string, value: any) => {
-    const newConfig = { ...config, [key]: value };
-    setConfig(newConfig);
-    onUpdate(node.id, { config: newConfig });
+    // Only keep fields that are valid for this node type
+    const validFields = fieldConfig.fields.map((f: any) => f.key);
+    const cleanConfig: Record<string, any> = {};
+    
+    // Copy only valid fields from existing config
+    for (const fieldKey of validFields) {
+      if (config[fieldKey] !== undefined) {
+        cleanConfig[fieldKey] = config[fieldKey];
+      }
+    }
+    
+    // Update the changed field
+    cleanConfig[key] = value;
+    
+    setConfig(cleanConfig);
+    onUpdate(node.id, { config: cleanConfig });
   };
 
   const handleLabelChange = (newLabel: string) => {

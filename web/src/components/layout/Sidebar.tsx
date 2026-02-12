@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
@@ -22,8 +23,15 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
       <div className="p-6">
-        <Link href="/app" className="text-2xl font-bold text-primary-600">
-          Aivaro
+        <Link href="/app" className="flex items-center gap-2">
+          <Image 
+            src="/logo-dark.png" 
+            alt="Aivaro" 
+            width={140} 
+            height={49} 
+            className="h-10 w-auto"
+            priority
+          />
         </Link>
       </div>
 

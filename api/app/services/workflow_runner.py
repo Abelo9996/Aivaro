@@ -42,16 +42,28 @@ class WorkflowRunner:
     
     def run(self, trigger_data: Optional[dict] = None) -> Execution:
         """Execute the workflow"""
-        start_nodes = self.get_start_nodes()
-        
-        if not start_nodes:
+        try:
+            start_nodes = self.get_start_nodes()
+            
+            if not start_nodes:
+                print(f"[WorkflowRunner] No start nodes found in workflow {self.workflow.id}")
+                self.execution.status = "failed"
+                self.db.commit()
+                return self.execution
+            
+            # Start with the first start node
+            current_data = trigger_data or self._generate_mock_trigger_data()
+            print(f"[WorkflowRunner] Starting execution from node {start_nodes[0]['id']} with data: {list(current_data.keys())}")
+            self._execute_from_node(start_nodes[0]["id"], current_data)
+            
+            return self.execution
+        except Exception as e:
+            import traceback
+            error_msg = f"Workflow execution failed: {str(e)}\n{traceback.format_exc()}"
+            print(f"[WorkflowRunner] {error_msg}")
             self.execution.status = "failed"
             self.db.commit()
             return self.execution
-        
-        # Start with the first start node
-        current_data = trigger_data or self._generate_mock_trigger_data()
-        self._execute_from_node(start_nodes[0]["id"], current_data)
         
         return self.execution
     
@@ -59,6 +71,7 @@ class WorkflowRunner:
         """Execute starting from a specific node"""
         node = self.nodes.get(node_id)
         if not node:
+            print(f"[WorkflowRunner] Node not found: {node_id}")
             return
         
         # Create execution node record
@@ -85,14 +98,26 @@ class WorkflowRunner:
             self.db.commit()
             return
         
-        # Execute the node
-        result = execute_node(
-            node_type=node["type"],
-            parameters=node.get("parameters", {}),
-            input_data=input_data,
-            is_test=self.execution.is_test,
-            connections=self.connections
-        )
+        # Execute the node with error handling
+        try:
+            result = execute_node(
+                node_type=node["type"],
+                parameters=node.get("parameters", {}),
+                input_data=input_data,
+                is_test=self.execution.is_test,
+                connections=self.connections
+            )
+        except Exception as e:
+            import traceback
+            error_msg = f"Exception executing node {node_id} ({node['type']}): {str(e)}\n{traceback.format_exc()}"
+            print(f"[WorkflowRunner] {error_msg}")
+            exec_node.logs = error_msg
+            exec_node.status = "failed"
+            exec_node.completed_at = datetime.utcnow()
+            exec_node.duration_ms = int((exec_node.completed_at - exec_node.started_at).total_seconds() * 1000)
+            self.execution.status = "failed"
+            self.db.commit()
+            return
         
         exec_node.output_data = result.get("output", {})
         exec_node.logs = result.get("logs", "")
@@ -102,6 +127,7 @@ class WorkflowRunner:
         self.db.commit()
         
         if not result.get("success"):
+            exec_node.logs = exec_node.logs or f"Node returned failure: {result}"
             self.execution.status = "failed"
             self.db.commit()
             return
@@ -172,23 +198,21 @@ class WorkflowRunner:
         return result
     
     def _generate_mock_trigger_data(self) -> dict:
-        """Generate mock data for test runs"""
+        """Generate initial data for manual runs - uses actual user info when available"""
+        # Get the user's actual email from the workflow owner
+        user_email = None
+        user_name = None
+        if self.workflow and self.workflow.user:
+            user_email = self.workflow.user.email
+            user_name = self.workflow.user.full_name or self.workflow.user.email.split('@')[0]
+        
         return {
-            "name": "John Smith",
-            "email": "test@example.com",
-            "phone": "+1 555-0123",
-            "booking_date": "2024-02-15",
-            "booking_time": "10:00 AM",
-            "service": "Standard Consultation",
-            "amount": 150.00,
-            "customer_name": "John Smith",
-            "customer_email": "test@example.com",
-            "order_id": "ORD-12345",
-            "invoice_id": "INV-67890",
-            "deposit_amount": 50.00,
-            "payment_link": "https://pay.example.com/abc123",
+            "name": user_name or "User",
+            "email": user_email or "user@example.com",
+            "user_email": user_email or "user@example.com",
             "today": datetime.utcnow().strftime("%Y-%m-%d"),
             "date": datetime.utcnow().strftime("%Y-%m-%d"),
+            "timestamp": datetime.utcnow().isoformat(),
         }
     
     def resume_from_approval(self, approval_id: UUID):

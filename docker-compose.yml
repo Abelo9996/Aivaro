@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: aivaro-db
@@ -17,6 +18,51 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - aivaro-network
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: aivaro-api
+    environment:
+      - DATABASE_URL=postgresql://aivaro:aivaro_dev_password@postgres:5432/aivaro
+      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - API_URL=${API_URL:-http://localhost:8000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - aivaro-network
+    restart: unless-stopped
+
+  # Next.js Frontend
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: aivaro-web
+    environment:
+      - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - aivaro-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  aivaro-network:
+    driver: bridge

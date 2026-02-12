@@ -1,12 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    return [
+  // Enable static exports for Vercel
+  output: 'standalone',
+  
+  // Image optimization
+  images: {
+    remotePatterns: [
       {
-        source: '/api/:path*',
-        destination: 'http://localhost:12000/api/:path*',
+        protocol: 'https',
+        hostname: '**',
       },
-    ]
+    ],
+  },
+  
+  // Environment variables available at build time
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
 }
 

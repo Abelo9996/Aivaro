@@ -1,6 +1,7 @@
 'use client';
 
 import { Handle, Position } from '@xyflow/react';
+import ServiceIcon from '@/components/ui/ServiceIcon';
 
 interface ActionNodeProps {
   data: {
@@ -11,22 +12,7 @@ interface ActionNodeProps {
   selected?: boolean;
 }
 
-const actionIcons: Record<string, string> = {
-  send_email: '✉️',
-  send_sms: '📱',
-  update_spreadsheet: '📊',
-  create_task: '✅',
-  send_notification: '🔔',
-  wait: '⏳',
-  http_request: '🌐',
-  javascript: '💻',
-  filter: '🔍',
-  transform: '🔄',
-};
-
 export default function ActionNode({ data, selected }: ActionNodeProps) {
-  const icon = actionIcons[data.nodeType] || '⚡';
-
   return (
     <div
       className={`bg-white border-2 rounded-xl px-4 py-3 min-w-[180px] shadow-sm ${
@@ -39,7 +25,7 @@ export default function ActionNode({ data, selected }: ActionNodeProps) {
         className="w-3 h-3 !bg-gray-400 border-2 border-white"
       />
       <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
+        <ServiceIcon type={data.nodeType} size={24} />
         <div>
           <div className="text-xs text-gray-400 font-medium uppercase tracking-wider">
             Action

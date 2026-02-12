@@ -1,6 +1,7 @@
 'use client';
 
 import { Handle, Position } from '@xyflow/react';
+import ServiceIcon from '@/components/ui/ServiceIcon';
 
 interface TriggerNodeProps {
   data: {
@@ -11,17 +12,7 @@ interface TriggerNodeProps {
   selected?: boolean;
 }
 
-const triggerIcons: Record<string, string> = {
-  form_submit: '📝',
-  schedule: '⏰',
-  email_received: '📧',
-  manual_trigger: '👆',
-  webhook: '🔗',
-};
-
 export default function TriggerNode({ data, selected }: TriggerNodeProps) {
-  const icon = triggerIcons[data.nodeType] || '⚡';
-
   return (
     <div
       className={`bg-gradient-to-br from-green-50 to-emerald-50 border-2 rounded-xl px-4 py-3 min-w-[180px] shadow-sm ${
@@ -29,7 +20,7 @@ export default function TriggerNode({ data, selected }: TriggerNodeProps) {
       }`}
     >
       <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
+        <ServiceIcon type={data.nodeType} size={24} />
         <div>
           <div className="text-xs text-green-600 font-medium uppercase tracking-wider">
             Start

@@ -11,7 +11,16 @@ __pycache__/
 venv/
 .venv/
 env/
+
+# Environment files (keep examples)
 .env
+.env.local
+.env.*.local
+api/.env
+web/.env.local
+!.env.example
+!api/.env.example
+!web/.env.example
 
 # Next.js
 .next/
@@ -40,3 +49,6 @@ npm-debug.log*
 # Build
 dist/
 build/
+
+# Vercel
+.vercel

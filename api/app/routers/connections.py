@@ -20,10 +20,11 @@ router = APIRouter()
 # In-memory state storage (use Redis in production)
 oauth_states = {}
 
-# Frontend URL for redirects - use environment variables for flexibility
-import os
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://work-2-rvvbmdvsfidltqxj.prod-runtime.all-hands.dev")
-API_URL = os.getenv("API_URL", "https://work-1-rvvbmdvsfidltqxj.prod-runtime.all-hands.dev")
+# Frontend URL for redirects - use settings for flexibility
+from app.config import get_settings
+settings = get_settings()
+FRONTEND_URL = settings.frontend_url
+API_URL = settings.api_url
 
 
 @router.get("/", response_model=List[ConnectionResponse])

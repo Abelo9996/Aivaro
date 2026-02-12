@@ -33,19 +33,24 @@ const nodeTypes = {
   approval: ApprovalNode,
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FlowNode = Node<any>;
+
 export default function WorkflowEditorPage() {
   const params = useParams();
   const router = useRouter();
   const { isAdvancedMode } = useModeStore();
   
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [showPalette, setShowPalette] = useState(false);
   const [workflowName, setWorkflowName] = useState('New Workflow');
+  const [isActive, setIsActive] = useState(false);
+  const [activating, setActivating] = useState(false);
 
   const workflowId = params.id as string;
   const isNew = workflowId === 'new';
@@ -100,6 +105,7 @@ export default function WorkflowEditorPage() {
           }
           
           setWorkflowName(workflow.name || 'Untitled Workflow');
+          setIsActive(workflow.is_active || false);
           
           // Helper function to map node types
           const mapNodeType = (nodeType: string): string => {
@@ -232,12 +238,38 @@ export default function WorkflowEditorPage() {
     }
   };
 
+  const handleToggleActive = async () => {
+    if (isNew) return;
+    
+    setActivating(true);
+    try {
+      await api.updateWorkflow(workflowId, { is_active: !isActive });
+      setIsActive(!isActive);
+    } catch (err) {
+      console.error('Failed to toggle workflow status:', err);
+    } finally {
+      setActivating(false);
+    }
+  };
+
   const handleTestRun = async () => {
     try {
       const execution = await api.runWorkflow(workflowId, true); // isTest = true
       router.push(`/app/executions/${execution.id}`);
     } catch (err) {
       console.error('Failed to run test:', err);
+    }
+  };
+
+  const handleRealRun = async () => {
+    if (!confirm('This will run the workflow for real. Emails will be sent, sheets will be modified, etc. Continue?')) {
+      return;
+    }
+    try {
+      const execution = await api.runWorkflow(workflowId, false); // isTest = false - REAL RUN
+      router.push(`/app/executions/${execution.id}`);
+    } catch (err) {
+      console.error('Failed to run workflow:', err);
     }
   };
 
@@ -277,12 +309,31 @@ export default function WorkflowEditorPage() {
         </div>
         <div className="flex items-center gap-3">
           {!isNew && (
-            <button
-              onClick={handleTestRun}
-              className="px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100"
-            >
-              🧪 Test Run
-            </button>
+            <>
+              <button
+                onClick={handleToggleActive}
+                disabled={activating}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isActive 
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {activating ? '...' : isActive ? '✓ Active' : '○ Inactive'}
+              </button>
+              <button
+                onClick={handleTestRun}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                🧪 Test
+              </button>
+              <button
+                onClick={handleRealRun}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+              >
+                ▶ Run Now
+              </button>
+            </>
           )}
           <button
             onClick={handleSave}

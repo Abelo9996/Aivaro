@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import ServiceIcon from '@/components/ui/ServiceIcon';
 
 interface GeneratedWorkflow {
   workflowName: string;
@@ -61,23 +62,6 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
     setStep('input');
   };
 
-  const getNodeIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      start_manual: '▶️',
-      start_form: '📝',
-      start_schedule: '⏰',
-      send_email: '📧',
-      append_row: '📊',
-      delay: '⏳',
-      send_notification: '🔔',
-      send_slack: '💬',
-      http_request: '🌐',
-      condition: '🔀',
-      ai_summarize: '🤖',
-    };
-    return icons[type] || '⚡';
-  };
-
   if (step === 'preview' && generatedWorkflow) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -104,8 +88,8 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
                   key={node.id} 
                   className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                 >
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-lg">
-                    {getNodeIcon(node.type)}
+                  <div className="flex-shrink-0 w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+                    <ServiceIcon type={node.type} size={18} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 truncate">{node.label}</div>

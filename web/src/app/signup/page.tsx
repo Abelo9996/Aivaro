@@ -160,26 +160,11 @@ export default function SignupPage() {
             alignItems: 'center',
             gap: '12px',
           }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Workflow size={28} color="white" />
-            </div>
-            <span style={{
-              fontSize: '28px',
-              fontWeight: 700,
-              background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Aivaro
-            </span>
+            <img 
+              src="/logo.png" 
+              alt="Aivaro" 
+              style={{ height: 48, width: 'auto' }}
+            />
           </div>
         </div>
 

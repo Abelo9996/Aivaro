@@ -10,3 +10,5 @@ python-multipart>=0.0.6
 openai>=1.10.0
 httpx>=0.26.0
 aiosqlite>=0.19.0
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0

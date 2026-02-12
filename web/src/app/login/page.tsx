@@ -23,28 +23,11 @@ const colors = {
 function Logo() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-      <div style={{
-        width: 40,
-        height: 40,
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-        borderRadius: 10,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
-      }}>
-        <Workflow size={24} color="white" />
-      </div>
-      <span style={{ 
-        fontSize: 28, 
-        fontWeight: 800, 
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        letterSpacing: '-0.5px'
-      }}>
-        Aivaro
-      </span>
+      <img 
+        src="/logo.png" 
+        alt="Aivaro" 
+        style={{ height: 48, width: 'auto' }}
+      />
     </div>
   );
 }

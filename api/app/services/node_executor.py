@@ -4,6 +4,7 @@ Node Executor - Executes individual workflow nodes using real integrations.
 from typing import Any, Optional
 from datetime import datetime
 import asyncio
+import json
 
 
 class NodeExecutor:
@@ -63,7 +64,10 @@ class NodeExecutor:
             "start_form": self._execute_start,
             "start_webhook": self._execute_start,
             "start_schedule": self._execute_start,
+            "start_email": self._execute_start,
             "send_email": self._execute_send_email,
+            "ai_reply": self._execute_ai_reply,
+            "ai_summarize": self._execute_ai_summarize,
             "append_row": self._execute_append_row,
             "read_sheet": self._execute_read_sheet,
             "delay": self._execute_delay,
@@ -145,6 +149,138 @@ class NodeExecutor:
             "logs": logs
         }
     
+    async def _execute_ai_reply(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Generate an AI-powered reply to an email."""
+        from app.config import get_settings
+        settings = get_settings()
+        
+        tone = params.get("tone", "professional")
+        context = params.get("context", "Reply helpfully to this email")
+        
+        # Get email content from input data
+        email_from = input_data.get("from", "Unknown sender")
+        email_subject = input_data.get("subject", "No subject")
+        email_snippet = input_data.get("snippet", "")
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Generating AI reply\n"
+        logs += f"  Original email from: {email_from}\n"
+        logs += f"  Subject: {email_subject}\n"
+        logs += f"  Tone: {tone}\n"
+        
+        if is_test:
+            ai_response = f"[TEST MODE] This would be an AI-generated {tone} reply to the email about '{email_subject}'."
+            logs += "  AI response NOT generated (test mode)\n"
+            return {
+                "success": True,
+                "output": {**input_data, "ai_response": ai_response},
+                "logs": logs
+            }
+        
+        # Generate AI response using OpenAI
+        if settings.openai_api_key:
+            try:
+                import openai
+                client = openai.OpenAI(api_key=settings.openai_api_key)
+                
+                system_prompt = f"""You are an email assistant. Generate a {tone} reply to the following email.
+Keep the response concise, helpful, and appropriate for the context: {context}
+Do not include a subject line, just the email body.
+Sign off appropriately but don't include the sender's name (it will be added automatically)."""
+                
+                user_prompt = f"""Email from: {email_from}
+Subject: {email_subject}
+Content: {email_snippet}
+
+Generate a {tone} reply:"""
+                
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=500
+                )
+                
+                ai_response = response.choices[0].message.content.strip()
+                logs += f"  ✅ AI response generated ({len(ai_response)} chars)\n"
+                
+                return {
+                    "success": True,
+                    "output": {**input_data, "ai_response": ai_response},
+                    "logs": logs
+                }
+                
+            except Exception as e:
+                logs += f"  ❌ AI generation failed: {str(e)}\n"
+                ai_response = f"Thank you for your email regarding '{email_subject}'. I'll get back to you shortly."
+        else:
+            logs += "  ⚠️ OpenAI not configured - using default response\n"
+            ai_response = f"Thank you for your email regarding '{email_subject}'. I've received your message and will respond soon."
+        
+        return {
+            "success": True,
+            "output": {**input_data, "ai_response": ai_response},
+            "logs": logs
+        }
+    
+    async def _execute_ai_summarize(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Use AI to summarize or analyze data."""
+        from app.config import get_settings
+        settings = get_settings()
+        
+        source = params.get("source", "the provided data")
+        format_type = params.get("format", "paragraph")
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Generating AI summary\n"
+        logs += f"  Source: {source}\n"
+        logs += f"  Format: {format_type}\n"
+        
+        if is_test:
+            summary = f"[TEST MODE] This would be an AI-generated summary of {source}."
+            return {
+                "success": True,
+                "output": {**input_data, "summary": summary},
+                "logs": logs
+            }
+        
+        if settings.openai_api_key:
+            try:
+                import openai
+                client = openai.OpenAI(api_key=settings.openai_api_key)
+                
+                format_instruction = "bullet points" if format_type == "bullet_points" else "a concise paragraph"
+                
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": f"Summarize the following data in {format_instruction}. Be concise and highlight key points."},
+                        {"role": "user", "content": f"Data to summarize:\n{json.dumps(input_data, indent=2, default=str)}"}
+                    ],
+                    temperature=0.5,
+                    max_tokens=500
+                )
+                
+                summary = response.choices[0].message.content.strip()
+                logs += f"  ✅ Summary generated\n"
+                
+                return {
+                    "success": True,
+                    "output": {**input_data, "summary": summary},
+                    "logs": logs
+                }
+                
+            except Exception as e:
+                logs += f"  ❌ AI summarization failed: {str(e)}\n"
+        
+        logs += "  ⚠️ Using fallback summary\n"
+        return {
+            "success": True,
+            "output": {**input_data, "summary": f"Summary of {source}: Data processed successfully."},
+            "logs": logs
+        }
+
     async def _execute_append_row(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Append row to Google Sheets."""
         spreadsheet = params.get("spreadsheet", "Untitled Spreadsheet")
@@ -205,27 +341,69 @@ class NodeExecutor:
     async def _execute_read_sheet(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Read data from Google Sheets."""
         spreadsheet_id = params.get("spreadsheet_id")
-        range_name = params.get("range", "Sheet1")
+        spreadsheet_name = params.get("spreadsheet") or params.get("spreadsheet_name")
+        range_name = params.get("range", "Sheet1!A1:Z100")
         
         logs = f"[{datetime.utcnow().isoformat()}] Reading from spreadsheet\n"
+        logs += f"  Spreadsheet ID/Name: {spreadsheet_id or spreadsheet_name}\n"
         logs += f"  Range: {range_name}\n"
         
-        google = await self.get_google_service()
-        if google and spreadsheet_id:
-            try:
-                values = await google.get_sheet_values(spreadsheet_id, range_name)
-                logs += f"  ✅ Read {len(values)} rows\n"
-                return {
-                    "success": True,
-                    "output": {**input_data, "sheet_data": values, "row_count": len(values)},
-                    "logs": logs
-                }
-            except Exception as e:
-                logs += f"  ❌ Failed: {str(e)}\n"
-                return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
+        if is_test:
+            logs += "  Sheet NOT read (test mode) - returning mock data\n"
+            mock_data = [
+                ["Header1", "Header2", "Header3"],
+                ["Row1Val1", "Row1Val2", "Row1Val3"],
+                ["Row2Val1", "Row2Val2", "Row2Val3"],
+            ]
+            return {
+                "success": True,
+                "output": {**input_data, "sheet_data": mock_data, "row_count": len(mock_data)},
+                "logs": logs
+            }
         
-        logs += "  ⚠️ Google Sheets not connected\n"
-        return {"success": False, "output": input_data, "logs": logs, "error": "Google Sheets not connected"}
+        google = await self.get_google_service()
+        if not google:
+            logs += "  ❌ Google Sheets not connected - please connect Google in Settings\n"
+            return {"success": False, "output": input_data, "logs": logs, "error": "Google Sheets not connected"}
+        
+        # If spreadsheet_id looks like a name (not a long alphanumeric string), try to find it
+        if spreadsheet_id and len(spreadsheet_id) < 30 and ' ' in spreadsheet_id:
+            # This is likely a name, not an ID - try to find it
+            logs += f"  Looking up spreadsheet by name: '{spreadsheet_id}'\n"
+            try:
+                found_id = await google.find_spreadsheet_by_name(spreadsheet_id)
+                if found_id:
+                    logs += f"  Found spreadsheet ID: {found_id}\n"
+                    spreadsheet_id = found_id
+                else:
+                    logs += f"  ❌ Could not find spreadsheet named '{spreadsheet_id}'. Please provide the actual Google Sheets ID from the URL.\n"
+                    return {"success": False, "output": input_data, "logs": logs, "error": f"Spreadsheet '{spreadsheet_id}' not found. Use the spreadsheet ID from the URL instead."}
+            except Exception as e:
+                logs += f"  ❌ Error looking up spreadsheet: {str(e)}\n"
+        
+        if not spreadsheet_id:
+            logs += "  ❌ No spreadsheet ID provided\n"
+            return {"success": False, "output": input_data, "logs": logs, "error": "No spreadsheet ID provided"}
+        
+        try:
+            values = await google.get_sheet_values(spreadsheet_id, range_name)
+            logs += f"  ✅ Read {len(values)} rows\n"
+            return {
+                "success": True,
+                "output": {**input_data, "sheet_data": values, "row_count": len(values)},
+                "logs": logs
+            }
+        except Exception as e:
+            error_msg = str(e)
+            logs += f"  ❌ Failed: {error_msg}\n"
+            
+            # Add helpful tips
+            if "404" in error_msg or "not found" in error_msg.lower():
+                logs += "  💡 Tip: Make sure to use the actual Spreadsheet ID from the URL (the long string after /d/)\n"
+                logs += "     Example URL: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA.../edit\n"
+                logs += "     The ID would be: 1BxiMVs0XRA...\n"
+            
+            return {"success": False, "output": input_data, "logs": logs, "error": error_msg}
     
     async def _execute_send_slack(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Send message to Slack."""
@@ -440,7 +618,32 @@ def execute_node(
 ) -> dict[str, Any]:
     """Execute a single node (sync wrapper for backward compatibility)."""
     executor = NodeExecutor(connections)
+    
+    # Check if we're already in an async context
+    try:
+        loop = asyncio.get_running_loop()
+        # We're in an async context - use nest_asyncio or run in thread
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            future = pool.submit(_run_executor_sync, executor, node_type, parameters, input_data, is_test)
+            return future.result()
+    except RuntimeError:
+        # No running loop - create a new one
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(
+                executor.execute(node_type, parameters, input_data, is_test)
+            )
+            return result
+        finally:
+            loop.run_until_complete(executor.close())
+            loop.close()
+
+
+def _run_executor_sync(executor, node_type, parameters, input_data, is_test):
+    """Run executor in a new event loop (for use in thread pool)."""
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         result = loop.run_until_complete(
             executor.execute(node_type, parameters, input_data, is_test)

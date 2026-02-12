@@ -115,3 +115,24 @@ async def delete_workflow(
     db.commit()
     
     return {"message": "Workflow deleted"}
+
+
+@router.post("/poll-email-triggers")
+async def poll_email_triggers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Poll Gmail for new emails and trigger matching workflows.
+    Call this endpoint periodically (e.g., every minute) to check for new emails.
+    """
+    from app.services.email_trigger_service import EmailTriggerService
+    
+    service = EmailTriggerService()
+    results = await service.poll_and_trigger(db, str(current_user.id))
+    
+    return {
+        "triggered": len(results),
+        "executions": results
+    }
+

@@ -57,6 +57,34 @@ class GoogleService:
         else:
             raise Exception(f"Failed to list spreadsheets: {response.text}")
     
+    async def find_spreadsheet_by_name(self, name: str) -> Optional[str]:
+        """Find a spreadsheet by name and return its ID."""
+        client = await self._get_client()
+        # Search for spreadsheet by name
+        response = await client.get(
+            "https://www.googleapis.com/drive/v3/files",
+            params={
+                "q": f"mimeType='application/vnd.google-apps.spreadsheet' and name contains '{name}'",
+                "fields": "files(id,name)",
+                "pageSize": 10,
+            },
+            headers=self.headers,
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            files = data.get("files", [])
+            # Exact match first
+            for f in files:
+                if f["name"].lower() == name.lower():
+                    return f["id"]
+            # Partial match
+            if files:
+                return files[0]["id"]
+            return None
+        else:
+            raise Exception(f"Failed to search spreadsheets: {response.text}")
+
     async def get_spreadsheet(self, spreadsheet_id: str) -> dict:
         """Get spreadsheet metadata."""
         client = await self._get_client()

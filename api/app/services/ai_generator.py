@@ -32,35 +32,43 @@ Generate a workflow based on the user's description. Return a JSON object with:
 - nodes: Array of nodes with {id, type, label, position: {x, y}, parameters, requiresApproval}
 - edges: Array of edges with {id, source, target}
 
-Available node types:
+Available TRIGGER node types (must be first node):
 - start_manual: Manual start trigger (when user clicks "Run")
 - start_form: Form submission trigger (when someone fills a form)
-- start_schedule: Scheduled trigger (runs on a schedule)
-- send_email: Send an email (requiresApproval: true for external emails)
-- append_row: Add row to Google Sheets or spreadsheet
-- delay: Wait for a duration (use for follow-up sequences)
-- send_notification: Send a push/Slack notification
-- send_slack: Send a Slack message
-- http_request: Make an API call
-- condition: Branch based on conditions
-- ai_summarize: Use AI to summarize or analyze data
+- start_schedule: Scheduled trigger (runs on a schedule). Parameters: {time: "09:00", days: ["monday", "wednesday"]}
+- start_email: Email received trigger (when an email arrives). Parameters: {from: "email@example.com"} - Use this when user wants to respond to incoming emails!
 
-Guidelines:
-- Always start with a start node (start_manual, start_form, or start_schedule)
-- Create 3-8 practical steps based on complexity
-- No cycles in the workflow
-- Position nodes vertically, starting at y=50, spaced 150px apart, x=250
-- Mark email sending to external recipients as requiresApproval: true
-- Use friendly, action-oriented labels like "Send booking confirmation" not "Email Node"
-- Include realistic parameters with template variables like {{name}}, {{email}}, {{date}}
-- For delays, use realistic durations (hours or days for follow-ups)
-- Think about what a small business owner would actually need
+Available ACTION node types:
+- send_email: Send an email. Parameters: {to: "{{from}}", subject: "Re: {{subject}}", body: "..."}
+- ai_reply: Generate an AI response to an email. Parameters: {context: "...", tone: "professional/friendly/casual"}
+- append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", columns: [{name: "...", value: "{{...}}"}]}
+- read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "...", range: "A1:D10"}
+- delay: Wait for a duration. Parameters: {duration: 2, unit: "hours/days"}
+- send_notification: Send a notification. Parameters: {message: "..."}
+- send_slack: Send a Slack message. Parameters: {channel: "#general", message: "..."}
+- http_request: Make an API call. Parameters: {url: "...", method: "GET/POST", body: {...}}
+- condition: Branch based on conditions. Parameters: {condition: "if {{status}} == 'approved'"}
+- ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
 
-Example parameters:
-- send_email: {to: "{{email}}", subject: "...", body: "Hi {{name}},\\n\\n..."}
-- append_row: {spreadsheet: "...", columns: [{name: "...", value: "{{...}}"}]}
-- delay: {duration: 2, unit: "days"}
-- send_notification: {message: "..."}
+IMPORTANT RULES:
+1. For "when I receive an email from X" → use start_email with {from: "X"}
+2. For auto-reply workflows → use ai_reply node to generate smart responses
+3. Available template variables in email triggers: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{message_id}}
+4. Always connect nodes with edges
+5. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
+6. Set requiresApproval: false for automated workflows, true only for sensitive actions
+
+Example for "auto-reply to emails from john@example.com":
+{
+  "workflowName": "Auto Reply to John",
+  "summary": "When an email arrives from john@example.com, Aivaro will generate and send an AI-powered reply.",
+  "nodes": [
+    {"id": "1", "type": "start_email", "label": "Email from john@example.com", "position": {"x": 250, "y": 50}, "parameters": {"from": "john@example.com"}, "requiresApproval": false},
+    {"id": "2", "type": "ai_reply", "label": "Generate AI response", "position": {"x": 250, "y": 200}, "parameters": {"tone": "professional", "context": "Reply helpfully to the email"}, "requiresApproval": false},
+    {"id": "3", "type": "send_email", "label": "Send auto-reply", "position": {"x": 250, "y": 350}, "parameters": {"to": "{{from}}", "subject": "Re: {{subject}}", "body": "{{ai_response}}"}, "requiresApproval": false}
+  ],
+  "edges": [{"id": "e1", "source": "1", "target": "2"}, {"id": "e2", "source": "2", "target": "3"}]
+}
 
 Return ONLY valid JSON, no markdown code blocks or explanation."""
 

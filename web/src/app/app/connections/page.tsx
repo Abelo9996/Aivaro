@@ -4,17 +4,18 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import ServiceIcon from '@/components/ui/ServiceIcon';
 import type { Connection } from '@/types';
 
 const availableConnections = [
-  { type: 'google', name: 'Google', icon: '📧', description: 'Gmail, Google Sheets, Calendar' },
-  { type: 'stripe', name: 'Stripe', icon: '💳', description: 'Payments and invoicing' },
-  { type: 'slack', name: 'Slack', icon: '💬', description: 'Team messaging' },
-  { type: 'notion', name: 'Notion', icon: '📝', description: 'Notes and databases' },
-  { type: 'calendly', name: 'Calendly', icon: '📅', description: 'Scheduling and bookings' },
-  { type: 'airtable', name: 'Airtable', icon: '📊', description: 'Spreadsheets and databases' },
-  { type: 'mailchimp', name: 'Mailchimp', icon: '✉️', description: 'Email marketing' },
-  { type: 'twilio', name: 'Twilio', icon: '📱', description: 'SMS and voice' },
+  { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar' },
+  { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing' },
+  { type: 'slack', name: 'Slack', description: 'Team messaging' },
+  { type: 'notion', name: 'Notion', description: 'Notes and databases' },
+  { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings' },
+  { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases' },
+  { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing' },
+  { type: 'twilio', name: 'Twilio', description: 'SMS and voice' },
 ];
 
 export default function ConnectionsPage() {
@@ -142,7 +143,9 @@ export default function ConnectionsPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="text-3xl">{service.icon}</div>
+                  <div className="w-12 h-12 flex items-center justify-center">
+                    <ServiceIcon type={service.type} size={40} />
+                  </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{service.name}</h3>

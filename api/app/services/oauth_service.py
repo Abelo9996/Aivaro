@@ -2,16 +2,18 @@
 OAuth Service for handling third-party integrations.
 Supports Google, Slack, and other OAuth2 providers.
 """
-import os
 import httpx
 from typing import Optional
 from urllib.parse import urlencode
+from app.config import get_settings
 
-# OAuth Configuration - Set these environment variables
+settings = get_settings()
+
+# OAuth Configuration - Using settings from .env
 OAUTH_CONFIGS = {
     "google": {
-        "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
-        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+        "client_id": settings.google_client_id or "",
+        "client_secret": settings.google_client_secret or "",
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
         "userinfo_url": "https://www.googleapis.com/oauth2/v2/userinfo",
@@ -23,25 +25,26 @@ OAUTH_CONFIGS = {
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.readonly",  # For searching/listing spreadsheets
         ],
     },
     "slack": {
-        "client_id": os.getenv("SLACK_CLIENT_ID", ""),
-        "client_secret": os.getenv("SLACK_CLIENT_SECRET", ""),
+        "client_id": settings.slack_client_id or "",
+        "client_secret": settings.slack_client_secret or "",
         "auth_url": "https://slack.com/oauth/v2/authorize",
         "token_url": "https://slack.com/api/oauth.v2.access",
         "scopes": ["channels:read", "chat:write", "users:read"],
     },
     "notion": {
-        "client_id": os.getenv("NOTION_CLIENT_ID", ""),
-        "client_secret": os.getenv("NOTION_CLIENT_SECRET", ""),
+        "client_id": settings.notion_client_id or "",
+        "client_secret": settings.notion_client_secret or "",
         "auth_url": "https://api.notion.com/v1/oauth/authorize",
         "token_url": "https://api.notion.com/v1/oauth/token",
         "scopes": [],
     },
     "stripe": {
-        "client_id": os.getenv("STRIPE_CLIENT_ID", ""),
-        "client_secret": os.getenv("STRIPE_CLIENT_SECRET", ""),
+        "client_id": settings.stripe_client_id or "",
+        "client_secret": settings.stripe_client_secret or "",
         "auth_url": "https://connect.stripe.com/oauth/authorize",
         "token_url": "https://connect.stripe.com/oauth/token",
         "scopes": ["read_write"],

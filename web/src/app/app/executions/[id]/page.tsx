@@ -23,9 +23,18 @@ export default function ExecutionDetailPage() {
   const loadExecution = async (id: string) => {
     try {
       const data = await api.getExecution(id);
-      setExecution(data);
+      // Map API response to frontend types
+      const execution = {
+        ...data,
+        node_executions: (data.execution_nodes || data.node_executions || []).map((n: any) => ({
+          ...n,
+          output: n.output_data || n.output,
+          input: n.input_data || n.input,
+        })),
+      };
+      setExecution(execution);
       // Auto-show chat if execution is completed with output
-      if (data.status === 'completed' && data.node_executions?.some(n => n.output)) {
+      if (execution.status === 'completed' && execution.node_executions?.some((n: any) => n.output)) {
         setShowChat(true);
       }
     } catch (err) {
@@ -92,14 +101,26 @@ export default function ExecutionDetailPage() {
             <h1 className="text-xl font-bold">Execution Details</h1>
             <p className="text-sm text-gray-500">ID: {execution.id}</p>
           </div>
-          <span
-            className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(
-              execution.status
-            )}`}
-          >
-            {execution.status.replace('_', ' ')}
-          </span>
+          <div className="flex items-center gap-3">
+            {execution.is_test && (
+              <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
+                🧪 Test Run
+              </span>
+            )}
+            <span
+              className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(
+                execution.status
+              )}`}
+            >
+              {execution.status.replace('_', ' ')}
+            </span>
+          </div>
         </div>
+        {execution.is_test && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+            ⚠️ <strong>Test Mode:</strong> No real actions were performed. Emails were not sent, sheets were not accessed, and AI responses were simulated.
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <div className="text-gray-500">Started</div>
@@ -111,10 +132,6 @@ export default function ExecutionDetailPage() {
               <div className="font-medium">{formatDate(execution.completed_at)}</div>
             </div>
           )}
-          <div>
-            <div className="text-gray-500">Test Run</div>
-            <div className="font-medium">{execution.is_test ? 'Yes' : 'No'}</div>
-          </div>
         </div>
       </div>
 
@@ -140,7 +157,10 @@ export default function ExecutionDetailPage() {
                   />
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-medium">{node.node_id}</div>
+                      <div>
+                        <div className="font-medium">{node.node_label || node.node_type}</div>
+                        <div className="text-xs text-gray-400">{node.node_type}</div>
+                      </div>
                       <span
                         className={`px-2 py-0.5 text-xs rounded ${getStatusColor(
                           node.status
@@ -152,21 +172,33 @@ export default function ExecutionDetailPage() {
                     {node.started_at && (
                       <div className="text-xs text-gray-500 mb-2">
                         {formatDate(node.started_at)}
+                        {node.duration_ms && ` • ${node.duration_ms}ms`}
                       </div>
                     )}
-                    {node.output && (
+                    
+                    {/* Logs - Always show if present */}
+                    {node.logs && (
+                      <div className="mt-3 p-3 bg-gray-800 text-gray-100 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto">
+                        {node.logs}
+                      </div>
+                    )}
+                    
+                    {/* Output - Collapsible */}
+                    {node.output && Object.keys(node.output).length > 0 && (
                       <details className="mt-2">
                         <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
-                          View Output
+                          📦 View Output Data
                         </summary>
-                        <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto">
+                        <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto max-h-64 overflow-y-auto">
                           {JSON.stringify(node.output, null, 2)}
                         </pre>
                       </details>
                     )}
+                    
+                    {/* Error */}
                     {node.error && (
                       <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm">
-                        {node.error}
+                        ❌ {node.error}
                       </div>
                     )}
                   </div>

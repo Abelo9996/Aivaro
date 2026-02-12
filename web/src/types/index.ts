@@ -91,6 +91,7 @@ export interface Template {
   id: string;
   name: string;
   description?: string;
+  summary?: string;
   icon?: string;
   category: string;
   business_types?: string[];
