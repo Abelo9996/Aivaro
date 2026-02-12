@@ -24,6 +24,7 @@ const simpleNodes = [
       { type: 'action', nodeType: 'send_email', label: 'Send Email' },
       { type: 'action', nodeType: 'ai_reply', label: 'AI Reply' },
       { type: 'action', nodeType: 'ai_summarize', label: 'AI Summarize' },
+      { type: 'action', nodeType: 'ai_extract', label: 'AI Extract Data' },
       { type: 'action', nodeType: 'append_row', label: 'Add to Spreadsheet' },
       { type: 'action', nodeType: 'send_slack', label: 'Send Slack' },
       { type: 'action', nodeType: 'send_notification', label: 'Send Notification' },

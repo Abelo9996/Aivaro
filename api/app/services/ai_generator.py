@@ -36,7 +36,9 @@ Available TRIGGER node types (must be first node):
 - start_manual: Manual start trigger (when user clicks "Run")
 - start_form: Form submission trigger (when someone fills a form)
 - start_schedule: Scheduled trigger (runs on a schedule). Parameters: {time: "09:00", frequency: "daily/weekly/monthly"}
-- start_email: Email received trigger (when an email arrives). Parameters: {from: "email@example.com"}
+- start_email: Email received trigger - monitors the user's CONNECTED Gmail account for new emails matching criteria. Use this when user says "when I receive an email", "when an email comes in", "when I get an email", etc. Parameters: {subject: "keyword to match", from: "optional@sender.com"}
+
+IMPORTANT: When the user mentions receiving emails, getting emails, or email triggers, they mean their connected Gmail account. The start_email trigger monitors their Gmail inbox automatically.
 
 Available ACTION node types:
 - send_email: Send an email. Parameters: {to: "{{from}}", subject: "Re: {{subject}}", body: "..."}
@@ -63,12 +65,13 @@ STRIPE PAYMENT node types (use these for deposits, payments, invoices):
 IMPORTANT RULES:
 1. For booking/appointment workflows with deposits → use google_calendar_create + stripe_create_payment_link
 2. For payment reminders → use delay + stripe_check_payment + condition
-3. For "when I receive an email from X" → use start_email trigger
+3. When user says "when I receive an email", "when I get an email", "when an email comes in", "emails from X", etc. → ALWAYS use start_email trigger. This monitors their connected Gmail inbox.
 4. For auto-reply workflows → use ai_reply node to generate smart responses
-5. Available template variables: {{from}}, {{to}}, {{subject}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}
+5. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}
 6. Always connect nodes with edges
 7. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
 8. Set requiresApproval: true for emails that need human review before sending
+9. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
 
 Example for "booking automation with deposit":
 {
@@ -114,9 +117,13 @@ def _generate_deterministic(prompt: str) -> dict:
     prompt_lower = prompt.lower()
     
     # First, check for email-triggered workflows (higher priority)
-    is_email_trigger = any(word in prompt_lower for word in [
-        "email", "receive", "inbox", "subject", "when i get", "arrives", 
-        "appointment scheduled", "incoming"
+    # These phrases indicate the user wants to trigger on emails from their connected Gmail
+    is_email_trigger = any(phrase in prompt_lower for phrase in [
+        "when i receive", "when i get", "when an email", "when email",
+        "receive an email", "get an email", "email comes in", "email arrives",
+        "incoming email", "new email", "subject", "inbox", 
+        "appointment scheduled", "booking confirmation", "when someone emails",
+        "emails from", "email from", "receive a", "when a customer emails"
     ])
     
     # Detect workflow type based on keywords
@@ -148,109 +155,200 @@ def _template_booking_workflow(email_trigger: bool = False, prompt: str = "") ->
     
     # Choose trigger type based on detection
     if email_trigger:
-        trigger_node = {
-            "id": "start-1",
-            "type": "start_email",
-            "label": f"Email received with \"{subject_filter or 'booking'}\"" if subject_filter else "When booking email received",
-            "position": {"x": 250, "y": 50},
-            "parameters": {
-                "subject": subject_filter or "Appointment Scheduled"
-            },
-            "requiresApproval": False
+        # Email-triggered workflow needs AI to extract booking details
+        return {
+            "workflowName": "Booking with Deposit",
+            "summary": f"When an email arrives with \"{subject_filter or 'Appointment Scheduled'}\" in the subject, Aivaro will extract booking details, create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet.",
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_email",
+                    "label": f"Email with \"{subject_filter or 'Appointment Scheduled'}\"",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {
+                        "subject": subject_filter or "Appointment Scheduled"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "extract-1",
+                    "type": "ai_extract",
+                    "label": "Extract booking details from email",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "fields": "customer_name, customer_email, pickup_date, pickup_time, phone, service",
+                        "context": "Extract the customer name, their email, the scheduled pickup date (YYYY-MM-DD format), time (HH:MM format), phone number, and service type from this booking confirmation email."
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "calendar-1",
+                    "type": "google_calendar_create",
+                    "label": "Create pickup event",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "title": "Pickup — {{customer_name}}",
+                        "date": "{{pickup_date}}",
+                        "start_time": "{{pickup_time}}",
+                        "duration": 1,
+                        "description": "Customer: {{customer_name}}\nPhone: {{phone}}\nService: {{service}}\nEmail: {{customer_email}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "stripe-1",
+                    "type": "stripe_create_payment_link",
+                    "label": "Create $20 deposit link",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "amount": 20,
+                        "product_name": "Booking Deposit - {{service}}",
+                        "success_message": "Your booking is confirmed! We'll see you on {{pickup_date}}."
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send confirmation with payment link",
+                    "position": {"x": 250, "y": 650},
+                    "parameters": {
+                        "to": "{{customer_email}}",
+                        "subject": "Confirm your booking - $20 deposit required",
+                        "body": "Hi {{customer_name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log to bookings spreadsheet",
+                    "position": {"x": 250, "y": 800},
+                    "parameters": {
+                        "spreadsheet": "Bookings Log",
+                        "columns": [
+                            {"name": "Date", "value": "{{pickup_date}}"},
+                            {"name": "Time", "value": "{{pickup_time}}"},
+                            {"name": "Name", "value": "{{customer_name}}"},
+                            {"name": "Email", "value": "{{customer_email}}"},
+                            {"name": "Phone", "value": "{{phone}}"},
+                            {"name": "Service", "value": "{{service}}"},
+                            {"name": "Deposit Status", "value": "Pending"},
+                            {"name": "Payment Link", "value": "{{payment_link_url}}"}
+                        ]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notify-1",
+                    "type": "send_notification",
+                    "label": "Notify you of new booking",
+                    "position": {"x": 250, "y": 950},
+                    "parameters": {
+                        "message": "New booking: {{customer_name}} for {{service}} on {{pickup_date}} - Deposit link sent"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "extract-1"},
+                {"id": "e2", "source": "extract-1", "target": "calendar-1"},
+                {"id": "e3", "source": "calendar-1", "target": "stripe-1"},
+                {"id": "e4", "source": "stripe-1", "target": "email-1"},
+                {"id": "e5", "source": "email-1", "target": "sheet-1"},
+                {"id": "e6", "source": "sheet-1", "target": "notify-1"}
+            ]
         }
-        summary = f"When an email arrives with \"{subject_filter or 'Appointment Scheduled'}\" in the subject, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet."
     else:
-        trigger_node = {
-            "id": "start-1",
-            "type": "start_form",
-            "label": "When booking form is submitted",
-            "position": {"x": 250, "y": 50},
-            "parameters": {},
-            "requiresApproval": False
+        # Form-triggered workflow - data comes from form fields
+        return {
+            "workflowName": "Booking with Deposit",
+            "summary": "When a new booking form is submitted, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet.",
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When booking form is submitted",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "calendar-1",
+                    "type": "google_calendar_create",
+                    "label": "Create pickup event",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "title": "Pickup — {{name}}",
+                        "date": "{{pickup_date}}",
+                        "start_time": "{{pickup_time}}",
+                        "duration": 1,
+                        "description": "Customer: {{name}}\nPhone: {{phone}}\nService: {{service}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "stripe-1",
+                    "type": "stripe_create_payment_link",
+                    "label": "Create $20 deposit link",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "amount": 20,
+                        "product_name": "Booking Deposit - {{service}}",
+                        "success_message": "Your booking is confirmed! We'll see you on {{pickup_date}}."
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send confirmation with payment link",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "to": "{{email}}",
+                        "subject": "Confirm your booking - $20 deposit required",
+                        "body": "Hi {{name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log to bookings spreadsheet",
+                    "position": {"x": 250, "y": 650},
+                    "parameters": {
+                        "spreadsheet": "Bookings Log",
+                        "columns": [
+                            {"name": "Date", "value": "{{pickup_date}}"},
+                            {"name": "Time", "value": "{{pickup_time}}"},
+                            {"name": "Name", "value": "{{name}}"},
+                            {"name": "Email", "value": "{{email}}"},
+                            {"name": "Service", "value": "{{service}}"},
+                            {"name": "Deposit Status", "value": "Pending"},
+                            {"name": "Payment Link", "value": "{{payment_link_url}}"}
+                        ]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notify-1",
+                    "type": "send_notification",
+                    "label": "Notify you of new booking",
+                    "position": {"x": 250, "y": 800},
+                    "parameters": {
+                        "message": "New booking: {{name}} for {{service}} on {{pickup_date}} - Deposit link sent"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "calendar-1"},
+                {"id": "e2", "source": "calendar-1", "target": "stripe-1"},
+                {"id": "e3", "source": "stripe-1", "target": "email-1"},
+                {"id": "e4", "source": "email-1", "target": "sheet-1"},
+                {"id": "e5", "source": "sheet-1", "target": "notify-1"}
+            ]
         }
-        summary = "When a new booking is made, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet."
-    
-    return {
-        "workflowName": "Booking with Deposit",
-        "summary": summary,
-        "nodes": [
-            trigger_node,
-            {
-                "id": "calendar-1",
-                "type": "google_calendar_create",
-                "label": "Create pickup event",
-                "position": {"x": 250, "y": 200},
-                "parameters": {
-                    "title": "Pickup — {{name}}",
-                    "date": "{{pickup_date}}",
-                    "start_time": "{{pickup_time}}",
-                    "duration": 1,
-                    "description": "Customer: {{name}}\nPhone: {{phone}}\nService: {{service}}"
-                },
-                "requiresApproval": False
-            },
-            {
-                "id": "stripe-1",
-                "type": "stripe_create_payment_link",
-                "label": "Create $20 deposit link",
-                "position": {"x": 250, "y": 350},
-                "parameters": {
-                    "amount": 20,
-                    "product_name": "Booking Deposit - {{service}}",
-                    "success_message": "Your booking is confirmed! We'll see you on {{pickup_date}}."
-                },
-                "requiresApproval": False
-            },
-            {
-                "id": "email-1",
-                "type": "send_email",
-                "label": "Send confirmation with payment link",
-                "position": {"x": 250, "y": 500},
-                "parameters": {
-                    "to": "{{from}}" if email_trigger else "{{email}}",
-                    "subject": "Confirm your booking - $20 deposit required",
-                    "body": "Hi {{name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
-                },
-                "requiresApproval": False
-            },
-            {
-                "id": "sheet-1",
-                "type": "append_row",
-                "label": "Log to bookings spreadsheet",
-                "position": {"x": 250, "y": 650},
-                "parameters": {
-                    "spreadsheet": "Bookings Log",
-                    "columns": [
-                        {"name": "Date", "value": "{{pickup_date}}"},
-                        {"name": "Time", "value": "{{pickup_time}}"},
-                        {"name": "Name", "value": "{{name}}"},
-                        {"name": "Email", "value": "{{from}}" if email_trigger else "{{email}}"},
-                        {"name": "Service", "value": "{{service}}"},
-                        {"name": "Deposit Status", "value": "Pending"},
-                        {"name": "Payment Link", "value": "{{payment_link_url}}"}
-                    ]
-                },
-                "requiresApproval": False
-            },
-            {
-                "id": "notify-1",
-                "type": "send_notification",
-                "label": "Notify you of new booking",
-                "position": {"x": 250, "y": 800},
-                "parameters": {
-                    "message": "New booking: {{name}} for {{service}} on {{pickup_date}} - Deposit link sent"
-                },
-                "requiresApproval": False
-            }
-        ],
-        "edges": [
-            {"id": "e1", "source": "start-1", "target": "calendar-1"},
-            {"id": "e2", "source": "calendar-1", "target": "stripe-1"},
-            {"id": "e3", "source": "stripe-1", "target": "email-1"},
-            {"id": "e4", "source": "email-1", "target": "sheet-1"},
-            {"id": "e5", "source": "sheet-1", "target": "notify-1"}
-        ]
-    }
 
 
 def _template_email_workflow(prompt: str = "") -> dict:

@@ -49,6 +49,12 @@ const nodeConfigs: Record<string, { fields: { key: string; label: string; type: 
       { key: 'format', label: 'Format', type: 'select', options: ['paragraph', 'bullet_points'] },
     ],
   },
+  ai_extract: {
+    fields: [
+      { key: 'fields', label: 'Fields to extract', type: 'text', placeholder: 'customer_name, email, date, time, phone' },
+      { key: 'context', label: 'Instructions', type: 'textarea', placeholder: 'Extract booking details from this email. Date in YYYY-MM-DD, time in HH:MM format.' },
+    ],
+  },
   append_row: {
     fields: [
       { key: 'spreadsheet', label: 'Spreadsheet Name', type: 'text', placeholder: 'My Sales Log' },

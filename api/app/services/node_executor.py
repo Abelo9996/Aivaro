@@ -83,6 +83,7 @@ class NodeExecutor:
             "send_email": self._execute_send_email,
             "ai_reply": self._execute_ai_reply,
             "ai_summarize": self._execute_ai_summarize,
+            "ai_extract": self._execute_ai_extract,
             "append_row": self._execute_append_row,
             "read_sheet": self._execute_read_sheet,
             "delay": self._execute_delay,
@@ -301,6 +302,119 @@ Generate a {tone} reply:"""
         return {
             "success": True,
             "output": {**input_data, "summary": f"Summary of {source}: Data processed successfully."},
+            "logs": logs
+        }
+
+    async def _execute_ai_extract(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Use AI to extract structured data from text (e.g., email body)."""
+        from app.config import get_settings
+        settings = get_settings()
+        
+        fields_to_extract = params.get("fields", "name, email, date, time")
+        context = params.get("context", "Extract the requested fields from the text.")
+        
+        # Get the text to extract from - could be email snippet, body, or other text
+        text_content = input_data.get("snippet", "") or input_data.get("body", "") or input_data.get("text", "")
+        subject = input_data.get("subject", "")
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Extracting data with AI\n"
+        logs += f"  Fields: {fields_to_extract}\n"
+        logs += f"  Text length: {len(text_content)} chars\n"
+        
+        if is_test:
+            # Generate mock extracted data for test mode
+            mock_data = {}
+            for field in fields_to_extract.split(","):
+                field = field.strip()
+                if "date" in field.lower():
+                    mock_data[field] = "2026-02-15"
+                elif "time" in field.lower():
+                    mock_data[field] = "10:00"
+                elif "email" in field.lower():
+                    mock_data[field] = "customer@example.com"
+                elif "name" in field.lower():
+                    mock_data[field] = "John Doe"
+                elif "phone" in field.lower():
+                    mock_data[field] = "(555) 123-4567"
+                else:
+                    mock_data[field] = f"[extracted_{field}]"
+            
+            logs += f"  [TEST MODE] Mock extracted data: {mock_data}\n"
+            return {
+                "success": True,
+                "output": {**input_data, **mock_data},
+                "logs": logs
+            }
+        
+        if settings.openai_api_key:
+            try:
+                import openai
+                client = openai.OpenAI(api_key=settings.openai_api_key)
+                
+                system_prompt = f"""You are a data extraction assistant. Extract the following fields from the provided text:
+{fields_to_extract}
+
+Instructions: {context}
+
+Return your response as a valid JSON object with the field names as keys. 
+For dates, use YYYY-MM-DD format. For times, use HH:MM format (24-hour).
+If a field cannot be found, use null or a reasonable default.
+Return ONLY the JSON object, no explanation."""
+
+                user_prompt = f"""Subject: {subject}
+
+Content:
+{text_content}
+
+Extract: {fields_to_extract}"""
+
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=500
+                )
+                
+                extracted_text = response.choices[0].message.content.strip()
+                
+                # Parse JSON response
+                # Handle markdown code blocks if present
+                if extracted_text.startswith("```"):
+                    extracted_text = extracted_text.split("```")[1]
+                    if extracted_text.startswith("json"):
+                        extracted_text = extracted_text[4:]
+                
+                extracted_data = json.loads(extracted_text.strip())
+                
+                logs += f"  ✅ Data extracted: {list(extracted_data.keys())}\n"
+                
+                return {
+                    "success": True,
+                    "output": {**input_data, **extracted_data},
+                    "logs": logs
+                }
+                
+            except json.JSONDecodeError as e:
+                logs += f"  ❌ Failed to parse AI response as JSON: {str(e)}\n"
+                logs += f"  Raw response: {extracted_text[:200]}\n"
+            except Exception as e:
+                logs += f"  ❌ AI extraction failed: {str(e)}\n"
+        else:
+            logs += "  ⚠️ OpenAI not configured\n"
+        
+        # Fallback - return empty extracted fields
+        logs += "  ⚠️ Using fallback extraction (empty values)\n"
+        fallback_data = {}
+        for field in fields_to_extract.split(","):
+            field = field.strip()
+            fallback_data[field] = ""
+        
+        return {
+            "success": True,
+            "output": {**input_data, **fallback_data},
             "logs": logs
         }
 

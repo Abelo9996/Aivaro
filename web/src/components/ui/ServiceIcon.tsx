@@ -30,6 +30,7 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   send_slack: { src: '/icons/slack.svg' },
   ai_reply: { src: '/icons/openai.svg' },
   ai_summarize: { src: '/icons/openai.svg' },
+  ai_extract: { src: '/icons/openai.svg' },
   
   // Stripe node types
   stripe_create_invoice: { src: '/icons/stripe.svg' },
