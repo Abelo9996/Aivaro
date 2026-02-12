@@ -3,7 +3,8 @@ Google Services Integration - Sheets, Gmail, Calendar
 """
 import httpx
 from typing import Optional, List, Any
-from datetime import datetime
+from datetime import datetime, date, time
+import re
 
 
 class GoogleService:
@@ -34,6 +35,61 @@ class GoogleService:
         if self._client:
             await self._client.aclose()
             self._client = None
+    
+    def _format_cell_value(self, value: Any, column_hint: str = "") -> str:
+        """Format a value for insertion into a spreadsheet cell.
+        
+        Handles datetime objects, floats that might be timestamps, and other types.
+        """
+        if value is None or value == "":
+            return ""
+        
+        # Handle datetime objects
+        if isinstance(value, datetime):
+            if "time" in column_hint and "date" not in column_hint:
+                return value.strftime("%H:%M")
+            elif "date" in column_hint and "time" not in column_hint:
+                return value.strftime("%Y-%m-%d")
+            else:
+                return value.strftime("%Y-%m-%d %H:%M")
+        
+        # Handle date objects
+        if isinstance(value, date):
+            return value.strftime("%Y-%m-%d")
+        
+        # Handle time objects
+        if isinstance(value, time):
+            return value.strftime("%H:%M")
+        
+        # Handle floats - check if it looks like it's already a proper date/time string
+        if isinstance(value, float):
+            # If it's a reasonable date serial number (like from Excel), convert it
+            # Excel serial numbers for 2020-2030 are roughly 43831 to 47483
+            if 40000 < value < 50000:
+                # This looks like an Excel date serial number - convert it
+                try:
+                    # Excel's epoch is 1899-12-30
+                    days = int(value)
+                    fraction = value - days
+                    hours = int(fraction * 24)
+                    minutes = int((fraction * 24 - hours) * 60)
+                    from datetime import timedelta
+                    base_date = datetime(1899, 12, 30) + timedelta(days=days)
+                    if "time" in column_hint and "date" not in column_hint:
+                        return f"{hours:02d}:{minutes:02d}"
+                    elif "date" in column_hint and "time" not in column_hint:
+                        return base_date.strftime("%Y-%m-%d")
+                    else:
+                        return base_date.strftime("%Y-%m-%d") + f" {hours:02d}:{minutes:02d}"
+                except:
+                    pass
+            # Otherwise just convert to string, but without unnecessary decimals
+            if value == int(value):
+                return str(int(value))
+            return str(value)
+        
+        # Handle strings - just return as-is
+        return str(value)
     
     # ==================== Google Sheets ====================
     
@@ -139,15 +195,19 @@ class GoogleService:
     ) -> dict:
         """Append a row to a spreadsheet."""
         client = await self._get_client()
+        
+        # Ensure all values are strings to prevent Google Sheets from converting dates to serial numbers
+        string_values = [str(v) if v is not None else "" for v in values]
+        
         response = await client.post(
             f"{self.BASE_SHEETS_URL}/{spreadsheet_id}/values/{sheet_name}:append",
             params={
-                "valueInputOption": "USER_ENTERED",
+                "valueInputOption": "RAW",  # Use RAW to prevent date/number auto-conversion
                 "insertDataOption": "INSERT_ROWS",
             },
             headers=self.headers,
             json={
-                "values": [values]
+                "values": [string_values]
             },
         )
         
@@ -241,7 +301,9 @@ class GoogleService:
                     if value:
                         break
             
-            row_values.append(str(value) if value else "")
+            # Format the value as a string, handling special types
+            formatted_value = self._format_cell_value(value, normalized_header)
+            row_values.append(formatted_value)
         
         print(f"[GoogleService] Appending row with schema-matched columns: {headers}")
         print(f"[GoogleService] Row values: {row_values}")
