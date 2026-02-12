@@ -206,7 +206,7 @@ class WorkflowRunner:
             user_email = self.workflow.user.email
             user_name = self.workflow.user.full_name or self.workflow.user.email.split('@')[0]
         
-        return {
+        base_data = {
             "name": user_name or "User",
             "email": user_email or "user@example.com",
             "user_email": user_email or "user@example.com",
@@ -214,6 +214,20 @@ class WorkflowRunner:
             "date": datetime.utcnow().strftime("%Y-%m-%d"),
             "timestamp": datetime.utcnow().isoformat(),
         }
+        
+        # Check if this is an email-triggered workflow - add mock email data
+        start_nodes = self.get_start_nodes()
+        if start_nodes and start_nodes[0].get("type") == "start_email":
+            # Add mock email data for testing email workflows manually
+            base_data.update({
+                "from": "customer@example.com",
+                "to": user_email or "user@example.com",
+                "subject": "Appointment Scheduled - John Doe",
+                "snippet": "Hi, I'd like to schedule a pickup. Name: John Doe, Email: john@example.com, Date: 2026-02-15, Time: 10:00 AM, Phone: (555) 123-4567, Service: Standard Pickup. Please confirm my booking. Thanks!",
+                "body": "Hi, I'd like to schedule a pickup.\n\nName: John Doe\nEmail: john@example.com\nDate: 2026-02-15\nTime: 10:00 AM\nPhone: (555) 123-4567\nService: Standard Pickup\n\nPlease confirm my booking.\n\nThanks!",
+            })
+        
+        return base_data
     
     def resume_from_approval(self, approval_id: UUID):
         """Resume execution after approval"""

@@ -131,6 +131,13 @@ class EmailTriggerService:
                 email_data["message_id"] = msg_id
                 email_data["snippet"] = message.get("snippet", "")
                 
+                # Try to get email body for better extraction
+                email_body = cls._extract_email_body(message)
+                if email_body:
+                    email_data["body"] = email_body
+                
+                print(f"[Email Trigger] Email data: from={email_data.get('from')}, subject={email_data.get('subject')}, snippet_len={len(email_data.get('snippet', ''))}, body_len={len(email_data.get('body', ''))}")
+                
                 # Create and run execution
                 execution = Execution(
                     workflow_id=workflow.id,
@@ -186,6 +193,38 @@ class EmailTriggerService:
                 result[header_map[name]] = value
         
         return result
+    
+    @staticmethod
+    def _extract_email_body(message: dict) -> str:
+        """Extract the plain text body from a Gmail message."""
+        import base64
+        
+        payload = message.get("payload", {})
+        
+        # Simple message with body data directly
+        if "body" in payload and payload["body"].get("data"):
+            data = payload["body"]["data"]
+            return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+        
+        # Multipart message - look for text/plain part
+        parts = payload.get("parts", [])
+        for part in parts:
+            mime_type = part.get("mimeType", "")
+            if mime_type == "text/plain":
+                data = part.get("body", {}).get("data", "")
+                if data:
+                    return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+            
+            # Nested multipart
+            if "parts" in part:
+                for subpart in part["parts"]:
+                    if subpart.get("mimeType") == "text/plain":
+                        data = subpart.get("body", {}).get("data", "")
+                        if data:
+                            return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+        
+        # Fallback to snippet if no body found
+        return message.get("snippet", "")
 
 
 async def poll_email_triggers(user_id: Optional[str] = None) -> list[dict]:
