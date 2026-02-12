@@ -35,39 +35,53 @@ Generate a workflow based on the user's description. Return a JSON object with:
 Available TRIGGER node types (must be first node):
 - start_manual: Manual start trigger (when user clicks "Run")
 - start_form: Form submission trigger (when someone fills a form)
-- start_schedule: Scheduled trigger (runs on a schedule). Parameters: {time: "09:00", days: ["monday", "wednesday"]}
-- start_email: Email received trigger (when an email arrives). Parameters: {from: "email@example.com"} - Use this when user wants to respond to incoming emails!
+- start_schedule: Scheduled trigger (runs on a schedule). Parameters: {time: "09:00", frequency: "daily/weekly/monthly"}
+- start_email: Email received trigger (when an email arrives). Parameters: {from: "email@example.com"}
 
 Available ACTION node types:
 - send_email: Send an email. Parameters: {to: "{{from}}", subject: "Re: {{subject}}", body: "..."}
 - ai_reply: Generate an AI response to an email. Parameters: {context: "...", tone: "professional/friendly/casual"}
-- append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", columns: [{name: "...", value: "{{...}}"}]}
+- ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
+- append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", sheet_name: "Sheet1", columns: [{name: "...", value: "{{...}}"}]}
 - read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "...", range: "A1:D10"}
-- delay: Wait for a duration. Parameters: {duration: 2, unit: "hours/days"}
+- delay: Wait for a duration. Parameters: {duration: 2, unit: "hours/minutes/days"}
 - send_notification: Send a notification. Parameters: {message: "..."}
 - send_slack: Send a Slack message. Parameters: {channel: "#general", message: "..."}
-- http_request: Make an API call. Parameters: {url: "...", method: "GET/POST", body: {...}}
+- http_request: Make an API call. Parameters: {url: "...", method: "GET/POST"}
 - condition: Branch based on conditions. Parameters: {condition: "if {{status}} == 'approved'"}
-- ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
+
+GOOGLE CALENDAR node types:
+- google_calendar_create: Create a calendar event. Parameters: {title: "Meeting with {{name}}", date: "{{date}}", start_time: "{{time}}", duration: 1, description: "...", location: "..."}
+
+STRIPE PAYMENT node types (use these for deposits, payments, invoices):
+- stripe_create_payment_link: Create a payment/deposit link. Parameters: {amount: 20, product_name: "Deposit", success_message: "Thank you!"}
+- stripe_check_payment: Check if payment was made. Parameters: {payment_link_id: "{{payment_link_id}}", customer_email: "{{email}}"}
+- stripe_create_invoice: Create an invoice. Parameters: {customer_email: "{{email}}", amount: 100, description: "Service", due_days: 30, auto_send: "true"}
+- stripe_send_invoice: Send an existing invoice. Parameters: {invoice_id: "{{invoice_id}}"}
+- stripe_get_customer: Get or create a Stripe customer. Parameters: {email: "{{email}}", name: "{{name}}"}
 
 IMPORTANT RULES:
-1. For "when I receive an email from X" → use start_email with {from: "X"}
-2. For auto-reply workflows → use ai_reply node to generate smart responses
-3. Available template variables in email triggers: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{message_id}}
-4. Always connect nodes with edges
-5. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
-6. Set requiresApproval: false for automated workflows, true only for sensitive actions
+1. For booking/appointment workflows with deposits → use google_calendar_create + stripe_create_payment_link
+2. For payment reminders → use delay + stripe_check_payment + condition
+3. For "when I receive an email from X" → use start_email trigger
+4. For auto-reply workflows → use ai_reply node to generate smart responses
+5. Available template variables: {{from}}, {{to}}, {{subject}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}
+6. Always connect nodes with edges
+7. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
+8. Set requiresApproval: true for emails that need human review before sending
 
-Example for "auto-reply to emails from john@example.com":
+Example for "booking automation with deposit":
 {
-  "workflowName": "Auto Reply to John",
-  "summary": "When an email arrives from john@example.com, Aivaro will generate and send an AI-powered reply.",
+  "workflowName": "Booking with Deposit",
+  "summary": "When a booking form is submitted, Aivaro will create a calendar event, generate a deposit link, and send a confirmation email.",
   "nodes": [
-    {"id": "1", "type": "start_email", "label": "Email from john@example.com", "position": {"x": 250, "y": 50}, "parameters": {"from": "john@example.com"}, "requiresApproval": false},
-    {"id": "2", "type": "ai_reply", "label": "Generate AI response", "position": {"x": 250, "y": 200}, "parameters": {"tone": "professional", "context": "Reply helpfully to the email"}, "requiresApproval": false},
-    {"id": "3", "type": "send_email", "label": "Send auto-reply", "position": {"x": 250, "y": 350}, "parameters": {"to": "{{from}}", "subject": "Re: {{subject}}", "body": "{{ai_response}}"}, "requiresApproval": false}
+    {"id": "1", "type": "start_form", "label": "When booking form submitted", "position": {"x": 250, "y": 50}, "parameters": {}, "requiresApproval": false},
+    {"id": "2", "type": "google_calendar_create", "label": "Create pickup event", "position": {"x": 250, "y": 200}, "parameters": {"title": "Pickup — {{name}}", "date": "{{pickup_date}}", "start_time": "{{pickup_time}}", "duration": 1, "description": "Customer: {{name}}\\nPhone: {{phone}}"}, "requiresApproval": false},
+    {"id": "3", "type": "stripe_create_payment_link", "label": "Create $20 deposit link", "position": {"x": 250, "y": 350}, "parameters": {"amount": 20, "product_name": "Booking Deposit", "success_message": "Your booking is confirmed!"}, "requiresApproval": false},
+    {"id": "4", "type": "send_email", "label": "Send confirmation with payment link", "position": {"x": 250, "y": 500}, "parameters": {"to": "{{email}}", "subject": "Confirm your booking - deposit required", "body": "Hi {{name}},\\n\\nYour pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\\n\\nPlease pay the $20 deposit to confirm: {{payment_link_url}}\\n\\nThank you!"}, "requiresApproval": false},
+    {"id": "5", "type": "append_row", "label": "Log to spreadsheet", "position": {"x": 250, "y": 650}, "parameters": {"spreadsheet": "Bookings", "columns": [{"name": "Name", "value": "{{name}}"}, {"name": "Date", "value": "{{pickup_date}}"}, {"name": "Status", "value": "Pending Deposit"}]}, "requiresApproval": false}
   ],
-  "edges": [{"id": "e1", "source": "1", "target": "2"}, {"id": "e2", "source": "2", "target": "3"}]
+  "edges": [{"id": "e1", "source": "1", "target": "2"}, {"id": "e2", "source": "2", "target": "3"}, {"id": "e3", "source": "3", "target": "4"}, {"id": "e4", "source": "4", "target": "5"}]
 }
 
 Return ONLY valid JSON, no markdown code blocks or explanation."""
@@ -116,8 +130,8 @@ def _generate_deterministic(prompt: str) -> dict:
 
 def _template_booking_workflow() -> dict:
     return {
-        "workflowName": "New Booking Automation",
-        "summary": "When a new booking is made, Aivaro will send a confirmation email and log it to your spreadsheet.",
+        "workflowName": "Booking with Deposit",
+        "summary": "When a new booking is made, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet.",
         "nodes": [
             {
                 "id": "start-1",
@@ -128,30 +142,58 @@ def _template_booking_workflow() -> dict:
                 "requiresApproval": False
             },
             {
-                "id": "email-1",
-                "type": "send_email",
-                "label": "Send booking confirmation",
+                "id": "calendar-1",
+                "type": "google_calendar_create",
+                "label": "Create pickup event",
                 "position": {"x": 250, "y": 200},
                 "parameters": {
-                    "to": "{{email}}",
-                    "subject": "Your booking is confirmed!",
-                    "body": "Hi {{name}},\n\nYour booking for {{service}} on {{booking_date}} at {{booking_time}} is confirmed.\n\nSee you soon!"
+                    "title": "Pickup — {{name}}",
+                    "date": "{{pickup_date}}",
+                    "start_time": "{{pickup_time}}",
+                    "duration": 1,
+                    "description": "Customer: {{name}}\nPhone: {{phone}}\nService: {{service}}"
                 },
-                "requiresApproval": True
+                "requiresApproval": False
+            },
+            {
+                "id": "stripe-1",
+                "type": "stripe_create_payment_link",
+                "label": "Create $20 deposit link",
+                "position": {"x": 250, "y": 350},
+                "parameters": {
+                    "amount": 20,
+                    "product_name": "Booking Deposit - {{service}}",
+                    "success_message": "Your booking is confirmed! We'll see you on {{pickup_date}}."
+                },
+                "requiresApproval": False
+            },
+            {
+                "id": "email-1",
+                "type": "send_email",
+                "label": "Send confirmation with payment link",
+                "position": {"x": 250, "y": 500},
+                "parameters": {
+                    "to": "{{email}}",
+                    "subject": "Confirm your booking - $20 deposit required",
+                    "body": "Hi {{name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
+                },
+                "requiresApproval": False
             },
             {
                 "id": "sheet-1",
                 "type": "append_row",
                 "label": "Log to bookings spreadsheet",
-                "position": {"x": 250, "y": 350},
+                "position": {"x": 250, "y": 650},
                 "parameters": {
                     "spreadsheet": "Bookings Log",
                     "columns": [
-                        {"name": "Date", "value": "{{booking_date}}"},
-                        {"name": "Time", "value": "{{booking_time}}"},
+                        {"name": "Date", "value": "{{pickup_date}}"},
+                        {"name": "Time", "value": "{{pickup_time}}"},
                         {"name": "Name", "value": "{{name}}"},
                         {"name": "Email", "value": "{{email}}"},
-                        {"name": "Service", "value": "{{service}}"}
+                        {"name": "Service", "value": "{{service}}"},
+                        {"name": "Deposit Status", "value": "Pending"},
+                        {"name": "Payment Link", "value": "{{payment_link_url}}"}
                     ]
                 },
                 "requiresApproval": False
@@ -160,17 +202,19 @@ def _template_booking_workflow() -> dict:
                 "id": "notify-1",
                 "type": "send_notification",
                 "label": "Notify you of new booking",
-                "position": {"x": 250, "y": 500},
+                "position": {"x": 250, "y": 800},
                 "parameters": {
-                    "message": "New booking: {{name}} for {{service}} on {{booking_date}}"
+                    "message": "New booking: {{name}} for {{service}} on {{pickup_date}} - Deposit link sent"
                 },
                 "requiresApproval": False
             }
         ],
         "edges": [
-            {"id": "e1", "source": "start-1", "target": "email-1"},
-            {"id": "e2", "source": "email-1", "target": "sheet-1"},
-            {"id": "e3", "source": "sheet-1", "target": "notify-1"}
+            {"id": "e1", "source": "start-1", "target": "calendar-1"},
+            {"id": "e2", "source": "calendar-1", "target": "stripe-1"},
+            {"id": "e3", "source": "stripe-1", "target": "email-1"},
+            {"id": "e4", "source": "email-1", "target": "sheet-1"},
+            {"id": "e5", "source": "sheet-1", "target": "notify-1"}
         ]
     }
 
@@ -283,8 +327,8 @@ def _template_order_workflow() -> dict:
 
 def _template_invoice_workflow() -> dict:
     return {
-        "workflowName": "Overdue Invoice Follow-up",
-        "summary": "When an invoice becomes overdue, Aivaro will send a reminder email.",
+        "workflowName": "Invoice & Payment Collection",
+        "summary": "When you need to invoice a customer, Aivaro will create and send a Stripe invoice, then follow up if unpaid.",
         "nodes": [
             {
                 "id": "start-1",
@@ -295,63 +339,116 @@ def _template_invoice_workflow() -> dict:
                 "requiresApproval": False
             },
             {
-                "id": "email-1",
-                "type": "send_email",
-                "label": "Send payment reminder",
+                "id": "stripe-1",
+                "type": "stripe_create_invoice",
+                "label": "Create Stripe invoice",
                 "position": {"x": 250, "y": 200},
                 "parameters": {
-                    "to": "{{email}}",
-                    "subject": "Payment Reminder - Invoice #{{invoice_id}}",
-                    "body": "Hi {{name}},\n\nThis is a friendly reminder that invoice #{{invoice_id}} for ${{amount}} is now overdue.\n\nPlease arrange payment at your earliest convenience."
+                    "customer_email": "{{email}}",
+                    "amount": "{{amount}}",
+                    "description": "{{service}} - {{description}}",
+                    "due_days": 30,
+                    "auto_send": "true"
                 },
-                "requiresApproval": True
+                "requiresApproval": False
             },
             {
                 "id": "sheet-1",
                 "type": "append_row",
-                "label": "Log reminder sent",
+                "label": "Log invoice",
                 "position": {"x": 250, "y": 350},
                 "parameters": {
-                    "spreadsheet": "Payment Reminders Log",
+                    "spreadsheet": "Invoices Log",
                     "columns": [
                         {"name": "Date", "value": "{{today}}"},
-                        {"name": "Invoice", "value": "{{invoice_id}}"},
+                        {"name": "Invoice ID", "value": "{{invoice_id}}"},
                         {"name": "Customer", "value": "{{name}}"},
-                        {"name": "Amount", "value": "{{amount}}"}
+                        {"name": "Amount", "value": "{{amount}}"},
+                        {"name": "Status", "value": "Sent"}
                     ]
                 },
                 "requiresApproval": False
+            },
+            {
+                "id": "delay-1",
+                "type": "delay",
+                "label": "Wait 7 days",
+                "position": {"x": 250, "y": 500},
+                "parameters": {
+                    "duration": 7,
+                    "unit": "days"
+                },
+                "requiresApproval": False
+            },
+            {
+                "id": "email-1",
+                "type": "send_email",
+                "label": "Send payment reminder",
+                "position": {"x": 250, "y": 650},
+                "parameters": {
+                    "to": "{{email}}",
+                    "subject": "Payment Reminder - Invoice #{{invoice_id}}",
+                    "body": "Hi {{name}},\n\nThis is a friendly reminder that your invoice for ${{amount}} is due soon.\n\nYou can pay here: {{invoice_url}}\n\nThank you!"
+                },
+                "requiresApproval": True
             }
         ],
         "edges": [
-            {"id": "e1", "source": "start-1", "target": "email-1"},
-            {"id": "e2", "source": "email-1", "target": "sheet-1"}
+            {"id": "e1", "source": "start-1", "target": "stripe-1"},
+            {"id": "e2", "source": "stripe-1", "target": "sheet-1"},
+            {"id": "e3", "source": "sheet-1", "target": "delay-1"},
+            {"id": "e4", "source": "delay-1", "target": "email-1"}
         ]
     }
 
 
 def _template_report_workflow() -> dict:
     return {
-        "workflowName": "Weekly Summary Report",
-        "summary": "Aivaro will compile your weekly data and send you a summary report.",
+        "workflowName": "Weekly Profit Report",
+        "summary": "Every Monday, Aivaro will read your bookings spreadsheet, summarize the data with AI, and email you a profit report.",
         "nodes": [
             {
                 "id": "start-1",
-                "type": "start_manual",
-                "label": "When you run this workflow",
+                "type": "start_schedule",
+                "label": "Every Monday at 9am",
                 "position": {"x": 250, "y": 50},
-                "parameters": {},
+                "parameters": {
+                    "time": "09:00",
+                    "frequency": "weekly"
+                },
+                "requiresApproval": False
+            },
+            {
+                "id": "read-1",
+                "type": "read_sheet",
+                "label": "Read bookings data",
+                "position": {"x": 250, "y": 200},
+                "parameters": {
+                    "spreadsheet_id": "{{spreadsheet_id}}",
+                    "range": "Sheet1!A1:G100"
+                },
+                "requiresApproval": False
+            },
+            {
+                "id": "ai-1",
+                "type": "ai_summarize",
+                "label": "AI analyze weekly data",
+                "position": {"x": 250, "y": 350},
+                "parameters": {
+                    "source": "bookings data",
+                    "format": "bullet_points"
+                },
                 "requiresApproval": False
             },
             {
                 "id": "email-1",
                 "type": "send_email",
-                "label": "Send weekly summary",
-                "position": {"x": 250, "y": 200},
+                "label": "Send weekly report",
+                "position": {"x": 250, "y": 500},
                 "parameters": {
                     "to": "{{your_email}}",
-                    "subject": "Weekly Summary Report",
-                    "body": "Here's your weekly summary:\n\n- Total sales: ${{total_sales}}\n- New customers: {{new_customers}}\n- Pending tasks: {{pending_tasks}}\n\nGreat work this week!"
+                    "subject": "Weekly Profit Report - Week of {{week_start}}",
+                    "body": "Here's your weekly business summary:\n\n{{summary}}\n\n---\nGenerated by Aivaro"
                 },
                 "requiresApproval": False
             },
@@ -359,16 +456,18 @@ def _template_report_workflow() -> dict:
                 "id": "notify-1",
                 "type": "send_notification",
                 "label": "Notify report sent",
-                "position": {"x": 250, "y": 350},
+                "position": {"x": 250, "y": 650},
                 "parameters": {
-                    "message": "Weekly report has been generated and sent"
+                    "message": "Weekly profit report has been generated and sent"
                 },
                 "requiresApproval": False
             }
         ],
         "edges": [
-            {"id": "e1", "source": "start-1", "target": "email-1"},
-            {"id": "e2", "source": "email-1", "target": "notify-1"}
+            {"id": "e1", "source": "start-1", "target": "read-1"},
+            {"id": "e2", "source": "read-1", "target": "ai-1"},
+            {"id": "e3", "source": "ai-1", "target": "email-1"},
+            {"id": "e4", "source": "email-1", "target": "notify-1"}
         ]
     }
 
