@@ -5,7 +5,10 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Aivaro - Your Personalized AI Co-Founder',
+  title: {
+    default: 'Aivaro',
+    template: '%s | Aivaro',
+  },
   description: 'Tell us what you need in plain English. We build and run your business workflows automatically. Not suggestions. Not drafts. Execution.',
   icons: {
     icon: '/favicon.png',

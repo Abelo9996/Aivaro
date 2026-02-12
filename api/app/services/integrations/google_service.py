@@ -170,45 +170,76 @@ class GoogleService:
         # Get the header row to understand column order
         headers = await self.get_header_row(spreadsheet_id, sheet_name)
         
+        print(f"[GoogleService] Sheet headers: {headers}")
+        print(f"[GoogleService] Input data keys: {list(data.keys())}")
+        
         if not headers:
             # No headers found - just append the values as a list
             values = list(data.values()) if isinstance(data, dict) else data
             return await self.append_row(spreadsheet_id, values, sheet_name)
         
+        # Normalize header for matching: "Customer Name" -> "customer_name", "customer name", etc.
+        def normalize(s: str) -> str:
+            return s.lower().replace(" ", "_").replace("-", "_")
+        
+        # Map from normalized header to possible data keys
+        # Format: "normalized_header": ["possible_data_key1", "possible_data_key2", ...]
+        header_to_data_keys = {
+            "customer_name": ["customer_name", "name", "client_name", "full_name", "customer"],
+            "customer_email": ["customer_email", "email", "client_email", "user_email"],
+            "pickup_date": ["pickup_date", "date", "appointment_date", "booking_date", "event_date", "today"],
+            "pickup_time": ["pickup_time", "time", "appointment_time", "booking_time", "event_time", "start_time"],
+            "customer_phone": ["customer_phone", "phone", "phone_number", "mobile", "cell", "tel"],
+            "pickup_type": ["pickup_type", "service", "service_type", "type", "service_name"],
+            "status": ["status", "booking_status", "payment_status", "state"],
+            "payment_url": ["payment_url", "payment_link_url", "payment_link", "link", "url"],
+            "notes": ["notes", "description", "comments", "message", "details"],
+            "amount": ["amount", "price", "cost", "total", "fee", "payment_amount"],
+            "date": ["date", "pickup_date", "appointment_date", "booking_date", "today"],
+            "time": ["time", "pickup_time", "appointment_time", "booking_time"],
+            "name": ["name", "customer_name", "client_name", "full_name"],
+            "email": ["email", "customer_email", "client_email", "user_email"],
+            "phone": ["phone", "customer_phone", "phone_number", "mobile"],
+            "service": ["service", "pickup_type", "service_type", "type"],
+            "link": ["link", "payment_url", "payment_link_url", "payment_link", "url"],
+        }
+        
         # Build row matching header order
         row_values = []
         for header in headers:
-            # Try exact match first
-            value = data.get(header, "")
+            value = ""
+            normalized_header = normalize(header)
             
-            # If not found, try case-insensitive match
+            # 1. Try exact match with original header
+            if header in data and data[header]:
+                value = data[header]
+            
+            # 2. Try normalized header as key
+            if not value and normalized_header in data and data[normalized_header]:
+                value = data[normalized_header]
+            
+            # 3. Try case-insensitive match on all keys
             if not value:
                 header_lower = header.lower()
                 for key, val in data.items():
-                    if key.lower() == header_lower:
-                        value = val
-                        break
-            
-            # Try common aliases
-            if not value:
-                aliases = {
-                    "date": ["pickup_date", "appointment_date", "booking_date", "event_date", "today"],
-                    "time": ["pickup_time", "appointment_time", "booking_time", "event_time", "start_time"],
-                    "name": ["customer_name", "client_name", "full_name"],
-                    "email": ["customer_email", "client_email", "user_email"],
-                    "phone": ["phone_number", "mobile", "cell", "tel"],
-                    "service": ["service_type", "service_name", "type"],
-                    "status": ["booking_status", "payment_status", "state"],
-                    "notes": ["description", "comments", "message", "details"],
-                    "amount": ["price", "cost", "total", "fee", "payment_amount"],
-                    "link": ["payment_link", "payment_link_url", "url"],
-                }
-                header_lower = header.lower()
-                if header_lower in aliases:
-                    for alias in aliases[header_lower]:
-                        if alias in data:
-                            value = data[alias]
+                    if key.lower() == header_lower or normalize(key) == normalized_header:
+                        if val:
+                            value = val
                             break
+            
+            # 4. Try alias mapping
+            if not value and normalized_header in header_to_data_keys:
+                for possible_key in header_to_data_keys[normalized_header]:
+                    if possible_key in data and data[possible_key]:
+                        value = data[possible_key]
+                        break
+                    # Also try case-insensitive
+                    for key, val in data.items():
+                        if key.lower() == possible_key.lower() and val:
+                            value = val
+                            break
+                    if value:
+                        break
             
             row_values.append(str(value) if value else "")
         

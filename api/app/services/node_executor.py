@@ -442,34 +442,54 @@ Extract: {fields_to_extract}"""
                 row_data_list.append(value)
         else:
             # Auto-build data dict from input_data for schema matching
-            # Include all relevant fields that might map to spreadsheet columns
+            # Use multiple key variations so the schema matcher can find them
+            # The key names should match common spreadsheet column headers
+            
+            # Get values with fallbacks
+            customer_name = input_data.get("customer_name") or input_data.get("name") or ""
+            customer_email = input_data.get("customer_email") or input_data.get("email") or ""
+            pickup_date = input_data.get("pickup_date") or input_data.get("date") or input_data.get("today") or ""
+            pickup_time = input_data.get("pickup_time") or input_data.get("time") or ""
+            customer_phone = input_data.get("customer_phone") or input_data.get("phone") or ""
+            pickup_type = input_data.get("pickup_type") or input_data.get("service") or input_data.get("service_type") or ""
+            status = input_data.get("status") or "Pending"
+            payment_url = input_data.get("payment_url") or input_data.get("payment_link_url") or input_data.get("payment_link") or ""
+            notes = input_data.get("notes") or input_data.get("description") or ""
+            amount = input_data.get("amount") or input_data.get("price") or ""
+            
+            # Include all variations of key names for maximum compatibility
             row_data_dict = {
-                "Date": input_data.get("pickup_date") or input_data.get("date") or input_data.get("today", ""),
-                "Time": input_data.get("pickup_time") or input_data.get("time", ""),
-                "Name": input_data.get("customer_name") or input_data.get("name", ""),
-                "Email": input_data.get("customer_email") or input_data.get("email", ""),
-                "Phone": input_data.get("phone", ""),
-                "Service": input_data.get("service", ""),
-                "Status": input_data.get("status", "Pending"),
-                "Payment Link": input_data.get("payment_link_url", ""),
-                "Notes": input_data.get("notes") or input_data.get("description", ""),
-                "Amount": input_data.get("amount") or input_data.get("price", ""),
-                # Also include raw keys from input_data for direct matching
-                **{k: str(v) for k, v in input_data.items() if isinstance(v, (str, int, float, bool))}
+                # Exact match keys (for headers like "Customer Name", "Pickup Date")
+                "customer_name": customer_name,
+                "customer_email": customer_email,
+                "pickup_date": pickup_date,
+                "pickup_time": pickup_time,
+                "customer_phone": customer_phone,
+                "pickup_type": pickup_type,
+                "status": status,
+                "payment_url": payment_url,
+                # Alternate key names
+                "name": customer_name,
+                "email": customer_email,
+                "date": pickup_date,
+                "time": pickup_time,
+                "phone": customer_phone,
+                "service": pickup_type,
+                "payment_link_url": payment_url,
+                "payment_link": payment_url,
+                "link": payment_url,
+                "notes": notes,
+                "amount": amount,
+                "today": input_data.get("today", ""),
             }
             
+            # Also include all raw input_data for any custom columns
+            for k, v in input_data.items():
+                if isinstance(v, (str, int, float, bool)) and k not in row_data_dict:
+                    row_data_dict[k] = str(v) if v else ""
+            
             # Build fallback list (for non-schema mode)
-            auto_fields = [
-                input_data.get("pickup_date") or input_data.get("date") or input_data.get("today", ""),
-                input_data.get("pickup_time") or input_data.get("time", ""),
-                input_data.get("customer_name") or input_data.get("name", ""),
-                input_data.get("customer_email") or input_data.get("email", ""),
-                input_data.get("phone", ""),
-                input_data.get("service", ""),
-                "Pending",
-                input_data.get("payment_link_url", ""),
-                input_data.get("notes") or input_data.get("description", "")
-            ]
+            auto_fields = [pickup_date, pickup_time, customer_name, customer_email, customer_phone, pickup_type, status, payment_url, notes]
             row_data_list = [v for v in auto_fields if v]
             
             if not row_data_list:
@@ -484,7 +504,7 @@ Extract: {fields_to_extract}"""
         logs += f"  Spreadsheet: {spreadsheet}\n"
         logs += f"  Sheet: {sheet_name}\n"
         logs += f"  Use schema matching: {use_schema}\n"
-        logs += f"  Data fields: {list(row_data_dict.keys())[:10]}...\n"
+        logs += f"  Data keys: {[k for k in row_data_dict.keys() if row_data_dict[k]]}\n"
         
         if is_test:
             logs += "  Row NOT added (test mode)\n"
