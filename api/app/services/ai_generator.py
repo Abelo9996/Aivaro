@@ -113,9 +113,15 @@ def _generate_deterministic(prompt: str) -> dict:
     """Generate workflow using keyword matching"""
     prompt_lower = prompt.lower()
     
+    # First, check for email-triggered workflows (higher priority)
+    is_email_trigger = any(word in prompt_lower for word in [
+        "email", "receive", "inbox", "subject", "when i get", "arrives", 
+        "appointment scheduled", "incoming"
+    ])
+    
     # Detect workflow type based on keywords
-    if any(word in prompt_lower for word in ["booking", "appointment", "schedule"]):
-        return _template_booking_workflow()
+    if any(word in prompt_lower for word in ["booking", "appointment", "schedule", "pickup"]):
+        return _template_booking_workflow(email_trigger=is_email_trigger, prompt=prompt)
     elif any(word in prompt_lower for word in ["lead", "follow up", "prospect"]):
         return _template_lead_followup()
     elif any(word in prompt_lower for word in ["order", "purchase", "receipt"]):
@@ -124,23 +130,51 @@ def _generate_deterministic(prompt: str) -> dict:
         return _template_invoice_workflow()
     elif any(word in prompt_lower for word in ["report", "summary", "daily", "weekly"]):
         return _template_report_workflow()
+    elif is_email_trigger:
+        # Generic email workflow
+        return _template_email_workflow(prompt)
     else:
         return _template_generic_workflow(prompt)
 
 
-def _template_booking_workflow() -> dict:
+def _template_booking_workflow(email_trigger: bool = False, prompt: str = "") -> dict:
+    # Extract subject filter from prompt if mentioned
+    subject_filter = ""
+    prompt_lower = prompt.lower()
+    if "appointment scheduled" in prompt_lower:
+        subject_filter = "Appointment Scheduled"
+    elif "booking" in prompt_lower and "subject" in prompt_lower:
+        subject_filter = "Booking"
+    
+    # Choose trigger type based on detection
+    if email_trigger:
+        trigger_node = {
+            "id": "start-1",
+            "type": "start_email",
+            "label": f"Email received with \"{subject_filter or 'booking'}\"" if subject_filter else "When booking email received",
+            "position": {"x": 250, "y": 50},
+            "parameters": {
+                "subject": subject_filter or "Appointment Scheduled"
+            },
+            "requiresApproval": False
+        }
+        summary = f"When an email arrives with \"{subject_filter or 'Appointment Scheduled'}\" in the subject, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet."
+    else:
+        trigger_node = {
+            "id": "start-1",
+            "type": "start_form",
+            "label": "When booking form is submitted",
+            "position": {"x": 250, "y": 50},
+            "parameters": {},
+            "requiresApproval": False
+        }
+        summary = "When a new booking is made, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet."
+    
     return {
         "workflowName": "Booking with Deposit",
-        "summary": "When a new booking is made, Aivaro will create a calendar event, generate a deposit payment link, send confirmation, and log it to your spreadsheet.",
+        "summary": summary,
         "nodes": [
-            {
-                "id": "start-1",
-                "type": "start_form",
-                "label": "When booking form is submitted",
-                "position": {"x": 250, "y": 50},
-                "parameters": {},
-                "requiresApproval": False
-            },
+            trigger_node,
             {
                 "id": "calendar-1",
                 "type": "google_calendar_create",
@@ -173,7 +207,7 @@ def _template_booking_workflow() -> dict:
                 "label": "Send confirmation with payment link",
                 "position": {"x": 250, "y": 500},
                 "parameters": {
-                    "to": "{{email}}",
+                    "to": "{{from}}" if email_trigger else "{{email}}",
                     "subject": "Confirm your booking - $20 deposit required",
                     "body": "Hi {{name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
                 },
@@ -190,7 +224,7 @@ def _template_booking_workflow() -> dict:
                         {"name": "Date", "value": "{{pickup_date}}"},
                         {"name": "Time", "value": "{{pickup_time}}"},
                         {"name": "Name", "value": "{{name}}"},
-                        {"name": "Email", "value": "{{email}}"},
+                        {"name": "Email", "value": "{{from}}" if email_trigger else "{{email}}"},
                         {"name": "Service", "value": "{{service}}"},
                         {"name": "Deposit Status", "value": "Pending"},
                         {"name": "Payment Link", "value": "{{payment_link_url}}"}
@@ -215,6 +249,51 @@ def _template_booking_workflow() -> dict:
             {"id": "e3", "source": "stripe-1", "target": "email-1"},
             {"id": "e4", "source": "email-1", "target": "sheet-1"},
             {"id": "e5", "source": "sheet-1", "target": "notify-1"}
+        ]
+    }
+
+
+def _template_email_workflow(prompt: str = "") -> dict:
+    """Generic email-triggered workflow"""
+    return {
+        "workflowName": "Email Auto-Response",
+        "summary": "When an email arrives, Aivaro will generate an AI response and reply.",
+        "nodes": [
+            {
+                "id": "start-1",
+                "type": "start_email",
+                "label": "When email is received",
+                "position": {"x": 250, "y": 50},
+                "parameters": {},
+                "requiresApproval": False
+            },
+            {
+                "id": "ai-1",
+                "type": "ai_reply",
+                "label": "Generate AI response",
+                "position": {"x": 250, "y": 200},
+                "parameters": {
+                    "tone": "professional",
+                    "context": "Reply helpfully to this email"
+                },
+                "requiresApproval": False
+            },
+            {
+                "id": "email-1",
+                "type": "send_email",
+                "label": "Send reply",
+                "position": {"x": 250, "y": 350},
+                "parameters": {
+                    "to": "{{from}}",
+                    "subject": "Re: {{subject}}",
+                    "body": "{{ai_response}}"
+                },
+                "requiresApproval": True
+            }
+        ],
+        "edges": [
+            {"id": "e1", "source": "start-1", "target": "ai-1"},
+            {"id": "e2", "source": "ai-1", "target": "email-1"}
         ]
     }
 
