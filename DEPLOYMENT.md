@@ -37,11 +37,11 @@
    SECRET_KEY=<generate-a-random-32-char-string>
    OPENAI_API_KEY=<your-openai-key>
    GOOGLE_CLIENT_ID=<your-google-client-id>
-   GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+   n=<your-google-client-secret>
    FRONTEND_URL=https://your-app.vercel.app
    API_URL=https://your-api.railway.app
    ```
-6. Deploy! Railway will use `railway.toml` for configuration
+6. Deploy! Railway will use `railway.toml.` for configuration
 
 ### 3. Deploy Frontend to Vercel
 
