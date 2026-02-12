@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Clock, Sparkles, LayoutTemplate, BarChart3, Bot } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Workflow, Approval } from '@/types';
@@ -50,7 +51,9 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">⏳</span>
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
               <div>
                 <h2 className="font-semibold text-amber-900">
                   {approvals.length} action{approvals.length !== 1 ? 's' : ''} waiting for your approval
@@ -75,27 +78,33 @@ export default function DashboardPage() {
         <Link
           href="/app/workflows/new"
           data-walkthrough="quick-action-create"
-          className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition"
+          className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition group"
         >
-          <div className="text-3xl mb-3">✨</div>
+          <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-100 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition">
+            <Sparkles className="w-6 h-6 text-primary-600" />
+          </div>
           <h3 className="font-semibold mb-1">Create Workflow</h3>
           <p className="text-sm text-gray-500">Build a new automation</p>
         </Link>
         <Link
           href="/app/templates"
           data-walkthrough="quick-action-templates"
-          className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition"
+          className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition group"
         >
-          <div className="text-3xl mb-3">📋</div>
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition">
+            <LayoutTemplate className="w-6 h-6 text-blue-600" />
+          </div>
           <h3 className="font-semibold mb-1">Browse Templates</h3>
           <p className="text-sm text-gray-500">Start from a template</p>
         </Link>
         <Link
           href="/app/executions"
           data-walkthrough="quick-action-history"
-          className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition"
+          className="bg-white p-6 rounded-xl border border-gray-200 hover:border-primary-500 hover:shadow-sm transition group"
         >
-          <div className="text-3xl mb-3">📊</div>
+          <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition">
+            <BarChart3 className="w-6 h-6 text-green-600" />
+          </div>
           <h3 className="font-semibold mb-1">Run History</h3>
           <p className="text-sm text-gray-500">See what's happened</p>
         </Link>
@@ -115,7 +124,9 @@ export default function DashboardPage() {
 
         {workflows.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <div className="text-5xl mb-4">🤖</div>
+            <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Bot className="w-8 h-8 text-primary-600" />
+            </div>
             <h3 className="text-lg font-semibold mb-2">No workflows yet</h3>
             <p className="text-gray-500 mb-6">
               Create your first automation to get started.

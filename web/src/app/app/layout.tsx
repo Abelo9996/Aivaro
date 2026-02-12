@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { MessageSquare } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
@@ -61,13 +62,13 @@ export default function AppLayout({
         {/* Global AI Assistant FAB */}
         <button
           onClick={() => setIsAssistantOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-primary-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center z-40"
+          className="fixed bottom-6 right-6 w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center z-40 group"
           title="AI Assistant"
         >
-          <span className="text-2xl">🤖</span>
+          <MessageSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
         </button>
         
-        {/* Global Assistant Modal */}
+        {/* Global Assistant Panel */}
         <GlobalAssistant 
           isOpen={isAssistantOpen} 
           onClose={() => setIsAssistantOpen(false)} 

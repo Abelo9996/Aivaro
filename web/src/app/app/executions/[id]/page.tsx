@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { Bot, AlertCircle, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Execution } from '@/types';
@@ -186,8 +187,8 @@ export default function ExecutionDetailPage() {
                     {/* Output - Collapsible */}
                     {node.output && Object.keys(node.output).length > 0 && (
                       <details className="mt-2">
-                        <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
-                          📦 View Output Data
+                        <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800 flex items-center gap-1">
+                          <Package className="w-3 h-3" /> View Output Data
                         </summary>
                         <pre className="mt-2 p-3 bg-white rounded border text-xs overflow-x-auto max-h-64 overflow-y-auto">
                           {JSON.stringify(node.output, null, 2)}
@@ -197,8 +198,8 @@ export default function ExecutionDetailPage() {
                     
                     {/* Error */}
                     {node.error && (
-                      <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm">
-                        ❌ {node.error}
+                      <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" /> {node.error}
                       </div>
                     )}
                   </div>
@@ -223,7 +224,7 @@ export default function ExecutionDetailPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl">🤖</span>
+                  <Bot className="w-6 h-6 text-primary-600" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">AI Assistant</h3>
                 <p className="text-sm text-gray-500 mb-4">

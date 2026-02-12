@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Zap } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { api } from '@/lib/api';
 import type { Template } from '@/types';
@@ -143,7 +144,9 @@ export default function OnboardingPage() {
                     className="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{template.icon || '⚡'}</span>
+                      <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-primary-600" />
+                      </div>
                       <span className="font-medium">{template.name}</span>
                     </div>
                     <div className="text-sm text-gray-500 mt-1">{template.summary || template.description}</div>

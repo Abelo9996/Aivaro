@@ -8,8 +8,9 @@ interface ModeState {
   setMode: (advanced: boolean) => void;
 }
 
+// Always advanced mode - no toggling needed
 export const useModeStore = create<ModeState>((set) => ({
-  isAdvancedMode: false,
-  toggleMode: () => set((state) => ({ isAdvancedMode: !state.isAdvancedMode })),
-  setMode: (advanced: boolean) => set({ isAdvancedMode: advanced }),
+  isAdvancedMode: true, // Always true now
+  toggleMode: () => {}, // No-op
+  setMode: () => {}, // No-op
 }));

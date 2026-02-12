@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Wand2, Plus, LayoutTemplate, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import AIWorkflowGenerator from '@/components/workflow/AIWorkflowGenerator';
 
@@ -82,11 +83,11 @@ export default function NewWorkflowPage() {
           disabled={isCreating}
           className="group relative bg-gradient-to-br from-primary-500 to-purple-600 rounded-2xl p-6 text-left text-white hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50"
         >
-          <div className="absolute top-3 right-3 bg-white/20 text-xs px-2 py-1 rounded-full">
-            ✨ Recommended
+          <div className="absolute top-3 right-3 bg-white/20 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+            <Sparkles className="w-3 h-3" /> Recommended
           </div>
           <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <span className="text-3xl">🪄</span>
+            <Wand2 className="w-7 h-7" />
           </div>
           <h3 className="text-xl font-bold mb-2">Generate with AI</h3>
           <p className="text-white/80 text-sm">

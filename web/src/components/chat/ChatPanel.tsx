@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Bot, User, Send, Loader2 } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -83,7 +84,7 @@ export default function ChatPanel({
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-purple-50 rounded-t-xl">
         <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm">🤖</span>
+          <Bot className="w-4 h-4 text-white" />
         </div>
         <div>
           <h3 className="font-semibold text-gray-900">{title}</h3>

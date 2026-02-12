@@ -196,30 +196,6 @@ export default function ConnectionsPage() {
           or from this page.
         </p>
       </div>
-
-      {/* Setup Instructions */}
-      <div className="mt-4 bg-blue-50 rounded-xl p-6">
-        <h3 className="font-semibold mb-2 text-blue-900">🔧 Setting up OAuth</h3>
-        <p className="text-sm text-blue-800 mb-3">
-          To enable real OAuth connections, set these environment variables in your API:
-        </p>
-        <div className="bg-blue-100 rounded-lg p-3 font-mono text-xs text-blue-900">
-          <div>GOOGLE_CLIENT_ID=your_client_id</div>
-          <div>GOOGLE_CLIENT_SECRET=your_client_secret</div>
-          <div className="mt-2">SLACK_CLIENT_ID=your_client_id</div>
-          <div>SLACK_CLIENT_SECRET=your_client_secret</div>
-        </div>
-        <p className="text-sm text-blue-700 mt-3">
-          Get these from{' '}
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" className="underline">
-            Google Cloud Console
-          </a>{' '}
-          or{' '}
-          <a href="https://api.slack.com/apps" target="_blank" className="underline">
-            Slack API
-          </a>
-        </p>
-      </div>
     </div>
   );
 }

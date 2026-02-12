@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Sparkles, Wand2, RefreshCw, Bot, Loader2, CheckCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import ServiceIcon from '@/components/ui/ServiceIcon';
 
@@ -70,7 +71,7 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
           <div className="bg-gradient-to-r from-primary-500 to-purple-600 text-white p-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">✨</span>
+                <Sparkles className="w-6 h-6" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">{generatedWorkflow.workflowName}</h2>
@@ -115,9 +116,10 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
           <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
             <button
               onClick={handleRegenerate}
-              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors font-medium"
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors font-medium flex items-center justify-center gap-2"
             >
-              🔄 Regenerate
+              <RefreshCw className="w-4 h-4" />
+              Regenerate
             </button>
             <button
               onClick={onCancel}
@@ -127,9 +129,10 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
             </button>
             <button
               onClick={handleUseWorkflow}
-              className="flex-1 px-4 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors font-medium"
+              className="flex-1 px-4 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors font-medium flex items-center justify-center gap-2"
             >
-              ✨ Use This Workflow
+              <CheckCircle className="w-4 h-4" />
+              Use This Workflow
             </button>
           </div>
         </div>
@@ -144,7 +147,7 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
         <div className="bg-gradient-to-r from-primary-500 to-purple-600 text-white p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">🪄</span>
+              <Wand2 className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Generate Workflow with AI</h2>
@@ -194,8 +197,8 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
           {isGenerating && (
             <div className="mb-4 p-4 bg-primary-50 rounded-xl">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center animate-pulse">
-                  <span className="text-white text-sm">🤖</span>
+                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white animate-pulse" />
                 </div>
                 <div>
                   <div className="font-medium text-primary-900">Generating your workflow...</div>
@@ -222,12 +225,13 @@ export default function AIWorkflowGenerator({ onGenerate, onCancel }: AIWorkflow
           >
             {isGenerating ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                ✨ Generate Workflow
+                <Sparkles className="w-4 h-4" />
+                Generate Workflow
               </>
             )}
           </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Info } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Approval } from '@/types';
@@ -162,8 +163,9 @@ export default function ApprovalsPage() {
 
       {/* Info Box */}
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">
-          💡 About Approvals
+        <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+          <Info className="w-4 h-4" />
+          About Approvals
         </h3>
         <p className="text-sm text-blue-700">
           Some actions in your workflows require your approval before they run.

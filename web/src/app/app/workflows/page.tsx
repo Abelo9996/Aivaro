@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Workflow } from '@/types';
@@ -81,7 +82,9 @@ export default function WorkflowsPage() {
           data-walkthrough="workflows-list"
           className="bg-white rounded-xl border border-gray-200 p-12 text-center"
         >
-          <div className="text-5xl mb-4">⚡</div>
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-8 h-8 text-primary-600" />
+          </div>
           <h3 className="text-lg font-semibold mb-2">No workflows yet</h3>
           <p className="text-gray-500 mb-6">
             Create your first automation to start saving time.
