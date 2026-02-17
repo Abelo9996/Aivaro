@@ -1,63 +1,78 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Key, X } from 'lucide-react';
+import { Key, X, Search, Filter } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import ServiceIcon from '@/components/ui/ServiceIcon';
 import type { Connection } from '@/types';
 
+// Category definitions
+const categories = [
+  { id: 'all', label: 'All', icon: '🔗' },
+  { id: 'connected', label: 'Connected', icon: '✅' },
+  { id: 'core', label: 'Core', icon: '⚡' },
+  { id: 'crm', label: 'CRM & Sales', icon: '💼' },
+  { id: 'marketing', label: 'Marketing', icon: '📧' },
+  { id: 'analytics', label: 'Analytics', icon: '📊' },
+  { id: 'website', label: 'Website', icon: '🌐' },
+  { id: 'social', label: 'Social Media', icon: '📱' },
+  { id: 'productivity', label: 'Productivity', icon: '📋' },
+  { id: 'support', label: 'Support', icon: '🎧' },
+  { id: 'developer', label: 'Developer', icon: '💻' },
+];
+
 const availableConnections = [
   // Core integrations
-  { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar', authType: 'oauth' },
-  { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing', authType: 'api_key' },
-  { type: 'slack', name: 'Slack', description: 'Team messaging', authType: 'oauth' },
-  { type: 'notion', name: 'Notion', description: 'Notes and databases', authType: 'oauth' },
+  { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar', authType: 'oauth', category: 'core' },
+  { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing', authType: 'api_key', category: 'core' },
+  { type: 'slack', name: 'Slack', description: 'Team messaging', authType: 'oauth', category: 'core' },
+  { type: 'notion', name: 'Notion', description: 'Notes and databases', authType: 'oauth', category: 'productivity' },
   // Scheduling & Marketing
-  { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings', authType: 'oauth' },
-  { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases', authType: 'api_key' },
-  { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing', authType: 'api_key' },
-  { type: 'twilio', name: 'Twilio', description: 'SMS and voice', authType: 'api_key' },
+  { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings', authType: 'oauth', category: 'productivity' },
+  { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases', authType: 'api_key', category: 'productivity' },
+  { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing', authType: 'api_key', category: 'marketing' },
+  { type: 'twilio', name: 'Twilio', description: 'SMS and voice', authType: 'api_key', category: 'marketing' },
   // SMS Marketing
-  { type: 'textedly', name: 'Textedly', description: 'SMS marketing platform', authType: 'api_key' },
+  { type: 'textedly', name: 'Textedly', description: 'SMS marketing platform', authType: 'api_key', category: 'marketing' },
   // CRM & Sales
-  { type: 'hubspot', name: 'HubSpot', description: 'CRM and marketing automation', authType: 'oauth' },
-  { type: 'salesforce', name: 'Salesforce', description: 'Enterprise CRM', authType: 'oauth' },
+  { type: 'hubspot', name: 'HubSpot', description: 'CRM and marketing automation', authType: 'oauth', category: 'crm' },
+  { type: 'salesforce', name: 'Salesforce', description: 'Enterprise CRM', authType: 'oauth', category: 'crm' },
   // E-commerce & Finance
-  { type: 'shopify', name: 'Shopify', description: 'E-commerce platform', authType: 'oauth' },
-  { type: 'quickbooks', name: 'QuickBooks', description: 'Accounting and invoicing', authType: 'oauth' },
+  { type: 'shopify', name: 'Shopify', description: 'E-commerce platform', authType: 'oauth', category: 'core' },
+  { type: 'quickbooks', name: 'QuickBooks', description: 'Accounting and invoicing', authType: 'oauth', category: 'core' },
   // Website & Domain Providers
-  { type: 'godaddy', name: 'GoDaddy', description: 'Domains and hosting', authType: 'api_key' },
-  { type: 'wix', name: 'Wix', description: 'Website builder', authType: 'oauth' },
-  { type: 'squarespace', name: 'Squarespace', description: 'Website and commerce', authType: 'oauth' },
-  { type: 'webflow', name: 'Webflow', description: 'Visual web development', authType: 'api_key' },
+  { type: 'godaddy', name: 'GoDaddy', description: 'Domains and hosting', authType: 'api_key', category: 'website' },
+  { type: 'wix', name: 'Wix', description: 'Website builder', authType: 'oauth', category: 'website' },
+  { type: 'squarespace', name: 'Squarespace', description: 'Website and commerce', authType: 'oauth', category: 'website' },
+  { type: 'webflow', name: 'Webflow', description: 'Visual web development', authType: 'api_key', category: 'website' },
   // No-Code Platforms
-  { type: 'base44', name: 'Base44', description: 'No-code app builder', authType: 'api_key' },
-  { type: 'bubble', name: 'Bubble', description: 'No-code platform', authType: 'api_key' },
-  { type: 'zapier', name: 'Zapier', description: 'Workflow automation', authType: 'api_key' },
+  { type: 'base44', name: 'Base44', description: 'No-code app builder', authType: 'api_key', category: 'developer' },
+  { type: 'bubble', name: 'Bubble', description: 'No-code platform', authType: 'api_key', category: 'developer' },
+  { type: 'zapier', name: 'Zapier', description: 'Workflow automation', authType: 'api_key', category: 'developer' },
   // Analytics & Traffic
-  { type: 'google_analytics', name: 'Google Analytics', description: 'Website analytics', authType: 'oauth' },
-  { type: 'cloudflare', name: 'Cloudflare', description: 'CDN and security', authType: 'api_key' },
-  { type: 'plausible', name: 'Plausible', description: 'Privacy-friendly analytics', authType: 'api_key' },
-  { type: 'hotjar', name: 'Hotjar', description: 'Heatmaps and recordings', authType: 'api_key' },
+  { type: 'google_analytics', name: 'Google Analytics', description: 'Website analytics', authType: 'oauth', category: 'analytics' },
+  { type: 'cloudflare', name: 'Cloudflare', description: 'CDN and security', authType: 'api_key', category: 'analytics' },
+  { type: 'plausible', name: 'Plausible', description: 'Privacy-friendly analytics', authType: 'api_key', category: 'analytics' },
+  { type: 'hotjar', name: 'Hotjar', description: 'Heatmaps and recordings', authType: 'api_key', category: 'analytics' },
   // Social Media
-  { type: 'facebook', name: 'Facebook', description: 'Social media and ads', authType: 'oauth' },
-  { type: 'instagram', name: 'Instagram', description: 'Photo and video sharing', authType: 'oauth' },
-  { type: 'twitter', name: 'Twitter', description: 'Social media platform', authType: 'oauth' },
-  { type: 'linkedin', name: 'LinkedIn', description: 'Professional networking', authType: 'oauth' },
-  { type: 'tiktok', name: 'TikTok', description: 'Short-form video', authType: 'oauth' },
+  { type: 'facebook', name: 'Facebook', description: 'Social media and ads', authType: 'oauth', category: 'social' },
+  { type: 'instagram', name: 'Instagram', description: 'Photo and video sharing', authType: 'oauth', category: 'social' },
+  { type: 'twitter', name: 'Twitter', description: 'Social media platform', authType: 'oauth', category: 'social' },
+  { type: 'linkedin', name: 'LinkedIn', description: 'Professional networking', authType: 'oauth', category: 'social' },
+  { type: 'tiktok', name: 'TikTok', description: 'Short-form video', authType: 'oauth', category: 'social' },
   // Developer & Project Management
-  { type: 'github', name: 'GitHub', description: 'Code repositories and issues', authType: 'oauth' },
-  { type: 'discord', name: 'Discord', description: 'Community chat', authType: 'oauth' },
-  { type: 'asana', name: 'Asana', description: 'Project management', authType: 'oauth' },
-  { type: 'trello', name: 'Trello', description: 'Kanban boards', authType: 'api_key' },
+  { type: 'github', name: 'GitHub', description: 'Code repositories and issues', authType: 'oauth', category: 'developer' },
+  { type: 'discord', name: 'Discord', description: 'Community chat', authType: 'oauth', category: 'developer' },
+  { type: 'asana', name: 'Asana', description: 'Project management', authType: 'oauth', category: 'productivity' },
+  { type: 'trello', name: 'Trello', description: 'Kanban boards', authType: 'api_key', category: 'productivity' },
   // Support & Customer Success
-  { type: 'zendesk', name: 'Zendesk', description: 'Customer support tickets', authType: 'oauth' },
-  { type: 'intercom', name: 'Intercom', description: 'Customer messaging', authType: 'oauth' },
+  { type: 'zendesk', name: 'Zendesk', description: 'Customer support tickets', authType: 'oauth', category: 'support' },
+  { type: 'intercom', name: 'Intercom', description: 'Customer messaging', authType: 'oauth', category: 'support' },
   // Issue Tracking
-  { type: 'linear', name: 'Linear', description: 'Issue tracking', authType: 'oauth' },
-  { type: 'jira', name: 'Jira', description: 'Project and issue tracking', authType: 'oauth' },
+  { type: 'linear', name: 'Linear', description: 'Issue tracking', authType: 'oauth', category: 'developer' },
+  { type: 'jira', name: 'Jira', description: 'Project and issue tracking', authType: 'oauth', category: 'developer' },
 ];
 
 export default function ConnectionsPage() {
@@ -67,7 +82,38 @@ export default function ConnectionsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [apiKeyModal, setApiKeyModal] = useState<{ type: string; name: string } | null>(null);
   const [apiKey, setApiKey] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const searchParams = useSearchParams();
+
+  // Filter connections based on search and category
+  const filteredConnections = useMemo(() => {
+    return availableConnections.filter((service) => {
+      // Search filter
+      const matchesSearch = searchQuery === '' || 
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Category filter
+      let matchesCategory = true;
+      if (selectedCategory === 'connected') {
+        matchesCategory = connections.some((c: Connection) => c.type === service.type);
+      } else if (selectedCategory !== 'all') {
+        matchesCategory = service.category === selectedCategory;
+      }
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory, connections]);
+
+  // Count connections per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: availableConnections.length, connected: connections.length };
+    availableConnections.forEach((service) => {
+      counts[service.category] = (counts[service.category] || 0) + 1;
+    });
+    return counts;
+  }, [connections]);
 
   useEffect(() => {
     // Check for OAuth callback results
@@ -306,7 +352,7 @@ export default function ConnectionsPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Connections</h1>
         <p className="text-gray-500">
           Connect your apps to use them in your workflows
@@ -324,34 +370,99 @@ export default function ConnectionsPage() {
         </div>
       )}
 
-      <div data-walkthrough="connections-grid" className="grid md:grid-cols-2 gap-4">
-        {availableConnections.map((service) => {
-          const connected = getConnectionByType(service.type);
-          const isConnecting = connecting === service.type;
-          
-          return (
-            <div
-              key={service.type}
-              className={`bg-white rounded-xl border p-6 ${
-                connected ? 'border-green-200 bg-green-50/30' : 'border-gray-200'
+      {/* Search and Filter Bar */}
+      <div className="mb-6 space-y-4">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search connections..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                selectedCategory === category.id
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 flex items-center justify-center">
-                    <ServiceIcon type={service.type} size={40} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{service.name}</h3>
-                      {connected && (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                          Connected
-                        </span>
-                      )}
+              <span className="mr-1">{category.icon}</span>
+              {category.label}
+              <span className={`ml-1.5 text-xs ${
+                selectedCategory === category.id ? 'text-white/80' : 'text-gray-400'
+              }`}>
+                {categoryCounts[category.id] || 0}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Results Info */}
+      <div className="mb-4 text-sm text-gray-500">
+        Showing {filteredConnections.length} of {availableConnections.length} integrations
+        {searchQuery && <span> matching &ldquo;{searchQuery}&rdquo;</span>}
+      </div>
+
+      {/* Connections Grid */}
+      {filteredConnections.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-xl">
+          <Filter className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No connections match your filters</p>
+          <button
+            onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+            className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        <div data-walkthrough="connections-grid" className="grid md:grid-cols-2 gap-4">
+          {filteredConnections.map((service) => {
+            const connected = getConnectionByType(service.type);
+            const isConnecting = connecting === service.type;
+            
+            return (
+              <div
+                key={service.type}
+                className={`bg-white rounded-xl border p-6 transition-all hover:shadow-md ${
+                  connected ? 'border-green-200 bg-green-50/30' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 flex items-center justify-center">
+                      <ServiceIcon type={service.type} size={40} />
                     </div>
-                    <p className="text-sm text-gray-500">{service.description}</p>
-                    {connected && (
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{service.name}</h3>
+                        {connected && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                            Connected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">{service.description}</p>
+                      {connected && (
                       <p className="text-xs text-gray-400 mt-1">
                         Connected {formatDate(connected.created_at)}
                       </p>
@@ -380,7 +491,8 @@ export default function ConnectionsPage() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Info */}
       <div className="mt-8 bg-gray-50 rounded-xl p-6">

@@ -3,11 +3,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 import os
+import logging
 
 from app.routers import auth, workflows, executions, approvals, connections, templates, ai, chat, webhooks
+from app.routers import health
 from app.database import engine, Base, SessionLocal
 from app.models import user, workflow, execution, approval, connection, template
 from app.config import settings
+from app.utils.logging import setup_logging
+from app.middleware import (
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
+    ErrorHandlingMiddleware,
+)
+
+# Setup logging
+log_level = os.getenv("LOG_LEVEL", "INFO")
+json_logs = os.getenv("ENVIRONMENT") == "production"
+setup_logging(level=log_level, json_format=json_logs)
+
+logger = logging.getLogger(__name__)
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -84,18 +99,32 @@ if additional_origins:
 cors_origins = list(set([o for o in cors_origins if o]))
 
 # Log CORS origins for debugging
-print(f"[CORS] Allowed origins: {cors_origins}")
+logger.info(f"[CORS] Allowed origins: {cors_origins}")
 
-# Add CORS middleware BEFORE other middleware
+# Add middleware (order matters - first added = last executed)
+# Error handling should be outermost
+app.add_middleware(ErrorHandlingMiddleware)
+
+# Security headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Request logging with correlation IDs
+app.add_middleware(RequestLoggingMiddleware)
+
+# CORS must be after custom middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["X-Correlation-ID", "X-Response-Time"],
 )
 
+# Health check routes (no auth required)
+app.include_router(health.router, prefix="/api/health", tags=["Health"])
+
+# API routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(workflows.router, prefix="/api/workflows", tags=["Workflows"])
 app.include_router(executions.router, prefix="/api/executions", tags=["Run History"])
@@ -109,23 +138,9 @@ app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Aivaro API", "docs": "/docs"}
-
-
-@app.get("/health")
-async def health():
-    """Basic health check."""
-    return {"status": "healthy"}
-
-
-@app.get("/health/db")
-async def health_db():
-    """Health check with database connectivity verification."""
-    from sqlalchemy import text
-    try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+    return {
+        "message": "Welcome to Aivaro API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/health/ready",
+    }

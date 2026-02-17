@@ -4,6 +4,7 @@ from app.models.execution import Execution, ExecutionNode
 from app.models.approval import Approval
 from app.models.connection import Connection
 from app.models.template import Template
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "User",
@@ -13,4 +14,5 @@ __all__ = [
     "Approval",
     "Connection",
     "Template",
+    "AuditLog",
 ]
