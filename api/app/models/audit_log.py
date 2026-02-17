@@ -2,8 +2,7 @@
 Audit log model for tracking user actions and system events.
 Important for security, compliance, and debugging.
 """
-from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Index, JSON
 from sqlalchemy.sql import func
 import uuid
 
@@ -22,13 +21,13 @@ class AuditLog(Base):
     """
     __tablename__ = "audit_logs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # When
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
-    # Who
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # Who - matches User.id type (String(36))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     ip_address = Column(String(45), nullable=True)  # IPv6 can be up to 45 chars
     user_agent = Column(String(500), nullable=True)
     
@@ -37,8 +36,8 @@ class AuditLog(Base):
     resource_type = Column(String(50), nullable=True)  # e.g., "workflow", "connection"
     resource_id = Column(String(50), nullable=True)  # The ID of the affected resource
     
-    # Details
-    details = Column(JSONB, nullable=True)  # Additional context
+    # Details - use JSON for SQLite compatibility, JSONB for PostgreSQL
+    details = Column(JSON, nullable=True)
     
     # Status
     status = Column(String(20), default="success")  # success, failure, pending
