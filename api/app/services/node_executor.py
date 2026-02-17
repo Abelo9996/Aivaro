@@ -59,6 +59,76 @@ class NodeExecutor:
                 self._stripe_service = StripeService(api_key=api_key)
         return self._stripe_service
     
+    async def get_notion_service(self):
+        """Get or create Notion service instance."""
+        if not hasattr(self, '_notion_service'):
+            self._notion_service = None
+        if self._notion_service is None and "notion" in self.connections:
+            from app.services.integrations.notion_service import NotionService
+            creds = self.connections["notion"]
+            access_token = creds.get("access_token")
+            if access_token:
+                self._notion_service = NotionService(access_token=access_token)
+        return self._notion_service
+    
+    async def get_airtable_service(self):
+        """Get or create Airtable service instance."""
+        if not hasattr(self, '_airtable_service'):
+            self._airtable_service = None
+        if self._airtable_service is None and "airtable" in self.connections:
+            from app.services.integrations.airtable_service import AirtableService
+            creds = self.connections["airtable"]
+            access_token = creds.get("access_token")
+            if access_token:
+                self._airtable_service = AirtableService(access_token=access_token)
+        return self._airtable_service
+    
+    async def get_calendly_service(self):
+        """Get or create Calendly service instance."""
+        if not hasattr(self, '_calendly_service'):
+            self._calendly_service = None
+        if self._calendly_service is None and "calendly" in self.connections:
+            from app.services.integrations.calendly_service import CalendlyService
+            creds = self.connections["calendly"]
+            access_token = creds.get("access_token")
+            if access_token:
+                self._calendly_service = CalendlyService(access_token=access_token)
+        return self._calendly_service
+    
+    async def get_mailchimp_service(self):
+        """Get or create Mailchimp service instance."""
+        if not hasattr(self, '_mailchimp_service'):
+            self._mailchimp_service = None
+        if self._mailchimp_service is None and "mailchimp" in self.connections:
+            from app.services.integrations.mailchimp_service import MailchimpService
+            creds = self.connections["mailchimp"]
+            access_token = creds.get("access_token")
+            server_prefix = creds.get("server_prefix", "us1")
+            if access_token:
+                self._mailchimp_service = MailchimpService(
+                    access_token=access_token,
+                    server_prefix=server_prefix,
+                )
+        return self._mailchimp_service
+    
+    async def get_twilio_service(self):
+        """Get or create Twilio service instance."""
+        if not hasattr(self, '_twilio_service'):
+            self._twilio_service = None
+        if self._twilio_service is None and "twilio" in self.connections:
+            from app.services.integrations.twilio_service import TwilioService
+            creds = self.connections["twilio"]
+            account_sid = creds.get("account_sid")
+            auth_token = creds.get("auth_token")
+            phone_number = creds.get("phone_number")
+            if account_sid and auth_token:
+                self._twilio_service = TwilioService(
+                    account_sid=account_sid,
+                    auth_token=auth_token,
+                    default_from=phone_number,
+                )
+        return self._twilio_service
+    
     async def close(self):
         """Close all service connections."""
         if self._google_service:
@@ -67,6 +137,16 @@ class NodeExecutor:
             await self._slack_service.close()
         if hasattr(self, '_stripe_service') and self._stripe_service:
             await self._stripe_service.close()
+        if hasattr(self, '_notion_service') and self._notion_service:
+            await self._notion_service.close()
+        if hasattr(self, '_airtable_service') and self._airtable_service:
+            await self._airtable_service.close()
+        if hasattr(self, '_calendly_service') and self._calendly_service:
+            await self._calendly_service.close()
+        if hasattr(self, '_mailchimp_service') and self._mailchimp_service:
+            await self._mailchimp_service.close()
+        if hasattr(self, '_twilio_service') and self._twilio_service:
+            await self._twilio_service.close()
     
     async def execute(
         self,
@@ -102,6 +182,30 @@ class NodeExecutor:
             "stripe_create_payment_link": self._execute_stripe_create_payment_link,
             "stripe_get_customer": self._execute_stripe_get_customer,
             "stripe_check_payment": self._execute_stripe_check_payment,
+            # Notion integrations
+            "notion_create_page": self._execute_notion_create_page,
+            "notion_update_page": self._execute_notion_update_page,
+            "notion_query_database": self._execute_notion_query_database,
+            "notion_search": self._execute_notion_search,
+            # Airtable integrations
+            "airtable_create_record": self._execute_airtable_create_record,
+            "airtable_update_record": self._execute_airtable_update_record,
+            "airtable_list_records": self._execute_airtable_list_records,
+            "airtable_find_record": self._execute_airtable_find_record,
+            # Calendly integrations
+            "calendly_list_events": self._execute_calendly_list_events,
+            "calendly_get_event": self._execute_calendly_get_event,
+            "calendly_cancel_event": self._execute_calendly_cancel_event,
+            "calendly_create_link": self._execute_calendly_create_link,
+            # Mailchimp integrations
+            "mailchimp_add_subscriber": self._execute_mailchimp_add_subscriber,
+            "mailchimp_update_subscriber": self._execute_mailchimp_update_subscriber,
+            "mailchimp_add_tags": self._execute_mailchimp_add_tags,
+            "mailchimp_send_campaign": self._execute_mailchimp_send_campaign,
+            # Twilio integrations
+            "twilio_send_sms": self._execute_twilio_send_sms,
+            "twilio_send_whatsapp": self._execute_twilio_send_whatsapp,
+            "twilio_make_call": self._execute_twilio_make_call,
         }
         
         executor = executors.get(node_type, self._execute_default)
@@ -1350,6 +1454,802 @@ Extract: {fields_to_extract}"""
                 "output": input_data,
                 "logs": logs
             }
+
+    # ========== Notion Node Executors ==========
+    
+    async def _execute_notion_create_page(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create a new page in a Notion database."""
+        database_id = params.get("database_id", "")
+        properties = params.get("properties", {})
+        content = params.get("content", "")
+        
+        # Interpolate variables
+        database_id = _interpolate(database_id, input_data)
+        for key, value in properties.items():
+            if isinstance(value, str):
+                properties[key] = _interpolate(value, input_data)
+        content = _interpolate(content, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Creating Notion page\n"
+        logs += f"  Database: {database_id}\n"
+        logs += f"  Properties: {list(properties.keys())}\n"
+        
+        if is_test:
+            logs += "  Page NOT created (test mode)\n"
+            return {
+                "success": True,
+                "output": {**input_data, "notion_page_id": "test-page-id", "notion_created": False},
+                "logs": logs
+            }
+        
+        notion = await self.get_notion_service()
+        if not notion:
+            logs += "  ⚠️ Notion not connected\n"
+            return {
+                "success": False,
+                "error": "Notion not connected",
+                "output": input_data,
+                "logs": logs
+            }
+        
+        try:
+            # Build Notion properties format
+            notion_properties = {}
+            for key, value in properties.items():
+                # Auto-detect property type based on value
+                if isinstance(value, bool):
+                    notion_properties[key] = notion.create_checkbox_property(value)
+                elif isinstance(value, (int, float)):
+                    notion_properties[key] = notion.create_number_property(value)
+                elif key.lower() == "title" or key.lower() == "name":
+                    notion_properties[key] = notion.create_title_property(str(value))
+                else:
+                    notion_properties[key] = notion.create_rich_text_property(str(value))
+            
+            # Create children blocks if content is provided
+            children = None
+            if content:
+                children = [notion.create_paragraph_block(content)]
+            
+            result = await notion.create_page(database_id, notion_properties, children)
+            page_id = result.get("id", "")
+            page_url = result.get("url", "")
+            
+            logs += f"  ✅ Page created (ID: {page_id})\n"
+            return {
+                "success": True,
+                "output": {**input_data, "notion_page_id": page_id, "notion_page_url": page_url, "notion_created": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_notion_update_page(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Update properties of a Notion page."""
+        page_id = params.get("page_id", input_data.get("notion_page_id", ""))
+        properties = params.get("properties", {})
+        
+        page_id = _interpolate(page_id, input_data)
+        for key, value in properties.items():
+            if isinstance(value, str):
+                properties[key] = _interpolate(value, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Updating Notion page\n"
+        logs += f"  Page ID: {page_id}\n"
+        
+        if is_test:
+            logs += "  Page NOT updated (test mode)\n"
+            return {"success": True, "output": {**input_data, "notion_updated": False}, "logs": logs}
+        
+        notion = await self.get_notion_service()
+        if not notion:
+            logs += "  ⚠️ Notion not connected\n"
+            return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
+        
+        try:
+            # Build Notion properties format
+            notion_properties = {}
+            for key, value in properties.items():
+                if isinstance(value, bool):
+                    notion_properties[key] = notion.create_checkbox_property(value)
+                elif isinstance(value, (int, float)):
+                    notion_properties[key] = notion.create_number_property(value)
+                else:
+                    notion_properties[key] = notion.create_rich_text_property(str(value))
+            
+            result = await notion.update_page(page_id, notion_properties)
+            logs += f"  ✅ Page updated\n"
+            return {"success": True, "output": {**input_data, "notion_updated": True}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_notion_query_database(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Query records from a Notion database."""
+        database_id = params.get("database_id", "")
+        filter_json = params.get("filter", None)
+        page_size = params.get("page_size", 100)
+        
+        database_id = _interpolate(database_id, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Querying Notion database\n"
+        logs += f"  Database: {database_id}\n"
+        
+        if is_test:
+            logs += "  Database NOT queried (test mode)\n"
+            return {"success": True, "output": {**input_data, "notion_results": [], "notion_count": 0}, "logs": logs}
+        
+        notion = await self.get_notion_service()
+        if not notion:
+            logs += "  ⚠️ Notion not connected\n"
+            return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
+        
+        try:
+            result = await notion.query_database(database_id, filter=filter_json, page_size=page_size)
+            results = result.get("results", [])
+            count = len(results)
+            logs += f"  ✅ Retrieved {count} records\n"
+            return {
+                "success": True,
+                "output": {**input_data, "notion_results": results, "notion_count": count},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_notion_search(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Search across Notion pages and databases."""
+        query = params.get("query", "")
+        filter_type = params.get("filter_type", None)  # "page" or "database"
+        
+        query = _interpolate(query, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Searching Notion\n"
+        logs += f"  Query: {query}\n"
+        
+        if is_test:
+            logs += "  Search NOT performed (test mode)\n"
+            return {"success": True, "output": {**input_data, "notion_results": [], "notion_count": 0}, "logs": logs}
+        
+        notion = await self.get_notion_service()
+        if not notion:
+            logs += "  ⚠️ Notion not connected\n"
+            return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
+        
+        try:
+            results = await notion.search(query, filter_type=filter_type)
+            count = len(results)
+            logs += f"  ✅ Found {count} results\n"
+            return {
+                "success": True,
+                "output": {**input_data, "notion_results": results, "notion_count": count},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    # ========== Airtable Node Executors ==========
+    
+    async def _execute_airtable_create_record(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create a new record in an Airtable table."""
+        base_id = params.get("base_id", "")
+        table_name = params.get("table_name", "")
+        fields = params.get("fields", {})
+        
+        base_id = _interpolate(base_id, input_data)
+        table_name = _interpolate(table_name, input_data)
+        for key, value in fields.items():
+            if isinstance(value, str):
+                fields[key] = _interpolate(value, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Creating Airtable record\n"
+        logs += f"  Base: {base_id}, Table: {table_name}\n"
+        logs += f"  Fields: {list(fields.keys())}\n"
+        
+        if is_test:
+            logs += "  Record NOT created (test mode)\n"
+            return {
+                "success": True,
+                "output": {**input_data, "airtable_record_id": "test-record-id", "airtable_created": False},
+                "logs": logs
+            }
+        
+        airtable = await self.get_airtable_service()
+        if not airtable:
+            logs += "  ⚠️ Airtable not connected\n"
+            return {"success": False, "error": "Airtable not connected", "output": input_data, "logs": logs}
+        
+        try:
+            result = await airtable.create_record(base_id, table_name, fields, typecast=True)
+            record_id = result.get("id", "")
+            logs += f"  ✅ Record created (ID: {record_id})\n"
+            return {
+                "success": True,
+                "output": {**input_data, "airtable_record_id": record_id, "airtable_record": result, "airtable_created": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_airtable_update_record(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Update an existing Airtable record."""
+        base_id = params.get("base_id", "")
+        table_name = params.get("table_name", "")
+        record_id = params.get("record_id", input_data.get("airtable_record_id", ""))
+        fields = params.get("fields", {})
+        
+        base_id = _interpolate(base_id, input_data)
+        table_name = _interpolate(table_name, input_data)
+        record_id = _interpolate(record_id, input_data)
+        for key, value in fields.items():
+            if isinstance(value, str):
+                fields[key] = _interpolate(value, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Updating Airtable record\n"
+        logs += f"  Record: {record_id}\n"
+        
+        if is_test:
+            logs += "  Record NOT updated (test mode)\n"
+            return {"success": True, "output": {**input_data, "airtable_updated": False}, "logs": logs}
+        
+        airtable = await self.get_airtable_service()
+        if not airtable:
+            logs += "  ⚠️ Airtable not connected\n"
+            return {"success": False, "error": "Airtable not connected", "output": input_data, "logs": logs}
+        
+        try:
+            result = await airtable.update_record(base_id, table_name, record_id, fields, typecast=True)
+            logs += f"  ✅ Record updated\n"
+            return {
+                "success": True,
+                "output": {**input_data, "airtable_record": result, "airtable_updated": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_airtable_list_records(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List records from an Airtable table."""
+        base_id = params.get("base_id", "")
+        table_name = params.get("table_name", "")
+        view = params.get("view", None)
+        filter_formula = params.get("filter_formula", None)
+        max_records = params.get("max_records", 100)
+        
+        base_id = _interpolate(base_id, input_data)
+        table_name = _interpolate(table_name, input_data)
+        if filter_formula:
+            filter_formula = _interpolate(filter_formula, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Airtable records\n"
+        logs += f"  Base: {base_id}, Table: {table_name}\n"
+        
+        if is_test:
+            logs += "  Records NOT fetched (test mode)\n"
+            return {"success": True, "output": {**input_data, "airtable_records": [], "airtable_count": 0}, "logs": logs}
+        
+        airtable = await self.get_airtable_service()
+        if not airtable:
+            logs += "  ⚠️ Airtable not connected\n"
+            return {"success": False, "error": "Airtable not connected", "output": input_data, "logs": logs}
+        
+        try:
+            result = await airtable.list_records(
+                base_id, table_name,
+                view=view,
+                filter_formula=filter_formula,
+                max_records=max_records
+            )
+            records = result.get("records", [])
+            count = len(records)
+            logs += f"  ✅ Retrieved {count} records\n"
+            return {
+                "success": True,
+                "output": {**input_data, "airtable_records": records, "airtable_count": count},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_airtable_find_record(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Find records by field value in Airtable."""
+        base_id = params.get("base_id", "")
+        table_name = params.get("table_name", "")
+        field_name = params.get("field_name", "")
+        field_value = params.get("field_value", "")
+        
+        base_id = _interpolate(base_id, input_data)
+        table_name = _interpolate(table_name, input_data)
+        field_name = _interpolate(field_name, input_data)
+        field_value = _interpolate(field_value, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Finding Airtable record\n"
+        logs += f"  Find where {field_name} = {field_value}\n"
+        
+        if is_test:
+            logs += "  Search NOT performed (test mode)\n"
+            return {"success": True, "output": {**input_data, "airtable_record": None, "airtable_found": False}, "logs": logs}
+        
+        airtable = await self.get_airtable_service()
+        if not airtable:
+            logs += "  ⚠️ Airtable not connected\n"
+            return {"success": False, "error": "Airtable not connected", "output": input_data, "logs": logs}
+        
+        try:
+            records = await airtable.find_records_by_field(base_id, table_name, field_name, field_value, max_records=1)
+            if records:
+                record = records[0]
+                logs += f"  ✅ Found record (ID: {record.get('id')})\n"
+                return {
+                    "success": True,
+                    "output": {**input_data, "airtable_record": record, "airtable_record_id": record.get("id"), "airtable_found": True},
+                    "logs": logs
+                }
+            else:
+                logs += "  ⚠️ No matching record found\n"
+                return {
+                    "success": True,
+                    "output": {**input_data, "airtable_record": None, "airtable_found": False},
+                    "logs": logs
+                }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    # ========== Calendly Node Executors ==========
+    
+    async def _execute_calendly_list_events(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List scheduled events from Calendly."""
+        status = params.get("status", "active")  # active or canceled
+        min_start_time = params.get("min_start_time", None)
+        max_start_time = params.get("max_start_time", None)
+        count = params.get("count", 20)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Calendly events\n"
+        logs += f"  Status: {status}, Count: {count}\n"
+        
+        if is_test:
+            logs += "  Events NOT fetched (test mode)\n"
+            return {"success": True, "output": {**input_data, "calendly_events": [], "calendly_count": 0}, "logs": logs}
+        
+        calendly = await self.get_calendly_service()
+        if not calendly:
+            logs += "  ⚠️ Calendly not connected\n"
+            return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
+        
+        try:
+            result = await calendly.list_scheduled_events(
+                status=status,
+                min_start_time=min_start_time,
+                max_start_time=max_start_time,
+                count=count
+            )
+            events = result.get("collection", [])
+            formatted_events = [calendly.format_event_for_display(e) for e in events]
+            count = len(formatted_events)
+            logs += f"  ✅ Retrieved {count} events\n"
+            return {
+                "success": True,
+                "output": {**input_data, "calendly_events": formatted_events, "calendly_count": count},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_calendly_get_event(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Get details of a specific Calendly event."""
+        event_uuid = params.get("event_uuid", input_data.get("calendly_event_uuid", ""))
+        event_uuid = _interpolate(event_uuid, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Getting Calendly event\n"
+        logs += f"  Event UUID: {event_uuid}\n"
+        
+        if is_test:
+            logs += "  Event NOT fetched (test mode)\n"
+            return {"success": True, "output": {**input_data, "calendly_event": None}, "logs": logs}
+        
+        calendly = await self.get_calendly_service()
+        if not calendly:
+            logs += "  ⚠️ Calendly not connected\n"
+            return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
+        
+        try:
+            event = await calendly.get_scheduled_event(event_uuid)
+            # Also get invitees
+            invitees_result = await calendly.list_event_invitees(event_uuid)
+            invitees = [calendly.format_invitee_for_display(i) for i in invitees_result.get("collection", [])]
+            
+            formatted_event = calendly.format_event_for_display(event)
+            formatted_event["invitees"] = invitees
+            
+            logs += f"  ✅ Event retrieved with {len(invitees)} invitee(s)\n"
+            return {
+                "success": True,
+                "output": {**input_data, "calendly_event": formatted_event},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_calendly_cancel_event(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Cancel a scheduled Calendly event."""
+        event_uuid = params.get("event_uuid", input_data.get("calendly_event_uuid", ""))
+        reason = params.get("reason", "")
+        
+        event_uuid = _interpolate(event_uuid, input_data)
+        reason = _interpolate(reason, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Canceling Calendly event\n"
+        logs += f"  Event UUID: {event_uuid}\n"
+        
+        if is_test:
+            logs += "  Event NOT canceled (test mode)\n"
+            return {"success": True, "output": {**input_data, "calendly_canceled": False}, "logs": logs}
+        
+        calendly = await self.get_calendly_service()
+        if not calendly:
+            logs += "  ⚠️ Calendly not connected\n"
+            return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
+        
+        try:
+            await calendly.cancel_scheduled_event(event_uuid, reason=reason or None)
+            logs += f"  ✅ Event canceled\n"
+            return {
+                "success": True,
+                "output": {**input_data, "calendly_canceled": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_calendly_create_link(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create a single-use scheduling link."""
+        event_type_uuid = params.get("event_type_uuid", "")
+        max_event_count = params.get("max_event_count", 1)
+        
+        event_type_uuid = _interpolate(event_type_uuid, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Creating Calendly scheduling link\n"
+        logs += f"  Event Type UUID: {event_type_uuid}\n"
+        
+        if is_test:
+            logs += "  Link NOT created (test mode)\n"
+            return {"success": True, "output": {**input_data, "calendly_link": "https://calendly.com/test-link", "calendly_link_created": False}, "logs": logs}
+        
+        calendly = await self.get_calendly_service()
+        if not calendly:
+            logs += "  ⚠️ Calendly not connected\n"
+            return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
+        
+        try:
+            # Build full event type URI
+            event_type_uri = f"https://api.calendly.com/event_types/{event_type_uuid}"
+            result = await calendly.create_scheduling_link(event_type_uri, max_event_count)
+            booking_url = result.get("resource", {}).get("booking_url", "")
+            logs += f"  ✅ Scheduling link created: {booking_url}\n"
+            return {
+                "success": True,
+                "output": {**input_data, "calendly_link": booking_url, "calendly_link_created": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    # ========== Mailchimp Node Executors ==========
+    
+    async def _execute_mailchimp_add_subscriber(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Add a subscriber to a Mailchimp audience."""
+        list_id = params.get("list_id", "")
+        email = params.get("email", input_data.get("email", ""))
+        first_name = params.get("first_name", input_data.get("first_name", ""))
+        last_name = params.get("last_name", input_data.get("last_name", ""))
+        status = params.get("status", "subscribed")
+        tags = params.get("tags", [])
+        
+        list_id = _interpolate(list_id, input_data)
+        email = _interpolate(email, input_data)
+        first_name = _interpolate(first_name, input_data)
+        last_name = _interpolate(last_name, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Adding Mailchimp subscriber\n"
+        logs += f"  Email: {email}\n"
+        logs += f"  List: {list_id}\n"
+        
+        if is_test:
+            logs += "  Subscriber NOT added (test mode)\n"
+            return {"success": True, "output": {**input_data, "mailchimp_subscribed": False}, "logs": logs}
+        
+        mailchimp = await self.get_mailchimp_service()
+        if not mailchimp:
+            logs += "  ⚠️ Mailchimp not connected\n"
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        
+        try:
+            merge_fields = {}
+            if first_name:
+                merge_fields["FNAME"] = first_name
+            if last_name:
+                merge_fields["LNAME"] = last_name
+            
+            result = await mailchimp.add_or_update_member(
+                list_id=list_id,
+                email=email,
+                status=status,
+                merge_fields=merge_fields if merge_fields else None
+            )
+            
+            # Add tags if specified
+            if tags:
+                await mailchimp.add_tags_to_member(list_id, email, tags)
+            
+            logs += f"  ✅ Subscriber added/updated\n"
+            return {
+                "success": True,
+                "output": {**input_data, "mailchimp_subscribed": True, "mailchimp_member": mailchimp.format_member_for_display(result)},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_mailchimp_update_subscriber(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Update an existing Mailchimp subscriber."""
+        list_id = params.get("list_id", "")
+        email = params.get("email", input_data.get("email", ""))
+        status = params.get("status", None)
+        merge_fields = params.get("merge_fields", {})
+        
+        list_id = _interpolate(list_id, input_data)
+        email = _interpolate(email, input_data)
+        for key, value in merge_fields.items():
+            if isinstance(value, str):
+                merge_fields[key] = _interpolate(value, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Updating Mailchimp subscriber\n"
+        logs += f"  Email: {email}\n"
+        
+        if is_test:
+            logs += "  Subscriber NOT updated (test mode)\n"
+            return {"success": True, "output": {**input_data, "mailchimp_updated": False}, "logs": logs}
+        
+        mailchimp = await self.get_mailchimp_service()
+        if not mailchimp:
+            logs += "  ⚠️ Mailchimp not connected\n"
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        
+        try:
+            result = await mailchimp.update_member(
+                list_id=list_id,
+                email=email,
+                status=status,
+                merge_fields=merge_fields if merge_fields else None
+            )
+            logs += f"  ✅ Subscriber updated\n"
+            return {
+                "success": True,
+                "output": {**input_data, "mailchimp_updated": True, "mailchimp_member": mailchimp.format_member_for_display(result)},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_mailchimp_add_tags(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Add tags to a Mailchimp subscriber."""
+        list_id = params.get("list_id", "")
+        email = params.get("email", input_data.get("email", ""))
+        tags = params.get("tags", [])
+        
+        list_id = _interpolate(list_id, input_data)
+        email = _interpolate(email, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Adding Mailchimp tags\n"
+        logs += f"  Email: {email}\n"
+        logs += f"  Tags: {tags}\n"
+        
+        if is_test:
+            logs += "  Tags NOT added (test mode)\n"
+            return {"success": True, "output": {**input_data, "mailchimp_tags_added": False}, "logs": logs}
+        
+        mailchimp = await self.get_mailchimp_service()
+        if not mailchimp:
+            logs += "  ⚠️ Mailchimp not connected\n"
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        
+        try:
+            await mailchimp.add_tags_to_member(list_id, email, tags)
+            logs += f"  ✅ Tags added\n"
+            return {
+                "success": True,
+                "output": {**input_data, "mailchimp_tags_added": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_mailchimp_send_campaign(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Create and send a Mailchimp campaign."""
+        list_id = params.get("list_id", "")
+        subject = params.get("subject", "")
+        from_name = params.get("from_name", "")
+        reply_to = params.get("reply_to", "")
+        html_content = params.get("html_content", "")
+        
+        list_id = _interpolate(list_id, input_data)
+        subject = _interpolate(subject, input_data)
+        from_name = _interpolate(from_name, input_data)
+        reply_to = _interpolate(reply_to, input_data)
+        html_content = _interpolate(html_content, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending Mailchimp campaign\n"
+        logs += f"  Subject: {subject}\n"
+        logs += f"  List: {list_id}\n"
+        
+        if is_test:
+            logs += "  Campaign NOT sent (test mode)\n"
+            return {"success": True, "output": {**input_data, "mailchimp_campaign_sent": False}, "logs": logs}
+        
+        mailchimp = await self.get_mailchimp_service()
+        if not mailchimp:
+            logs += "  ⚠️ Mailchimp not connected\n"
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        
+        try:
+            # Create campaign
+            campaign = await mailchimp.create_campaign(
+                list_id=list_id,
+                subject=subject,
+                from_name=from_name,
+                reply_to=reply_to
+            )
+            campaign_id = campaign.get("id", "")
+            
+            # Set content
+            await mailchimp.set_campaign_content(campaign_id, html_content)
+            
+            # Send campaign
+            await mailchimp.send_campaign(campaign_id)
+            
+            logs += f"  ✅ Campaign sent (ID: {campaign_id})\n"
+            return {
+                "success": True,
+                "output": {**input_data, "mailchimp_campaign_id": campaign_id, "mailchimp_campaign_sent": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    # ========== Twilio Node Executors ==========
+    
+    async def _execute_twilio_send_sms(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Send an SMS message via Twilio."""
+        to = params.get("to", input_data.get("phone", ""))
+        body = params.get("body", "")
+        from_number = params.get("from_number", None)
+        
+        to = _interpolate(to, input_data)
+        body = _interpolate(body, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending SMS via Twilio\n"
+        logs += f"  To: {to}\n"
+        logs += f"  Body: {body[:50]}{'...' if len(body) > 50 else ''}\n"
+        
+        if is_test:
+            logs += "  SMS NOT sent (test mode)\n"
+            return {"success": True, "output": {**input_data, "twilio_sms_sent": False}, "logs": logs}
+        
+        twilio = await self.get_twilio_service()
+        if not twilio:
+            logs += "  ⚠️ Twilio not connected\n"
+            return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
+        
+        try:
+            # Format phone number
+            formatted_to = twilio.format_phone_number(to)
+            result = await twilio.send_sms(to=formatted_to, body=body, from_number=from_number)
+            message_sid = result.get("sid", "")
+            status = result.get("status", "")
+            logs += f"  ✅ SMS sent (SID: {message_sid}, Status: {status})\n"
+            return {
+                "success": True,
+                "output": {**input_data, "twilio_message_sid": message_sid, "twilio_sms_sent": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_twilio_send_whatsapp(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Send a WhatsApp message via Twilio."""
+        to = params.get("to", input_data.get("phone", ""))
+        body = params.get("body", "")
+        media_url = params.get("media_url", None)
+        
+        to = _interpolate(to, input_data)
+        body = _interpolate(body, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending WhatsApp via Twilio\n"
+        logs += f"  To: {to}\n"
+        logs += f"  Body: {body[:50]}{'...' if len(body) > 50 else ''}\n"
+        
+        if is_test:
+            logs += "  WhatsApp NOT sent (test mode)\n"
+            return {"success": True, "output": {**input_data, "twilio_whatsapp_sent": False}, "logs": logs}
+        
+        twilio = await self.get_twilio_service()
+        if not twilio:
+            logs += "  ⚠️ Twilio not connected\n"
+            return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
+        
+        try:
+            formatted_to = twilio.format_phone_number(to)
+            result = await twilio.send_whatsapp(to=formatted_to, body=body, media_url=media_url)
+            message_sid = result.get("sid", "")
+            status = result.get("status", "")
+            logs += f"  ✅ WhatsApp sent (SID: {message_sid}, Status: {status})\n"
+            return {
+                "success": True,
+                "output": {**input_data, "twilio_message_sid": message_sid, "twilio_whatsapp_sent": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+    
+    async def _execute_twilio_make_call(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Make a phone call via Twilio."""
+        to = params.get("to", input_data.get("phone", ""))
+        message = params.get("message", "")
+        twiml_url = params.get("twiml_url", None)
+        
+        to = _interpolate(to, input_data)
+        message = _interpolate(message, input_data)
+        
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Making call via Twilio\n"
+        logs += f"  To: {to}\n"
+        
+        if is_test:
+            logs += "  Call NOT made (test mode)\n"
+            return {"success": True, "output": {**input_data, "twilio_call_made": False}, "logs": logs}
+        
+        twilio = await self.get_twilio_service()
+        if not twilio:
+            logs += "  ⚠️ Twilio not connected\n"
+            return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
+        
+        try:
+            formatted_to = twilio.format_phone_number(to)
+            
+            # Use TwiML URL if provided, otherwise create simple say TwiML
+            if twiml_url:
+                result = await twilio.make_call(to=formatted_to, twiml_url=twiml_url)
+            else:
+                twiml = twilio.create_say_twiml(message)
+                result = await twilio.make_call(to=formatted_to, twiml=twiml)
+            
+            call_sid = result.get("sid", "")
+            status = result.get("status", "")
+            logs += f"  ✅ Call initiated (SID: {call_sid}, Status: {status})\n"
+            return {
+                "success": True,
+                "output": {**input_data, "twilio_call_sid": call_sid, "twilio_call_made": True},
+                "logs": logs
+            }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_default(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Default executor for unknown node types."""

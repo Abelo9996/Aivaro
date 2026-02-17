@@ -62,16 +62,48 @@ STRIPE PAYMENT node types (use these for deposits, payments, invoices):
 - stripe_send_invoice: Send an existing invoice. Parameters: {invoice_id: "{{invoice_id}}"}
 - stripe_get_customer: Get or create a Stripe customer. Parameters: {email: "{{email}}", name: "{{name}}"}
 
+NOTION node types (for notes, databases, documentation):
+- notion_create_page: Create a page in a Notion database. Parameters: {database_id: "...", properties: {Title: "{{name}}", Status: "New"}, content: "..."}
+- notion_update_page: Update a Notion page. Parameters: {page_id: "{{notion_page_id}}", properties: {Status: "Completed"}}
+- notion_query_database: Query records from a Notion database. Parameters: {database_id: "...", page_size: 100}
+- notion_search: Search across Notion. Parameters: {query: "{{search_term}}", filter_type: "page/database"}
+
+AIRTABLE node types (for database operations, CRM):
+- airtable_create_record: Create a record in Airtable. Parameters: {base_id: "appXXX", table_name: "Customers", fields: {Name: "{{name}}", Email: "{{email}}"}}
+- airtable_update_record: Update an Airtable record. Parameters: {base_id: "appXXX", table_name: "Customers", record_id: "{{airtable_record_id}}", fields: {Status: "Active"}}
+- airtable_list_records: List records from Airtable. Parameters: {base_id: "appXXX", table_name: "Customers", max_records: 100}
+- airtable_find_record: Find a record by field value. Parameters: {base_id: "appXXX", table_name: "Customers", field_name: "Email", field_value: "{{email}}"}
+
+CALENDLY node types (for scheduling):
+- calendly_list_events: List scheduled Calendly events. Parameters: {status: "active", count: 20}
+- calendly_get_event: Get details of a Calendly event. Parameters: {event_uuid: "{{calendly_event_uuid}}"}
+- calendly_cancel_event: Cancel a Calendly event. Parameters: {event_uuid: "{{calendly_event_uuid}}", reason: "..."}
+- calendly_create_link: Create a single-use scheduling link. Parameters: {event_type_uuid: "...", max_event_count: 1}
+
+MAILCHIMP node types (for email marketing):
+- mailchimp_add_subscriber: Add/update subscriber to an audience. Parameters: {list_id: "...", email: "{{email}}", first_name: "{{first_name}}", last_name: "{{last_name}}", status: "subscribed", tags: ["customer"]}
+- mailchimp_add_tags: Add tags to a subscriber. Parameters: {list_id: "...", email: "{{email}}", tags: ["vip", "customer"]}
+- mailchimp_send_campaign: Create and send a campaign. Parameters: {list_id: "...", subject: "...", from_name: "...", reply_to: "...", html_content: "..."}
+
+TWILIO node types (for SMS and calls):
+- twilio_send_sms: Send an SMS message. Parameters: {to: "{{phone}}", body: "Hi {{name}}, your booking is confirmed!"}
+- twilio_send_whatsapp: Send a WhatsApp message. Parameters: {to: "{{phone}}", body: "...", media_url: "..."}
+- twilio_make_call: Make a phone call with a message. Parameters: {to: "{{phone}}", message: "Hello, this is a reminder about..."}
+
 IMPORTANT RULES:
 1. For booking/appointment workflows with deposits → use google_calendar_create + stripe_create_payment_link
 2. For payment reminders → use delay + stripe_check_payment + condition
 3. When user says "when I receive an email", "when I get an email", "when an email comes in", "emails from X", etc. → ALWAYS use start_email trigger. This monitors their connected Gmail inbox.
 4. For auto-reply workflows → use ai_reply node to generate smart responses
-5. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}
-6. Always connect nodes with edges
-7. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
-8. Set requiresApproval: true for emails that need human review before sending
-9. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
+5. For CRM/database workflows → prefer airtable_create_record or notion_create_page for storing customer data
+6. For marketing/newsletter workflows → use mailchimp_add_subscriber to add contacts
+7. For SMS notifications → use twilio_send_sms for text confirmations
+8. For scheduling links → use calendly_create_link to generate booking links
+9. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}
+10. Always connect nodes with edges
+11. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
+12. Set requiresApproval: true for emails that need human review before sending
+13. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
 
 Example for "booking automation with deposit":
 {

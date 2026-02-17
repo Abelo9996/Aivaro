@@ -35,6 +35,8 @@ const simpleNodes = [
     category: 'Calendar',
     items: [
       { type: 'action', nodeType: 'google_calendar_create', label: 'Create Calendar Event' },
+      { type: 'action', nodeType: 'calendly_list_events', label: 'List Calendly Events' },
+      { type: 'action', nodeType: 'calendly_create_link', label: 'Create Scheduling Link' },
     ],
   },
   {
@@ -48,6 +50,39 @@ const simpleNodes = [
     ],
   },
   {
+    category: 'Notion',
+    items: [
+      { type: 'action', nodeType: 'notion_create_page', label: 'Create Notion Page' },
+      { type: 'action', nodeType: 'notion_update_page', label: 'Update Notion Page' },
+      { type: 'action', nodeType: 'notion_query_database', label: 'Query Notion Database' },
+    ],
+  },
+  {
+    category: 'Airtable',
+    items: [
+      { type: 'action', nodeType: 'airtable_create_record', label: 'Create Airtable Record' },
+      { type: 'action', nodeType: 'airtable_update_record', label: 'Update Airtable Record' },
+      { type: 'action', nodeType: 'airtable_list_records', label: 'List Airtable Records' },
+      { type: 'action', nodeType: 'airtable_find_record', label: 'Find Airtable Record' },
+    ],
+  },
+  {
+    category: 'Mailchimp',
+    items: [
+      { type: 'action', nodeType: 'mailchimp_add_subscriber', label: 'Add Subscriber' },
+      { type: 'action', nodeType: 'mailchimp_add_tags', label: 'Add Tags to Subscriber' },
+      { type: 'action', nodeType: 'mailchimp_send_campaign', label: 'Send Campaign' },
+    ],
+  },
+  {
+    category: 'Twilio (SMS/Calls)',
+    items: [
+      { type: 'action', nodeType: 'twilio_send_sms', label: 'Send SMS' },
+      { type: 'action', nodeType: 'twilio_send_whatsapp', label: 'Send WhatsApp' },
+      { type: 'action', nodeType: 'twilio_make_call', label: 'Make Phone Call' },
+    ],
+  },
+  {
     category: 'Logic',
     items: [
       { type: 'condition', nodeType: 'condition', label: 'If/Else' },
@@ -58,6 +93,25 @@ const simpleNodes = [
 
 const advancedNodes = [
   ...simpleNodes,
+  {
+    category: 'Calendly (Advanced)',
+    items: [
+      { type: 'action', nodeType: 'calendly_get_event', label: 'Get Event Details' },
+      { type: 'action', nodeType: 'calendly_cancel_event', label: 'Cancel Event' },
+    ],
+  },
+  {
+    category: 'Notion (Advanced)',
+    items: [
+      { type: 'action', nodeType: 'notion_search', label: 'Search Notion' },
+    ],
+  },
+  {
+    category: 'Mailchimp (Advanced)',
+    items: [
+      { type: 'action', nodeType: 'mailchimp_update_subscriber', label: 'Update Subscriber' },
+    ],
+  },
   {
     category: 'Advanced',
     items: [

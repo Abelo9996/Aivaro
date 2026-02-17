@@ -39,7 +39,16 @@ async def list_connections(
 @router.get("/providers")
 async def list_providers():
     """List available OAuth providers and their configuration status."""
-    providers = ["google", "slack", "notion", "stripe", "calendly", "airtable", "mailchimp", "twilio"]
+    providers = [
+        # Core integrations
+        "google", "slack", "notion", "stripe", 
+        # Scheduling & CRM
+        "calendly", "airtable", "mailchimp", "twilio",
+        # New integrations
+        "hubspot", "salesforce", "shopify", "quickbooks",
+        "github", "discord", "asana", "trello",
+        "zendesk", "intercom", "linear", "jira",
+    ]
     return [
         {
             "type": p,

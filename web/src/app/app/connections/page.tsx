@@ -9,14 +9,33 @@ import ServiceIcon from '@/components/ui/ServiceIcon';
 import type { Connection } from '@/types';
 
 const availableConnections = [
+  // Core integrations
   { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar', authType: 'oauth' },
   { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing', authType: 'api_key' },
   { type: 'slack', name: 'Slack', description: 'Team messaging', authType: 'oauth' },
   { type: 'notion', name: 'Notion', description: 'Notes and databases', authType: 'oauth' },
+  // Scheduling & Marketing
   { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings', authType: 'oauth' },
   { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases', authType: 'api_key' },
   { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing', authType: 'api_key' },
   { type: 'twilio', name: 'Twilio', description: 'SMS and voice', authType: 'api_key' },
+  // CRM & Sales
+  { type: 'hubspot', name: 'HubSpot', description: 'CRM and marketing automation', authType: 'oauth' },
+  { type: 'salesforce', name: 'Salesforce', description: 'Enterprise CRM', authType: 'oauth' },
+  // E-commerce & Finance
+  { type: 'shopify', name: 'Shopify', description: 'E-commerce platform', authType: 'oauth' },
+  { type: 'quickbooks', name: 'QuickBooks', description: 'Accounting and invoicing', authType: 'oauth' },
+  // Developer & Project Management
+  { type: 'github', name: 'GitHub', description: 'Code repositories and issues', authType: 'oauth' },
+  { type: 'discord', name: 'Discord', description: 'Community chat', authType: 'oauth' },
+  { type: 'asana', name: 'Asana', description: 'Project management', authType: 'oauth' },
+  { type: 'trello', name: 'Trello', description: 'Kanban boards', authType: 'api_key' },
+  // Support & Customer Success
+  { type: 'zendesk', name: 'Zendesk', description: 'Customer support tickets', authType: 'oauth' },
+  { type: 'intercom', name: 'Intercom', description: 'Customer messaging', authType: 'oauth' },
+  // Issue Tracking
+  { type: 'linear', name: 'Linear', description: 'Issue tracking', authType: 'oauth' },
+  { type: 'jira', name: 'Jira', description: 'Project and issue tracking', authType: 'oauth' },
 ];
 
 export default function ConnectionsPage() {

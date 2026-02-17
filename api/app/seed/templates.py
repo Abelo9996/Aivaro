@@ -797,6 +797,1233 @@ def seed_templates():
             ]
         },
 
+        # ========== SLACK INTEGRATIONS ==========
+        {
+            "name": "Slack Team Notifications",
+            "icon": "💬",
+            "description": "Send automated notifications to Slack channels for important events.",
+            "summary": "Keep your team in the loop with automatic Slack alerts for leads, sales, and more.",
+            "category": "Team Communication",
+            "business_types": ["service", "agency", "saas", "startup"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When event occurs",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Post to Slack channel",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "channel": "#general",
+                        "text": "🔔 *{{event_type}}*\n\n{{event_details}}\n\nTriggered at {{timestamp}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log notification",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "spreadsheet": "Notification Log",
+                        "columns": [
+                            {"name": "Date", "value": "{{today}}"},
+                            {"name": "Event", "value": "{{event_type}}"},
+                            {"name": "Channel", "value": "#general"},
+                            {"name": "Status", "value": "Sent"}
+                        ]
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "slack-1"},
+                {"id": "e2", "source": "slack-1", "target": "sheet-1"}
+            ]
+        },
+        {
+            "name": "Slack Deal Alerts",
+            "icon": "🎉",
+            "description": "Celebrate closed deals with automatic Slack announcements.",
+            "summary": "When a deal closes, notify your team in Slack and track the win.",
+            "category": "Team Communication",
+            "business_types": ["service", "agency", "saas", "sales"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When deal is closed",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Announce in sales channel",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "channel": "#sales-wins",
+                        "text": "🎉 *DEAL CLOSED!*\n\n💰 *{{deal_name}}* - ${{deal_value}}\n👤 Closed by: {{sales_rep}}\n📅 Date: {{close_date}}\n\nCongrats to the team! 🚀"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log to wins tracker",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "spreadsheet": "Closed Deals",
+                        "columns": [
+                            {"name": "Date", "value": "{{close_date}}"},
+                            {"name": "Deal", "value": "{{deal_name}}"},
+                            {"name": "Value", "value": "{{deal_value}}"},
+                            {"name": "Rep", "value": "{{sales_rep}}"}
+                        ]
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "slack-1"},
+                {"id": "e2", "source": "slack-1", "target": "sheet-1"}
+            ]
+        },
+
+        # ========== NOTION INTEGRATIONS ==========
+        {
+            "name": "Notion Task Manager",
+            "icon": "📝",
+            "description": "Automatically create and organize tasks in Notion databases.",
+            "summary": "When tasks are submitted, add them to your Notion database with full details.",
+            "category": "Productivity",
+            "business_types": ["service", "agency", "saas", "startup"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When task is submitted",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notion-1",
+                    "type": "notion_create_page",
+                    "label": "Create Notion task",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "database_id": "{{notion_database_id}}",
+                        "title": "{{task_title}}",
+                        "properties": {
+                            "Status": "To Do",
+                            "Priority": "{{priority}}",
+                            "Due Date": "{{due_date}}",
+                            "Assignee": "{{assignee}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify team",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#tasks",
+                        "text": "📝 New task created: *{{task_title}}*\nAssigned to: {{assignee}}\nDue: {{due_date}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "notion-1"},
+                {"id": "e2", "source": "notion-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Notion Meeting Notes",
+            "icon": "📋",
+            "description": "Log meeting notes to a Notion database with attendees and action items.",
+            "summary": "After each meeting, automatically create a Notion page with notes and next steps.",
+            "category": "Productivity",
+            "business_types": ["service", "agency", "saas", "startup"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When meeting ends",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notion-1",
+                    "type": "notion_create_page",
+                    "label": "Create meeting notes",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "database_id": "{{meetings_database_id}}",
+                        "title": "{{meeting_title}} - {{meeting_date}}",
+                        "properties": {
+                            "Date": "{{meeting_date}}",
+                            "Attendees": "{{attendees}}",
+                            "Type": "{{meeting_type}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notion-2",
+                    "type": "notion_add_block",
+                    "label": "Add notes content",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "page_id": "{{notion_page_id}}",
+                        "content": "## Summary\n{{summary}}\n\n## Action Items\n{{action_items}}\n\n## Notes\n{{detailed_notes}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send notes to attendees",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "to": "{{attendee_emails}}",
+                        "subject": "Meeting Notes: {{meeting_title}}",
+                        "body": "Hi team,\n\nHere are the notes from today's meeting:\n\n{{summary}}\n\n**Action Items:**\n{{action_items}}\n\nFull notes: {{notion_link}}\n\nThanks!\n{{organizer_name}}"
+                    },
+                    "requiresApproval": True
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "notion-1"},
+                {"id": "e2", "source": "notion-1", "target": "notion-2"},
+                {"id": "e3", "source": "notion-2", "target": "email-1"}
+            ]
+        },
+
+        # ========== AIRTABLE INTEGRATIONS ==========
+        {
+            "name": "Airtable CRM Pipeline",
+            "icon": "🗃️",
+            "description": "Manage your sales pipeline in Airtable with automatic lead tracking.",
+            "summary": "When leads come in, automatically add them to Airtable and track through stages.",
+            "category": "Lead Generation",
+            "business_types": ["service", "agency", "saas", "sales"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When lead is captured",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Add to Airtable CRM",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Leads",
+                        "fields": {
+                            "Name": "{{lead_name}}",
+                            "Email": "{{lead_email}}",
+                            "Phone": "{{lead_phone}}",
+                            "Source": "{{lead_source}}",
+                            "Stage": "New Lead",
+                            "Created": "{{today}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send welcome email",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "to": "{{lead_email}}",
+                        "subject": "Thanks for reaching out, {{lead_name}}!",
+                        "body": "Hi {{lead_name}},\n\nThanks for your interest! I'll be in touch within 24 hours.\n\nBest,\n{{owner_name}}"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify sales team",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#leads",
+                        "text": "🎯 New lead: *{{lead_name}}* ({{lead_email}})\nSource: {{lead_source}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "airtable-1"},
+                {"id": "e2", "source": "airtable-1", "target": "email-1"},
+                {"id": "e3", "source": "email-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Airtable Project Tracker",
+            "icon": "📊",
+            "description": "Track project milestones and updates in Airtable with team notifications.",
+            "summary": "When project status changes, update Airtable and notify stakeholders.",
+            "category": "Operations",
+            "business_types": ["service", "agency", "startup"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When project is updated",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_update_record",
+                    "label": "Update project in Airtable",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Projects",
+                        "record_id": "{{project_record_id}}",
+                        "fields": {
+                            "Status": "{{new_status}}",
+                            "Last Updated": "{{today}}",
+                            "Progress": "{{progress_percentage}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify project channel",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#projects",
+                        "text": "📊 *Project Update*\n\n*{{project_name}}* is now {{new_status}}\nProgress: {{progress_percentage}}%\nUpdated by: {{updated_by}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "airtable-1"},
+                {"id": "e2", "source": "airtable-1", "target": "slack-1"}
+            ]
+        },
+
+        # ========== CALENDLY INTEGRATIONS ==========
+        {
+            "name": "Calendly Booking Automation",
+            "icon": "📅",
+            "description": "Automate your meeting workflow when someone books via Calendly.",
+            "summary": "When a Calendly booking is made, log it, notify your team, and prep for the meeting.",
+            "category": "Bookings",
+            "business_types": ["service", "coaching", "agency", "consulting"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_webhook",
+                    "label": "When Calendly booking is made",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {
+                        "webhook_type": "calendly"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Log to meetings database",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Meetings",
+                        "fields": {
+                            "Invitee Name": "{{invitee_name}}",
+                            "Email": "{{invitee_email}}",
+                            "Event Type": "{{event_type}}",
+                            "Scheduled Time": "{{scheduled_time}}",
+                            "Status": "Scheduled"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify team",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#meetings",
+                        "text": "📅 New booking!\n\n*{{event_type}}* with {{invitee_name}}\n📧 {{invitee_email}}\n⏰ {{scheduled_time}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notion-1",
+                    "type": "notion_create_page",
+                    "label": "Create meeting prep doc",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "database_id": "{{meetings_database_id}}",
+                        "title": "Meeting Prep: {{invitee_name}}",
+                        "properties": {
+                            "Date": "{{scheduled_time}}",
+                            "Type": "{{event_type}}",
+                            "Status": "Prep Needed"
+                        }
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "airtable-1"},
+                {"id": "e2", "source": "airtable-1", "target": "slack-1"},
+                {"id": "e3", "source": "slack-1", "target": "notion-1"}
+            ]
+        },
+
+        # ========== MAILCHIMP INTEGRATIONS ==========
+        {
+            "name": "Mailchimp Subscriber Workflow",
+            "icon": "📧",
+            "description": "Add new subscribers to Mailchimp with tags and welcome sequences.",
+            "summary": "When someone subscribes, add them to Mailchimp, tag them, and trigger welcome sequence.",
+            "category": "Marketing",
+            "business_types": ["coaching", "creator", "agency", "saas", "ecommerce"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When subscriber signs up",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "mailchimp-1",
+                    "type": "mailchimp_add_member",
+                    "label": "Add to Mailchimp audience",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "audience_id": "{{mailchimp_audience_id}}",
+                        "email": "{{subscriber_email}}",
+                        "merge_fields": {
+                            "FNAME": "{{first_name}}",
+                            "LNAME": "{{last_name}}"
+                        },
+                        "status": "subscribed"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "mailchimp-2",
+                    "type": "mailchimp_add_tags",
+                    "label": "Add subscriber tags",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "audience_id": "{{mailchimp_audience_id}}",
+                        "email": "{{subscriber_email}}",
+                        "tags": ["{{signup_source}}", "New Subscriber", "{{interest}}"]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify team",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#subscribers",
+                        "text": "📧 New subscriber: *{{first_name}} {{last_name}}*\n📬 {{subscriber_email}}\n🏷️ Source: {{signup_source}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "mailchimp-1"},
+                {"id": "e2", "source": "mailchimp-1", "target": "mailchimp-2"},
+                {"id": "e3", "source": "mailchimp-2", "target": "slack-1"}
+            ]
+        },
+
+        # ========== TWILIO SMS INTEGRATIONS ==========
+        {
+            "name": "SMS Appointment Reminders",
+            "icon": "📱",
+            "description": "Send SMS reminders before appointments to reduce no-shows.",
+            "summary": "Automatically text clients 24 hours and 1 hour before their appointments.",
+            "category": "Bookings",
+            "business_types": ["service", "coaching", "beauty", "wellness", "medical"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_manual",
+                    "label": "Day before appointment",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "twilio-1",
+                    "type": "twilio_send_sms",
+                    "label": "Send 24-hour SMS reminder",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "to": "{{customer_phone}}",
+                        "body": "Hi {{customer_name}}! Reminder: Your appointment is tomorrow at {{appointment_time}}. Reply CONFIRM to confirm or RESCHEDULE if you need to change. - {{business_name}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log SMS sent",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "spreadsheet": "SMS Log",
+                        "columns": [
+                            {"name": "Date", "value": "{{today}}"},
+                            {"name": "Customer", "value": "{{customer_name}}"},
+                            {"name": "Phone", "value": "{{customer_phone}}"},
+                            {"name": "Type", "value": "24-Hour Reminder"},
+                            {"name": "Status", "value": "Sent"}
+                        ]
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "twilio-1"},
+                {"id": "e2", "source": "twilio-1", "target": "sheet-1"}
+            ]
+        },
+        {
+            "name": "SMS Order Notifications",
+            "icon": "📦",
+            "description": "Send SMS updates to customers about their order status.",
+            "summary": "When order status changes, text the customer with updates.",
+            "category": "E-Commerce",
+            "business_types": ["ecommerce", "retail", "resale"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When order status changes",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "twilio-1",
+                    "type": "twilio_send_sms",
+                    "label": "Send status SMS",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "to": "{{customer_phone}}",
+                        "body": "Hi {{customer_name}}! Order #{{order_id}} update: {{order_status}}. {{status_details}} Track: {{tracking_link}} - {{business_name}}"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log notification",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "spreadsheet": "Order Updates",
+                        "columns": [
+                            {"name": "Date", "value": "{{today}}"},
+                            {"name": "Order ID", "value": "{{order_id}}"},
+                            {"name": "Status", "value": "{{order_status}}"},
+                            {"name": "Customer", "value": "{{customer_name}}"},
+                            {"name": "Notified", "value": "SMS"}
+                        ]
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "twilio-1"},
+                {"id": "e2", "source": "twilio-1", "target": "sheet-1"}
+            ]
+        },
+        {
+            "name": "WhatsApp Customer Support",
+            "icon": "💬",
+            "description": "Send WhatsApp messages for customer support and follow-ups.",
+            "summary": "Reach customers on WhatsApp for support tickets and follow-ups.",
+            "category": "Customer Support",
+            "business_types": ["service", "ecommerce", "saas"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When support needed",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "twilio-1",
+                    "type": "twilio_send_whatsapp",
+                    "label": "Send WhatsApp message",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "to": "{{customer_whatsapp}}",
+                        "body": "Hi {{customer_name}}! Thanks for reaching out. {{support_message}} - {{agent_name}}, {{business_name}} Support"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Log support interaction",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Support Log",
+                        "fields": {
+                            "Date": "{{today}}",
+                            "Customer": "{{customer_name}}",
+                            "Channel": "WhatsApp",
+                            "Message": "{{support_message}}",
+                            "Agent": "{{agent_name}}"
+                        }
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "twilio-1"},
+                {"id": "e2", "source": "twilio-1", "target": "airtable-1"}
+            ]
+        },
+
+        # ========== DISCORD INTEGRATIONS ==========
+        {
+            "name": "Discord Community Alerts",
+            "icon": "🎮",
+            "description": "Send automated announcements to your Discord server.",
+            "summary": "Notify your Discord community about new content, events, or updates.",
+            "category": "Team Communication",
+            "business_types": ["creator", "saas", "startup", "gaming"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When announcement is ready",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "discord-1",
+                    "type": "discord_send_message",
+                    "label": "Post to Discord channel",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "channel_id": "{{discord_channel_id}}",
+                        "content": "📢 **{{announcement_title}}**\n\n{{announcement_body}}\n\n{{call_to_action}}"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "sheet-1",
+                    "type": "append_row",
+                    "label": "Log announcement",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "spreadsheet": "Announcements",
+                        "columns": [
+                            {"name": "Date", "value": "{{today}}"},
+                            {"name": "Title", "value": "{{announcement_title}}"},
+                            {"name": "Platform", "value": "Discord"},
+                            {"name": "Channel", "value": "{{discord_channel_id}}"}
+                        ]
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "discord-1"},
+                {"id": "e2", "source": "discord-1", "target": "sheet-1"}
+            ]
+        },
+
+        # ========== GITHUB INTEGRATIONS ==========
+        {
+            "name": "GitHub Issue Automation",
+            "icon": "🐙",
+            "description": "Automatically create GitHub issues from bug reports or feature requests.",
+            "summary": "When a bug or feature request comes in, create a GitHub issue and notify the team.",
+            "category": "Developer Tools",
+            "business_types": ["saas", "startup", "tech"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When bug report is submitted",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "github-1",
+                    "type": "github_create_issue",
+                    "label": "Create GitHub issue",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "repo": "{{github_repo}}",
+                        "title": "[{{issue_type}}] {{issue_title}}",
+                        "body": "## Description\n{{issue_description}}\n\n## Steps to Reproduce\n{{steps}}\n\n## Expected Behavior\n{{expected}}\n\n## Reported By\n{{reporter_name}} ({{reporter_email}})",
+                        "labels": ["{{issue_type}}", "triage"]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify dev team",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#dev",
+                        "text": "🐛 New {{issue_type}} reported: *{{issue_title}}*\n\nReported by: {{reporter_name}}\nGitHub: {{github_issue_link}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Confirm to reporter",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "to": "{{reporter_email}}",
+                        "subject": "We received your {{issue_type}} report",
+                        "body": "Hi {{reporter_name}},\n\nThanks for reporting this {{issue_type}}. We've logged it and our team will look into it.\n\nIssue: {{issue_title}}\n\nWe'll update you when there's progress.\n\nBest,\n{{business_name}} Team"
+                    },
+                    "requiresApproval": True
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "github-1"},
+                {"id": "e2", "source": "github-1", "target": "slack-1"},
+                {"id": "e3", "source": "slack-1", "target": "email-1"}
+            ]
+        },
+
+        # ========== ASANA/TRELLO PROJECT MANAGEMENT ==========
+        {
+            "name": "Asana Task Automation",
+            "icon": "✅",
+            "description": "Create and manage tasks in Asana from form submissions.",
+            "summary": "When requests come in, create Asana tasks with full details and notify assignees.",
+            "category": "Productivity",
+            "business_types": ["service", "agency", "startup"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When request is submitted",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "asana-1",
+                    "type": "asana_create_task",
+                    "label": "Create Asana task",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "project_id": "{{asana_project_id}}",
+                        "name": "{{task_name}}",
+                        "notes": "{{task_description}}\n\nSubmitted by: {{requester_name}}",
+                        "due_date": "{{due_date}}",
+                        "assignee": "{{assignee_email}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify assignee",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#tasks",
+                        "text": "✅ New task assigned!\n\n*{{task_name}}*\nAssigned to: <@{{assignee_slack_id}}>\nDue: {{due_date}}\n\nAsana: {{asana_task_link}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "asana-1"},
+                {"id": "e2", "source": "asana-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Trello Board Automation",
+            "icon": "📋",
+            "description": "Automatically create Trello cards for new projects or tasks.",
+            "summary": "When new work comes in, create Trello cards and keep your board organized.",
+            "category": "Productivity",
+            "business_types": ["service", "agency", "freelance"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When project starts",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "trello-1",
+                    "type": "trello_create_card",
+                    "label": "Create Trello card",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "list_id": "{{trello_list_id}}",
+                        "name": "{{project_name}}",
+                        "desc": "Client: {{client_name}}\nDeadline: {{deadline}}\n\n{{project_details}}",
+                        "due": "{{deadline}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notify-1",
+                    "type": "send_notification",
+                    "label": "Confirm card created",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "message": "📋 Trello card created: {{project_name}} for {{client_name}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "trello-1"},
+                {"id": "e2", "source": "trello-1", "target": "notify-1"}
+            ]
+        },
+
+        # ========== LINEAR/JIRA ISSUE TRACKING ==========
+        {
+            "name": "Linear Sprint Automation",
+            "icon": "🔄",
+            "description": "Create Linear issues from customer feedback or feature requests.",
+            "summary": "When feedback comes in, create Linear issues and track in your sprint.",
+            "category": "Developer Tools",
+            "business_types": ["saas", "startup", "tech"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When feedback is received",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "linear-1",
+                    "type": "linear_create_issue",
+                    "label": "Create Linear issue",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "team_id": "{{linear_team_id}}",
+                        "title": "{{issue_title}}",
+                        "description": "{{issue_description}}\n\n---\nFeedback from: {{customer_name}}",
+                        "priority": "{{priority}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify product team",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#product",
+                        "text": "🔄 New issue from customer feedback:\n\n*{{issue_title}}*\nPriority: {{priority}}\nFrom: {{customer_name}}\n\nLinear: {{linear_issue_link}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "linear-1"},
+                {"id": "e2", "source": "linear-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Jira Ticket Workflow",
+            "icon": "🎫",
+            "description": "Create and track Jira tickets from support requests.",
+            "summary": "When support requests come in, create Jira tickets and track resolution.",
+            "category": "Developer Tools",
+            "business_types": ["saas", "enterprise", "tech"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When support request arrives",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "jira-1",
+                    "type": "jira_create_issue",
+                    "label": "Create Jira ticket",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "project_key": "{{jira_project_key}}",
+                        "summary": "{{ticket_title}}",
+                        "description": "{{ticket_description}}\n\nReported by: {{customer_name}} ({{customer_email}})",
+                        "issue_type": "{{issue_type}}",
+                        "priority": "{{priority}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Confirm to customer",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "to": "{{customer_email}}",
+                        "subject": "Support Ticket Created - {{jira_ticket_key}}",
+                        "body": "Hi {{customer_name}},\n\nWe've received your request and created ticket {{jira_ticket_key}}.\n\nWe'll be in touch within {{sla_time}}.\n\nBest,\n{{business_name}} Support"
+                    },
+                    "requiresApproval": True
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "jira-1"},
+                {"id": "e2", "source": "jira-1", "target": "email-1"}
+            ]
+        },
+
+        # ========== ZENDESK/INTERCOM SUPPORT ==========
+        {
+            "name": "Zendesk Ticket Automation",
+            "icon": "🎫",
+            "description": "Create Zendesk tickets from website forms and notify agents.",
+            "summary": "When support requests come in, create Zendesk tickets and route to the right team.",
+            "category": "Customer Support",
+            "business_types": ["saas", "ecommerce", "enterprise"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When support form submitted",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "zendesk-1",
+                    "type": "zendesk_create_ticket",
+                    "label": "Create Zendesk ticket",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "subject": "{{ticket_subject}}",
+                        "description": "{{ticket_description}}",
+                        "requester_email": "{{customer_email}}",
+                        "requester_name": "{{customer_name}}",
+                        "priority": "{{priority}}",
+                        "tags": ["{{category}}", "web-form"]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Alert support team",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#support",
+                        "text": "🎫 New Zendesk ticket:\n\n*{{ticket_subject}}*\nFrom: {{customer_name}}\nPriority: {{priority}}\n\nZendesk: {{zendesk_ticket_link}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "zendesk-1"},
+                {"id": "e2", "source": "zendesk-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Intercom Chat Follow-up",
+            "icon": "💬",
+            "description": "Follow up with customers after Intercom chat conversations.",
+            "summary": "After chat conversations, send follow-up emails and log interactions.",
+            "category": "Customer Support",
+            "business_types": ["saas", "ecommerce", "startup"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_webhook",
+                    "label": "When Intercom chat ends",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {
+                        "webhook_type": "intercom"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "delay-1",
+                    "type": "delay",
+                    "label": "Wait 1 hour",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {"duration": 1, "unit": "hours"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send follow-up email",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "to": "{{customer_email}}",
+                        "subject": "Following up on our chat",
+                        "body": "Hi {{customer_name}},\n\nThanks for chatting with us today! I wanted to follow up and make sure your question was fully answered.\n\nHere's a summary of what we discussed:\n{{chat_summary}}\n\nIf you have any other questions, just reply to this email or start another chat.\n\nBest,\n{{agent_name}}\n{{business_name}} Support"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Log conversation",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Support Conversations",
+                        "fields": {
+                            "Date": "{{today}}",
+                            "Customer": "{{customer_name}}",
+                            "Channel": "Intercom Chat",
+                            "Summary": "{{chat_summary}}",
+                            "Agent": "{{agent_name}}",
+                            "Follow-up Sent": "Yes"
+                        }
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "delay-1"},
+                {"id": "e2", "source": "delay-1", "target": "email-1"},
+                {"id": "e3", "source": "email-1", "target": "airtable-1"}
+            ]
+        },
+
+        # ========== HUBSPOT/SALESFORCE CRM ==========
+        {
+            "name": "HubSpot Lead Sync",
+            "icon": "🧲",
+            "description": "Sync new leads to HubSpot CRM with automatic deal creation.",
+            "summary": "When leads come in, create HubSpot contacts and deals automatically.",
+            "category": "Lead Generation",
+            "business_types": ["service", "agency", "saas", "sales"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When lead is captured",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "hubspot-1",
+                    "type": "hubspot_create_contact",
+                    "label": "Create HubSpot contact",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "email": "{{lead_email}}",
+                        "firstname": "{{first_name}}",
+                        "lastname": "{{last_name}}",
+                        "phone": "{{phone}}",
+                        "company": "{{company}}",
+                        "lead_source": "{{source}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "hubspot-2",
+                    "type": "hubspot_create_deal",
+                    "label": "Create HubSpot deal",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "dealname": "{{company}} - {{service}}",
+                        "pipeline": "default",
+                        "dealstage": "qualifiedtobuy",
+                        "amount": "{{estimated_value}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify sales team",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#sales",
+                        "text": "🧲 New HubSpot lead!\n\n*{{first_name}} {{last_name}}* at {{company}}\n📧 {{lead_email}}\n💰 Est. value: ${{estimated_value}}\n\nHubSpot: {{hubspot_contact_link}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "hubspot-1"},
+                {"id": "e2", "source": "hubspot-1", "target": "hubspot-2"},
+                {"id": "e3", "source": "hubspot-2", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Salesforce Opportunity Tracker",
+            "icon": "☁️",
+            "description": "Track sales opportunities in Salesforce with stage notifications.",
+            "summary": "When deals move through stages, update Salesforce and notify stakeholders.",
+            "category": "Lead Generation",
+            "business_types": ["enterprise", "saas", "sales"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When opportunity is updated",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "salesforce-1",
+                    "type": "salesforce_update_opportunity",
+                    "label": "Update Salesforce opportunity",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "opportunity_id": "{{sf_opportunity_id}}",
+                        "stage": "{{new_stage}}",
+                        "amount": "{{deal_amount}}",
+                        "close_date": "{{expected_close}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify team of stage change",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#sales",
+                        "text": "☁️ Salesforce opportunity update:\n\n*{{opportunity_name}}* moved to *{{new_stage}}*\n💰 Amount: ${{deal_amount}}\n📅 Expected close: {{expected_close}}\n\nOwner: {{opportunity_owner}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Update stakeholders",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "to": "{{stakeholder_emails}}",
+                        "subject": "Deal Update: {{opportunity_name}}",
+                        "body": "Hi team,\n\nQuick update on {{opportunity_name}}:\n\n📊 Stage: {{new_stage}}\n💰 Amount: ${{deal_amount}}\n📅 Expected close: {{expected_close}}\n\nNext steps: {{next_steps}}\n\nBest,\n{{sales_rep}}"
+                    },
+                    "requiresApproval": True
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "salesforce-1"},
+                {"id": "e2", "source": "salesforce-1", "target": "slack-1"},
+                {"id": "e3", "source": "slack-1", "target": "email-1"}
+            ]
+        },
+
+        # ========== STRIPE PAYMENT INTEGRATIONS ==========
+        {
+            "name": "Stripe Payment Notifications",
+            "icon": "💳",
+            "description": "Get notified when Stripe payments are received and log transactions.",
+            "summary": "When payments come through Stripe, notify your team and track revenue.",
+            "category": "Invoicing",
+            "business_types": ["saas", "ecommerce", "service"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_webhook",
+                    "label": "When Stripe payment received",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {
+                        "webhook_type": "stripe"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Celebrate payment",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "channel": "#revenue",
+                        "text": "💳 *Payment received!*\n\n💰 Amount: ${{amount}}\n👤 Customer: {{customer_name}}\n📧 Email: {{customer_email}}\n📝 Description: {{description}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Log to revenue tracker",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Revenue",
+                        "fields": {
+                            "Date": "{{today}}",
+                            "Amount": "{{amount}}",
+                            "Customer": "{{customer_name}}",
+                            "Description": "{{description}}",
+                            "Stripe ID": "{{stripe_payment_id}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send receipt",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "to": "{{customer_email}}",
+                        "subject": "Receipt for your payment - ${{amount}}",
+                        "body": "Hi {{customer_name}},\n\nThank you for your payment!\n\n💰 Amount: ${{amount}}\n📝 Description: {{description}}\n🔢 Transaction ID: {{stripe_payment_id}}\n\nIf you have any questions, just reply to this email.\n\nBest,\n{{business_name}}"
+                    },
+                    "requiresApproval": True
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "slack-1"},
+                {"id": "e2", "source": "slack-1", "target": "airtable-1"},
+                {"id": "e3", "source": "airtable-1", "target": "email-1"}
+            ]
+        },
+
         # ========== SOCIAL MEDIA & CONTENT ==========
         {
             "name": "Content Publishing Tracker",

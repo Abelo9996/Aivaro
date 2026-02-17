@@ -21,6 +21,14 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   hubspot: { src: '/icons/hubspot.svg' },
   salesforce: { src: '/icons/salesforce.svg' },
   openai: { src: '/icons/openai.svg' },
+  quickbooks: { src: '/icons/quickbooks.svg' },
+  discord: { src: '/icons/discord.svg' },
+  asana: { src: '/icons/asana.svg' },
+  trello: { src: '/icons/trello.svg' },
+  zendesk: { src: '/icons/zendesk.svg' },
+  intercom: { src: '/icons/intercom.svg' },
+  linear: { src: '/icons/linear.svg' },
+  jira: { src: '/icons/jira.svg' },
   
   // Workflow node types - map to appropriate service icons
   start_email: { src: '/icons/gmail.svg' },
@@ -41,6 +49,35 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   
   // Google Calendar node types
   google_calendar_create: { src: '/icons/calendar.svg' },
+  
+  // Notion node types
+  notion_create_page: { src: '/icons/notion.svg' },
+  notion_update_page: { src: '/icons/notion.svg' },
+  notion_query_database: { src: '/icons/notion.svg' },
+  notion_search: { src: '/icons/notion.svg' },
+  
+  // Airtable node types
+  airtable_create_record: { src: '/icons/airtable.svg' },
+  airtable_update_record: { src: '/icons/airtable.svg' },
+  airtable_list_records: { src: '/icons/airtable.svg' },
+  airtable_find_record: { src: '/icons/airtable.svg' },
+  
+  // Calendly node types
+  calendly_list_events: { src: '/icons/calendly.svg' },
+  calendly_get_event: { src: '/icons/calendly.svg' },
+  calendly_cancel_event: { src: '/icons/calendly.svg' },
+  calendly_create_link: { src: '/icons/calendly.svg' },
+  
+  // Mailchimp node types
+  mailchimp_add_subscriber: { src: '/icons/mailchimp.svg' },
+  mailchimp_update_subscriber: { src: '/icons/mailchimp.svg' },
+  mailchimp_add_tags: { src: '/icons/mailchimp.svg' },
+  mailchimp_send_campaign: { src: '/icons/mailchimp.svg' },
+  
+  // Twilio node types
+  twilio_send_sms: { src: '/icons/twilio.svg' },
+  twilio_send_whatsapp: { src: '/icons/twilio.svg' },
+  twilio_make_call: { src: '/icons/twilio.svg' },
 };
 
 // Fallback emoji icons for types without SVG icons

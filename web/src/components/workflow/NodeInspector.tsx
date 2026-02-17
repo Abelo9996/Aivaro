@@ -144,6 +144,137 @@ const nodeConfigs: Record<string, { fields: { key: string; label: string; type: 
       { key: 'success_message', label: 'Success Message', type: 'textarea', placeholder: 'Thank you! Your booking is confirmed.' },
     ],
   },
+  // Notion node types
+  notion_create_page: {
+    fields: [
+      { key: 'database_id', label: 'Database ID', type: 'text', placeholder: 'abc123...' },
+      { key: 'content', label: 'Page Content', type: 'textarea', placeholder: 'Content for the page body...' },
+    ],
+  },
+  notion_update_page: {
+    fields: [
+      { key: 'page_id', label: 'Page ID', type: 'text', placeholder: '{{notion_page_id}} or abc123...' },
+    ],
+  },
+  notion_query_database: {
+    fields: [
+      { key: 'database_id', label: 'Database ID', type: 'text', placeholder: 'abc123...' },
+      { key: 'page_size', label: 'Max Results', type: 'number', placeholder: '100' },
+    ],
+  },
+  notion_search: {
+    fields: [
+      { key: 'query', label: 'Search Query', type: 'text', placeholder: '{{customer_name}}' },
+      { key: 'filter_type', label: 'Filter Type', type: 'select', options: ['page', 'database', 'all'] },
+    ],
+  },
+  // Airtable node types
+  airtable_create_record: {
+    fields: [
+      { key: 'base_id', label: 'Base ID', type: 'text', placeholder: 'appXXXXXXXX' },
+      { key: 'table_name', label: 'Table Name', type: 'text', placeholder: 'Customers' },
+    ],
+  },
+  airtable_update_record: {
+    fields: [
+      { key: 'base_id', label: 'Base ID', type: 'text', placeholder: 'appXXXXXXXX' },
+      { key: 'table_name', label: 'Table Name', type: 'text', placeholder: 'Customers' },
+      { key: 'record_id', label: 'Record ID', type: 'text', placeholder: '{{airtable_record_id}} or recXXXX' },
+    ],
+  },
+  airtable_list_records: {
+    fields: [
+      { key: 'base_id', label: 'Base ID', type: 'text', placeholder: 'appXXXXXXXX' },
+      { key: 'table_name', label: 'Table Name', type: 'text', placeholder: 'Customers' },
+      { key: 'view', label: 'View (optional)', type: 'text', placeholder: 'Grid view' },
+      { key: 'max_records', label: 'Max Records', type: 'number', placeholder: '100' },
+    ],
+  },
+  airtable_find_record: {
+    fields: [
+      { key: 'base_id', label: 'Base ID', type: 'text', placeholder: 'appXXXXXXXX' },
+      { key: 'table_name', label: 'Table Name', type: 'text', placeholder: 'Customers' },
+      { key: 'field_name', label: 'Field Name', type: 'text', placeholder: 'Email' },
+      { key: 'field_value', label: 'Field Value', type: 'text', placeholder: '{{email}}' },
+    ],
+  },
+  // Calendly node types
+  calendly_list_events: {
+    fields: [
+      { key: 'status', label: 'Event Status', type: 'select', options: ['active', 'canceled'] },
+      { key: 'count', label: 'Max Results', type: 'number', placeholder: '20' },
+    ],
+  },
+  calendly_get_event: {
+    fields: [
+      { key: 'event_uuid', label: 'Event UUID', type: 'text', placeholder: '{{calendly_event_uuid}}' },
+    ],
+  },
+  calendly_cancel_event: {
+    fields: [
+      { key: 'event_uuid', label: 'Event UUID', type: 'text', placeholder: '{{calendly_event_uuid}}' },
+      { key: 'reason', label: 'Cancellation Reason', type: 'textarea', placeholder: 'Customer requested cancellation' },
+    ],
+  },
+  calendly_create_link: {
+    fields: [
+      { key: 'event_type_uuid', label: 'Event Type UUID', type: 'text', placeholder: 'Get from Calendly event types' },
+      { key: 'max_event_count', label: 'Max Uses', type: 'number', placeholder: '1' },
+    ],
+  },
+  // Mailchimp node types
+  mailchimp_add_subscriber: {
+    fields: [
+      { key: 'list_id', label: 'Audience/List ID', type: 'text', placeholder: 'abc123def4' },
+      { key: 'email', label: 'Email', type: 'text', placeholder: '{{email}}' },
+      { key: 'first_name', label: 'First Name (optional)', type: 'text', placeholder: '{{first_name}}' },
+      { key: 'last_name', label: 'Last Name (optional)', type: 'text', placeholder: '{{last_name}}' },
+      { key: 'status', label: 'Status', type: 'select', options: ['subscribed', 'pending', 'unsubscribed'] },
+    ],
+  },
+  mailchimp_update_subscriber: {
+    fields: [
+      { key: 'list_id', label: 'Audience/List ID', type: 'text', placeholder: 'abc123def4' },
+      { key: 'email', label: 'Email', type: 'text', placeholder: '{{email}}' },
+      { key: 'status', label: 'New Status (optional)', type: 'select', options: ['subscribed', 'pending', 'unsubscribed', 'cleaned'] },
+    ],
+  },
+  mailchimp_add_tags: {
+    fields: [
+      { key: 'list_id', label: 'Audience/List ID', type: 'text', placeholder: 'abc123def4' },
+      { key: 'email', label: 'Email', type: 'text', placeholder: '{{email}}' },
+      { key: 'tags', label: 'Tags (comma-separated)', type: 'text', placeholder: 'vip, customer' },
+    ],
+  },
+  mailchimp_send_campaign: {
+    fields: [
+      { key: 'list_id', label: 'Audience/List ID', type: 'text', placeholder: 'abc123def4' },
+      { key: 'subject', label: 'Subject', type: 'text', placeholder: 'Your Weekly Newsletter' },
+      { key: 'from_name', label: 'From Name', type: 'text', placeholder: 'Your Company' },
+      { key: 'reply_to', label: 'Reply-To Email', type: 'text', placeholder: 'hello@yourcompany.com' },
+      { key: 'html_content', label: 'HTML Content', type: 'textarea', placeholder: '<h1>Hello!</h1><p>Newsletter content...</p>' },
+    ],
+  },
+  // Twilio node types
+  twilio_send_sms: {
+    fields: [
+      { key: 'to', label: 'To Phone Number', type: 'text', placeholder: '{{phone}} or +1234567890' },
+      { key: 'body', label: 'Message', type: 'textarea', placeholder: 'Hi {{name}}, your booking is confirmed!' },
+    ],
+  },
+  twilio_send_whatsapp: {
+    fields: [
+      { key: 'to', label: 'To Phone Number', type: 'text', placeholder: '{{phone}} or +1234567890' },
+      { key: 'body', label: 'Message', type: 'textarea', placeholder: 'Hi {{name}}, your booking is confirmed!' },
+      { key: 'media_url', label: 'Media URL (optional)', type: 'text', placeholder: 'https://example.com/image.jpg' },
+    ],
+  },
+  twilio_make_call: {
+    fields: [
+      { key: 'to', label: 'To Phone Number', type: 'text', placeholder: '{{phone}} or +1234567890' },
+      { key: 'message', label: 'Message to Say', type: 'textarea', placeholder: 'Hello, this is an automated call from...' },
+    ],
+  },
 };
 
 export default function NodeInspector({
