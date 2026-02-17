@@ -19,12 +19,34 @@ const availableConnections = [
   { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases', authType: 'api_key' },
   { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing', authType: 'api_key' },
   { type: 'twilio', name: 'Twilio', description: 'SMS and voice', authType: 'api_key' },
+  // SMS Marketing
+  { type: 'textedly', name: 'Textedly', description: 'SMS marketing platform', authType: 'api_key' },
   // CRM & Sales
   { type: 'hubspot', name: 'HubSpot', description: 'CRM and marketing automation', authType: 'oauth' },
   { type: 'salesforce', name: 'Salesforce', description: 'Enterprise CRM', authType: 'oauth' },
   // E-commerce & Finance
   { type: 'shopify', name: 'Shopify', description: 'E-commerce platform', authType: 'oauth' },
   { type: 'quickbooks', name: 'QuickBooks', description: 'Accounting and invoicing', authType: 'oauth' },
+  // Website & Domain Providers
+  { type: 'godaddy', name: 'GoDaddy', description: 'Domains and hosting', authType: 'api_key' },
+  { type: 'wix', name: 'Wix', description: 'Website builder', authType: 'oauth' },
+  { type: 'squarespace', name: 'Squarespace', description: 'Website and commerce', authType: 'oauth' },
+  { type: 'webflow', name: 'Webflow', description: 'Visual web development', authType: 'api_key' },
+  // No-Code Platforms
+  { type: 'base44', name: 'Base44', description: 'No-code app builder', authType: 'api_key' },
+  { type: 'bubble', name: 'Bubble', description: 'No-code platform', authType: 'api_key' },
+  { type: 'zapier', name: 'Zapier', description: 'Workflow automation', authType: 'api_key' },
+  // Analytics & Traffic
+  { type: 'google_analytics', name: 'Google Analytics', description: 'Website analytics', authType: 'oauth' },
+  { type: 'cloudflare', name: 'Cloudflare', description: 'CDN and security', authType: 'api_key' },
+  { type: 'plausible', name: 'Plausible', description: 'Privacy-friendly analytics', authType: 'api_key' },
+  { type: 'hotjar', name: 'Hotjar', description: 'Heatmaps and recordings', authType: 'api_key' },
+  // Social Media
+  { type: 'facebook', name: 'Facebook', description: 'Social media and ads', authType: 'oauth' },
+  { type: 'instagram', name: 'Instagram', description: 'Photo and video sharing', authType: 'oauth' },
+  { type: 'twitter', name: 'Twitter', description: 'Social media platform', authType: 'oauth' },
+  { type: 'linkedin', name: 'LinkedIn', description: 'Professional networking', authType: 'oauth' },
+  { type: 'tiktok', name: 'TikTok', description: 'Short-form video', authType: 'oauth' },
   // Developer & Project Management
   { type: 'github', name: 'GitHub', description: 'Code repositories and issues', authType: 'oauth' },
   { type: 'discord', name: 'Discord', description: 'Community chat', authType: 'oauth' },
@@ -166,6 +188,26 @@ export default function ConnectionsPage() {
         return 'Your Mailchimp API key';
       case 'twilio':
         return 'Your Twilio Auth Token';
+      case 'textedly':
+        return 'Your Textedly API key';
+      case 'godaddy':
+        return 'Your GoDaddy API key';
+      case 'webflow':
+        return 'Your Webflow API token';
+      case 'base44':
+        return 'Your Base44 API key';
+      case 'bubble':
+        return 'Your Bubble API token';
+      case 'zapier':
+        return 'Your Zapier webhook key';
+      case 'cloudflare':
+        return 'Your Cloudflare API token';
+      case 'plausible':
+        return 'Your Plausible API key';
+      case 'hotjar':
+        return 'Your Hotjar API key';
+      case 'trello':
+        return 'Your Trello API key';
       default:
         return 'Enter your API key';
     }
@@ -188,6 +230,60 @@ export default function ConnectionsPage() {
             Generate a token at{' '}
             <a href="https://airtable.com/create/tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Airtable → Account → Developer hub
+            </a>
+          </p>
+        );
+      case 'textedly':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Find your API key in{' '}
+            <a href="https://www.textedly.com/api" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Textedly Dashboard → API Settings
+            </a>
+          </p>
+        );
+      case 'godaddy':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Generate API key at{' '}
+            <a href="https://developer.godaddy.com/keys" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              GoDaddy Developer Portal → API Keys
+            </a>
+          </p>
+        );
+      case 'webflow':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Generate a token at{' '}
+            <a href="https://webflow.com/dashboard/account/integrations" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Webflow → Account → Integrations
+            </a>
+          </p>
+        );
+      case 'cloudflare':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Create an API token at{' '}
+            <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Cloudflare Dashboard → API Tokens
+            </a>
+          </p>
+        );
+      case 'plausible':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Generate API key at{' '}
+            <a href="https://plausible.io/settings" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Plausible → Settings → API Keys
+            </a>
+          </p>
+        );
+      case 'hotjar':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Find your Site ID in{' '}
+            <a href="https://insights.hotjar.com/site/list" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Hotjar → Sites & Organizations
             </a>
           </p>
         );

@@ -1267,133 +1267,222 @@ function IntegrationsSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState('all');
   const { isMobile, isTablet } = useResponsive();
 
-  const integrations = [
-    { name: 'Gmail', icon: '/icons/gmail.svg', status: 'live' },
-    { name: 'Google Sheets', icon: '/icons/sheets.svg', status: 'live' },
-    { name: 'Google Calendar', icon: '/icons/calendar.svg', status: 'live' },
-    { name: 'Stripe', icon: '/icons/stripe.svg', status: 'live' },
+  const categories = [
+    { id: 'all', name: 'All Tools', count: 37 },
+    { id: 'core', name: 'Core', count: 4 },
+    { id: 'crm', name: 'CRM & Sales', count: 4 },
+    { id: 'productivity', name: 'Productivity', count: 6 },
+    { id: 'marketing', name: 'Marketing', count: 4 },
+    { id: 'analytics', name: 'Analytics', count: 4 },
+    { id: 'webdev', name: 'Web Dev', count: 6 },
+    { id: 'social', name: 'Social Media', count: 5 },
+    { id: 'support', name: 'Support', count: 4 },
   ];
 
-  const comingSoon = [
-    { name: 'Slack', icon: '/icons/slack.svg' },
-    { name: 'Notion', icon: '/icons/notion.svg' },
-    { name: 'Twilio', icon: '/icons/twilio.svg' },
-    { name: 'QuickBooks', icon: '/icons/quickbooks.svg' },
+  const allIntegrations = [
+    // Core
+    { name: 'Gmail', icon: '/icons/gmail.svg', category: 'core' },
+    { name: 'Google Sheets', icon: '/icons/sheets.svg', category: 'core' },
+    { name: 'Google Calendar', icon: '/icons/calendar.svg', category: 'core' },
+    { name: 'Stripe', icon: '/icons/stripe.svg', category: 'core' },
+    // CRM & Sales
+    { name: 'HubSpot', icon: '/icons/hubspot.svg', category: 'crm' },
+    { name: 'Salesforce', icon: '/icons/salesforce.svg', category: 'crm' },
+    { name: 'Airtable', icon: '/icons/airtable.svg', category: 'crm' },
+    { name: 'QuickBooks', icon: '/icons/quickbooks.svg', category: 'crm' },
+    // Productivity
+    { name: 'Slack', icon: '/icons/slack.svg', category: 'productivity' },
+    { name: 'Notion', icon: '/icons/notion.svg', category: 'productivity' },
+    { name: 'Asana', icon: '/icons/asana.svg', category: 'productivity' },
+    { name: 'Trello', icon: '/icons/trello.svg', category: 'productivity' },
+    { name: 'Linear', icon: '/icons/linear.svg', category: 'productivity' },
+    { name: 'Jira', icon: '/icons/jira.svg', category: 'productivity' },
+    // Marketing
+    { name: 'Mailchimp', icon: '/icons/mailchimp.svg', category: 'marketing' },
+    { name: 'Twilio', icon: '/icons/twilio.svg', category: 'marketing' },
+    { name: 'Textedly', icon: '/icons/textedly.svg', category: 'marketing' },
+    { name: 'Calendly', icon: '/icons/calendly.svg', category: 'marketing' },
+    // Analytics & Traffic
+    { name: 'Google Analytics', icon: '/icons/google-analytics.svg', category: 'analytics' },
+    { name: 'Cloudflare', icon: '/icons/cloudflare.svg', category: 'analytics' },
+    { name: 'Plausible', icon: '/icons/plausible.svg', category: 'analytics' },
+    { name: 'Hotjar', icon: '/icons/hotjar.svg', category: 'analytics' },
+    // Web Development
+    { name: 'GitHub', icon: '/icons/github.svg', category: 'webdev' },
+    { name: 'Webflow', icon: '/icons/webflow.svg', category: 'webdev' },
+    { name: 'Wix', icon: '/icons/wix.svg', category: 'webdev' },
+    { name: 'Squarespace', icon: '/icons/squarespace.svg', category: 'webdev' },
+    { name: 'GoDaddy', icon: '/icons/godaddy.svg', category: 'webdev' },
+    { name: 'Shopify', icon: '/icons/shopify.svg', category: 'webdev' },
+    // Social Media
+    { name: 'Facebook', icon: '/icons/facebook.svg', category: 'social' },
+    { name: 'Instagram', icon: '/icons/instagram.svg', category: 'social' },
+    { name: 'LinkedIn', icon: '/icons/linkedin.svg', category: 'social' },
+    { name: 'Twitter', icon: '/icons/twitter.svg', category: 'social' },
+    { name: 'TikTok', icon: '/icons/tiktok.svg', category: 'social' },
+    // Support
+    { name: 'Discord', icon: '/icons/discord.svg', category: 'support' },
+    { name: 'Zendesk', icon: '/icons/zendesk.svg', category: 'support' },
+    { name: 'Intercom', icon: '/icons/intercom.svg', category: 'support' },
+    { name: 'Zapier', icon: '/icons/zapier.svg', category: 'support' },
   ];
+
+  const filteredIntegrations = activeCategory === 'all' 
+    ? allIntegrations 
+    : allIntegrations.filter(i => i.category === activeCategory);
 
   return (
     <div id="integrations" style={{ background: 'transparent', padding: isMobile ? '48px 0' : '96px 0' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto', padding: isMobile ? '0 16px' : '0 48px' }}>
         <motion.div
           ref={ref}
-          style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 64 }}
+          style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
         >
           <h2 style={{ fontSize: isMobile ? 32 : 48, fontWeight: 800, marginBottom: isMobile ? 12 : 16, color: styles.textPrimary }}>
-            Powerful Integrations
+            37+ Powerful Integrations
           </h2>
-          <p style={{ fontSize: isMobile ? 16 : 20, color: styles.textSecondary }}>
-            Connect your essential business tools with one-click OAuth
+          <p style={{ fontSize: isMobile ? 16 : 20, color: styles.textSecondary, maxWidth: 600, margin: '0 auto' }}>
+            Connect your essential business tools with one-click OAuth. From CRM to analytics, marketing to web development.
           </p>
         </motion.div>
 
-        {/* Live Integrations */}
-        <div style={{ marginBottom: isMobile ? 32 : 48 }}>
-          <p style={{ fontSize: isMobile ? 12 : 14, fontWeight: 600, color: styles.primary, textAlign: 'center', marginBottom: isMobile ? 16 : 24, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            ✓ Available Now
-          </p>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-            gap: isMobile ? 12 : 24, 
-            justifyContent: 'center' 
-          }}>
-            {integrations.map((integration, i) => (
-              <motion.div
-                key={i}
-                onMouseEnter={() => setHoveredIndex(i)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                style={{
-                  background: hoveredIndex === i 
-                    ? 'rgba(139, 92, 246, 0.15)' 
-                    : 'rgba(214,221,230,0.05)',
-                  border: hoveredIndex === i 
-                    ? '1.5px solid #8b5cf6' 
-                    : '1.5px solid rgba(214,221,230,0.2)',
-                  borderRadius: isMobile ? 12 : 16,
-                  padding: isMobile ? '16px' : '24px 32px',
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  alignItems: 'center',
-                  gap: isMobile ? 8 : 16,
-                  cursor: 'pointer',
-                  boxShadow: hoveredIndex === i 
-                    ? '0 10px 30px rgba(139, 92, 246, 0.3)' 
-                    : 'none',
-                  transform: hoveredIndex === i ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.2s ease-out',
-                }}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                transition={{ duration: 0.5, delay: i * 0.05 }}
-              >
-                <img 
-                  src={integration.icon} 
-                  alt={integration.name} 
-                  style={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36, objectFit: 'contain' }} 
-                />
-                <span style={{ fontSize: isMobile ? 14 : 18, fontWeight: 600, color: styles.textPrimary, textAlign: 'center' }}>
-                  {integration.name}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        {/* Category Filter Tabs */}
+        <motion.div 
+          style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap',
+            justifyContent: 'center', 
+            gap: isMobile ? 8 : 12, 
+            marginBottom: isMobile ? 24 : 40 
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 0.2 }}
+        >
+          {categories.map((cat) => (
+            <motion.button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              style={{
+                background: activeCategory === cat.id 
+                  ? 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' 
+                  : 'rgba(139, 92, 246, 0.1)',
+                border: activeCategory === cat.id 
+                  ? 'none' 
+                  : '1px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: 20,
+                padding: isMobile ? '8px 14px' : '10px 20px',
+                color: activeCategory === cat.id ? 'white' : styles.textSecondary,
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {cat.name}
+            </motion.button>
+          ))}
+        </motion.div>
 
-        {/* Coming Soon */}
-        <div>
-          <p style={{ fontSize: isMobile ? 12 : 14, fontWeight: 600, color: styles.textMuted, textAlign: 'center', marginBottom: isMobile ? 16 : 24, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Coming Soon
-          </p>
-          <div style={{ 
+        {/* Integrations Grid */}
+        <motion.div 
+          style={{ 
             display: 'grid', 
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
-            gap: isMobile ? 8 : 16, 
+            gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : isTablet ? 'repeat(4, 1fr)' : 'repeat(6, 1fr)',
+            gap: isMobile ? 12 : 20, 
             justifyContent: 'center' 
+          }}
+          layout
+        >
+          {filteredIntegrations.map((integration, i) => (
+            <motion.div
+              key={integration.name}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              style={{
+                background: hoveredIndex === i 
+                  ? 'rgba(139, 92, 246, 0.15)' 
+                  : 'rgba(214,221,230,0.05)',
+                border: hoveredIndex === i 
+                  ? '1.5px solid #8b5cf6' 
+                  : '1.5px solid rgba(214,221,230,0.15)',
+                borderRadius: isMobile ? 12 : 16,
+                padding: isMobile ? '16px 8px' : '20px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: isMobile ? 8 : 12,
+                cursor: 'pointer',
+                boxShadow: hoveredIndex === i 
+                  ? '0 10px 30px rgba(139, 92, 246, 0.3)' 
+                  : 'none',
+                transition: 'all 0.2s ease-out',
+              }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: hoveredIndex === i ? 1.05 : 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.3, delay: i * 0.02 }}
+              layout
+            >
+              <img 
+                src={integration.icon} 
+                alt={integration.name} 
+                style={{ 
+                  width: isMobile ? 32 : 40, 
+                  height: isMobile ? 32 : 40, 
+                  objectFit: 'contain' 
+                }} 
+              />
+              <span style={{ 
+                fontSize: isMobile ? 11 : 13, 
+                fontWeight: 600, 
+                color: styles.textPrimary, 
+                textAlign: 'center',
+                lineHeight: 1.2
+              }}>
+                {integration.name}
+              </span>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Bottom CTA */}
+        <motion.div
+          style={{ textAlign: 'center', marginTop: isMobile ? 32 : 48 }}
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.5 }}
+        >
+          <p style={{ 
+            fontSize: isMobile ? 14 : 16, 
+            color: styles.textMuted, 
+            marginBottom: 16 
           }}>
-            {comingSoon.map((integration, i) => (
-              <motion.div
-                key={i}
-                style={{
-                  background: 'rgba(214,221,230,0.03)',
-                  border: '1.5px solid rgba(214,221,230,0.1)',
-                  borderRadius: isMobile ? 10 : 12,
-                  padding: isMobile ? '12px' : '14px 20px',
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  alignItems: 'center',
-                  gap: isMobile ? 6 : 12,
-                  opacity: 0.6,
-                }}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={isInView ? { opacity: 0.6, scale: 1 } : {}}
-                transition={{ duration: 0.5, delay: 0.3 + i * 0.05 }}
-              >
-                <img 
-                  src={integration.icon} 
-                  alt={integration.name} 
-                  style={{ width: isMobile ? 20 : 24, height: isMobile ? 20 : 24, objectFit: 'contain', filter: 'grayscale(50%)' }} 
-                />
-                <span style={{ fontSize: isMobile ? 12 : 15, fontWeight: 500, color: styles.textMuted, textAlign: 'center' }}>
-                  {integration.name}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+            Don't see your favorite tool? We're adding new integrations every week.
+          </p>
+          <motion.a
+            href="#"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              color: styles.primary,
+              fontSize: isMobile ? 14 : 16,
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+            whileHover={{ scale: 1.05, color: styles.primaryLight }}
+          >
+            Request an Integration <ArrowRight size={18} />
+          </motion.a>
+        </motion.div>
       </div>
     </div>
   );

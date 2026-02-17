@@ -486,6 +486,7 @@ export default function WorkflowEditorPage() {
             onDelete={handleDeleteNode}
             onClose={() => setSelectedNode(null)}
             isAdvancedMode={isAdvancedMode}
+            workflowId={params.id as string}
           />
         )}
       </div>

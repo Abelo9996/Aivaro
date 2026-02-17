@@ -9,10 +9,11 @@ interface NodeInspectorProps {
   onDelete: (nodeId: string) => void;
   onClose: () => void;
   isAdvancedMode: boolean;
+  workflowId?: string;
 }
 
 // Field configurations for different node types
-const nodeConfigs: Record<string, { fields: { key: string; label: string; type: string; placeholder?: string; options?: string[] }[] }> = {
+const nodeConfigs: Record<string, { fields: { key: string; label: string; type: string; placeholder?: string; options?: string[]; helpText?: string }[] }> = {
   start_email: {
     fields: [
       { key: 'from', label: 'From Email', type: 'text', placeholder: 'sender@example.com' },
@@ -27,7 +28,16 @@ const nodeConfigs: Record<string, { fields: { key: string; label: string; type: 
   },
   start_form: {
     fields: [
-      { key: 'form_name', label: 'Form Name', type: 'text', placeholder: 'Contact Form' },
+      { key: 'form_name', label: 'Form Name', type: 'text', placeholder: 'Contact Form', helpText: 'A friendly name to identify this form trigger' },
+      { key: 'form_source', label: 'Form Source', type: 'select', options: ['aivaro_form', 'webflow', 'typeform', 'custom_webhook', 'html_form'], helpText: 'Where will form submissions come from?' },
+      { key: 'expected_fields', label: 'Expected Fields', type: 'text', placeholder: 'name, email, message', helpText: 'Comma-separated list of fields you expect (used as {{name}}, {{email}}, etc.)' },
+    ],
+  },
+  start_webhook: {
+    fields: [
+      { key: 'webhook_name', label: 'Webhook Name', type: 'text', placeholder: 'Stripe Payment', helpText: 'A friendly name to identify this webhook' },
+      { key: 'webhook_provider', label: 'Provider', type: 'select', options: ['generic', 'stripe', 'calendly', 'github', 'shopify', 'webflow', 'typeform'], helpText: 'Select the service sending webhooks for automatic data parsing' },
+      { key: 'secret', label: 'Webhook Secret (optional)', type: 'text', placeholder: 'whsec_...', helpText: 'For signature verification (recommended for security)' },
     ],
   },
   send_email: {
@@ -283,9 +293,11 @@ export default function NodeInspector({
   onDelete,
   onClose,
   isAdvancedMode,
+  workflowId,
 }: NodeInspectorProps) {
   const [config, setConfig] = useState<Record<string, any>>(node.data.config || {});
   const [label, setLabel] = useState<string>(typeof node.data.label === 'string' ? node.data.label : '');
+  const [copied, setCopied] = useState(false);
 
   // Re-sync when node changes
   useEffect(() => {
@@ -352,6 +364,36 @@ export default function NodeInspector({
           <div className="font-medium">{nodeType}</div>
         </div>
 
+        {/* Webhook URL Section for form/webhook triggers */}
+        {(nodeType === 'start_form' || nodeType === 'start_webhook') && workflowId && (
+          <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+            <div className="text-xs text-indigo-600 font-medium uppercase tracking-wider mb-2">
+              📋 Your Webhook URL
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-white px-2 py-1.5 rounded border border-indigo-200 break-all text-gray-700">
+                {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/trigger/${workflowId}` : `/api/webhooks/trigger/${workflowId}`}
+              </code>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/api/webhooks/trigger/${workflowId}`;
+                  navigator.clipboard.writeText(url);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="px-2 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+              >
+                {copied ? '✓ Copied!' : 'Copy'}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-indigo-700">
+              {nodeType === 'start_form' 
+                ? 'Copy this URL and paste it into your form\'s action field. When users submit the form, it will trigger this workflow.'
+                : 'Send a POST request to this URL to trigger this workflow. Supports JSON, form-urlencoded, and multipart form data.'}
+            </p>
+          </div>
+        )}
+
         {/* Fields */}
         {fieldConfig.fields.map((field) => (
           <div key={field.key} className="mb-4">
@@ -385,6 +427,9 @@ export default function NodeInspector({
                 placeholder={field.placeholder}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+            )}
+            {field.helpText && (
+              <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
             )}
           </div>
         ))}

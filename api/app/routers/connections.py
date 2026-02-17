@@ -44,10 +44,21 @@ async def list_providers():
         "google", "slack", "notion", "stripe", 
         # Scheduling & CRM
         "calendly", "airtable", "mailchimp", "twilio",
-        # New integrations
+        # CRM & Sales
         "hubspot", "salesforce", "shopify", "quickbooks",
+        # Developer Tools
         "github", "discord", "asana", "trello",
         "zendesk", "intercom", "linear", "jira",
+        # SMS Marketing
+        "textedly",
+        # Website & Domain Providers
+        "godaddy", "wix", "squarespace", "webflow",
+        # No-Code Platforms
+        "base44", "bubble", "zapier",
+        # Analytics & Traffic
+        "google_analytics", "cloudflare", "plausible", "hotjar",
+        # Social Media
+        "facebook", "instagram", "twitter", "linkedin", "tiktok",
     ]
     return [
         {

@@ -29,6 +29,28 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   intercom: { src: '/icons/intercom.svg' },
   linear: { src: '/icons/linear.svg' },
   jira: { src: '/icons/jira.svg' },
+  // SMS Marketing
+  textedly: { src: '/icons/textedly.svg' },
+  // Website & Domain Providers
+  godaddy: { src: '/icons/godaddy.svg' },
+  wix: { src: '/icons/wix.svg' },
+  squarespace: { src: '/icons/squarespace.svg' },
+  webflow: { src: '/icons/webflow.svg' },
+  // No-Code Platforms
+  base44: { src: '/icons/base44.svg' },
+  bubble: { src: '/icons/bubble.svg' },
+  zapier: { src: '/icons/zapier.svg' },
+  // Analytics & Traffic
+  google_analytics: { src: '/icons/google-analytics.svg' },
+  cloudflare: { src: '/icons/cloudflare.svg' },
+  plausible: { src: '/icons/plausible.svg' },
+  hotjar: { src: '/icons/hotjar.svg' },
+  // Social Media
+  facebook: { src: '/icons/facebook.svg' },
+  instagram: { src: '/icons/instagram.svg' },
+  twitter: { src: '/icons/twitter.svg' },
+  linkedin: { src: '/icons/linkedin.svg' },
+  tiktok: { src: '/icons/tiktok.svg' },
   
   // Workflow node types - map to appropriate service icons
   start_email: { src: '/icons/gmail.svg' },

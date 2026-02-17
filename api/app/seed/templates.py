@@ -2234,6 +2234,471 @@ def seed_templates():
                 {"id": "e1", "source": "start-1", "target": "sheet-1"},
                 {"id": "e2", "source": "sheet-1", "target": "notify-1"}
             ]
+        },
+
+        # ========== WEB DEVELOPMENT & TRAFFIC ==========
+        {
+            "name": "Website Analytics Report",
+            "icon": "📊",
+            "description": "Get weekly analytics reports from Google Analytics or Plausible.",
+            "summary": "Receive automated weekly traffic reports with key metrics and insights.",
+            "category": "Analytics",
+            "business_types": ["saas", "agency", "ecommerce", "creator"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_schedule",
+                    "label": "Run weekly",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {"schedule": "weekly"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "analytics-1",
+                    "type": "google_analytics_report",
+                    "label": "Get analytics data",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "property_id": "{{ga_property_id}}",
+                        "date_range": "last_7_days",
+                        "metrics": ["sessions", "users", "pageviews", "bounce_rate"]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send weekly report",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "to": "{{owner_email}}",
+                        "subject": "📊 Weekly Traffic Report - {{site_name}}",
+                        "body": "Hey {{owner_name}},\n\nHere's your weekly traffic snapshot:\n\n📈 Sessions: {{sessions}}\n👥 Users: {{users}}\n📄 Pageviews: {{pageviews}}\n📉 Bounce Rate: {{bounce_rate}}%\n\nTop Pages:\n{{top_pages}}\n\nTraffic Sources:\n{{traffic_sources}}\n\nKeep building! 🚀"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Share in Slack",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#growth",
+                        "text": "📊 *Weekly Traffic Update*\n\n👥 {{users}} users | 📄 {{pageviews}} pageviews | 📉 {{bounce_rate}}% bounce rate"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "analytics-1"},
+                {"id": "e2", "source": "analytics-1", "target": "email-1"},
+                {"id": "e3", "source": "email-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Domain Expiration Alerts",
+            "icon": "🌐",
+            "description": "Get notified before your domains expire with GoDaddy monitoring.",
+            "summary": "Never lose a domain - get alerts 30, 14, and 7 days before expiration.",
+            "category": "Web Development",
+            "business_types": ["agency", "saas", "freelance"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_schedule",
+                    "label": "Check daily",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {"schedule": "daily"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "godaddy-1",
+                    "type": "godaddy_check_domains",
+                    "label": "Check domain expiration",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "domains": "{{domain_list}}",
+                        "alert_days": [30, 14, 7]
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Alert in Slack",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#ops",
+                        "text": "🌐 *Domain Expiration Alert*\n\n⚠️ {{domain}} expires in {{days_remaining}} days!\n📅 Expiration: {{expiration_date}}\n\nRenew now: {{renewal_link}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Email owner",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "to": "{{owner_email}}",
+                        "subject": "⚠️ Domain {{domain}} expires in {{days_remaining}} days",
+                        "body": "Hi {{owner_name}},\n\nYour domain {{domain}} is expiring soon!\n\n📅 Expiration Date: {{expiration_date}}\n⏰ Days Remaining: {{days_remaining}}\n\nRenew your domain to avoid losing it.\n\nBest,\nAivaro"
+                    },
+                    "requiresApproval": True
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "godaddy-1"},
+                {"id": "e2", "source": "godaddy-1", "target": "slack-1"},
+                {"id": "e3", "source": "slack-1", "target": "email-1"}
+            ]
+        },
+        {
+            "name": "Webflow Form to CRM",
+            "icon": "🔗",
+            "description": "Sync Webflow form submissions to your CRM and send notifications.",
+            "summary": "When a form is submitted on your Webflow site, add to CRM and notify team.",
+            "category": "Web Development",
+            "business_types": ["agency", "saas", "service"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_webhook",
+                    "label": "When Webflow form submitted",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {"webhook_type": "webflow"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Add to Airtable CRM",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Leads",
+                        "fields": {
+                            "Name": "{{form_name}}",
+                            "Email": "{{form_email}}",
+                            "Message": "{{form_message}}",
+                            "Source": "Webflow",
+                            "Date": "{{today}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send auto-reply",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "to": "{{form_email}}",
+                        "subject": "Thanks for reaching out, {{form_name}}!",
+                        "body": "Hi {{form_name}},\n\nThanks for contacting us through our website!\n\nWe've received your message and will get back to you within 24 hours.\n\nBest,\n{{business_name}}"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify sales team",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#sales",
+                        "text": "🔗 New Webflow lead!\n\n👤 *{{form_name}}*\n📧 {{form_email}}\n\n💬 {{form_message}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "airtable-1"},
+                {"id": "e2", "source": "airtable-1", "target": "email-1"},
+                {"id": "e3", "source": "email-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "Cloudflare Security Alerts",
+            "icon": "🛡️",
+            "description": "Get notified of security events and traffic anomalies from Cloudflare.",
+            "summary": "Monitor your sites for DDoS attacks, bot traffic, and security threats.",
+            "category": "Web Development",
+            "business_types": ["saas", "agency", "tech"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_webhook",
+                    "label": "When Cloudflare event occurs",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {"webhook_type": "cloudflare"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Alert security channel",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "channel": "#security",
+                        "text": "🛡️ *Cloudflare Security Alert*\n\n⚠️ Event: {{event_type}}\n🌐 Zone: {{zone_name}}\n📍 Details: {{event_details}}\n\nTime: {{event_time}}"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Log security event",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "Security Events",
+                        "fields": {
+                            "Date": "{{today}}",
+                            "Event Type": "{{event_type}}",
+                            "Zone": "{{zone_name}}",
+                            "Details": "{{event_details}}",
+                            "Status": "Open"
+                        }
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "slack-1"},
+                {"id": "e2", "source": "slack-1", "target": "airtable-1"}
+            ]
+        },
+        {
+            "name": "SMS Marketing Campaign",
+            "icon": "📱",
+            "description": "Send bulk SMS campaigns with Textedly and track responses.",
+            "summary": "Launch SMS marketing campaigns and log all responses for follow-up.",
+            "category": "Marketing",
+            "business_types": ["retail", "service", "ecommerce"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When campaign is ready",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "textedly-1",
+                    "type": "textedly_send_campaign",
+                    "label": "Send SMS campaign",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "list_id": "{{subscriber_list_id}}",
+                        "message": "{{campaign_message}}",
+                        "schedule": "{{send_time}}"
+                    },
+                    "requiresApproval": True
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Log campaign",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "SMS Campaigns",
+                        "fields": {
+                            "Date": "{{today}}",
+                            "Campaign Name": "{{campaign_name}}",
+                            "Recipients": "{{recipient_count}}",
+                            "Message": "{{campaign_message}}",
+                            "Status": "Sent"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify marketing team",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#marketing",
+                        "text": "📱 *SMS Campaign Sent*\n\n📣 {{campaign_name}}\n👥 {{recipient_count}} recipients\n📝 {{campaign_message}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "textedly-1"},
+                {"id": "e2", "source": "textedly-1", "target": "airtable-1"},
+                {"id": "e3", "source": "airtable-1", "target": "slack-1"}
+            ]
+        },
+
+        # ========== SOCIAL MEDIA ==========
+        {
+            "name": "Social Media Post Scheduler",
+            "icon": "📣",
+            "description": "Schedule and track posts across multiple social platforms.",
+            "summary": "Plan your social content and get reminded when it's time to post.",
+            "category": "Marketing",
+            "business_types": ["agency", "creator", "coaching", "ecommerce"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When post is scheduled",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notion-1",
+                    "type": "notion_create_page",
+                    "label": "Add to content calendar",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "database_id": "{{content_database_id}}",
+                        "title": "{{post_title}}",
+                        "properties": {
+                            "Platform": "{{platform}}",
+                            "Scheduled Date": "{{scheduled_date}}",
+                            "Status": "Scheduled",
+                            "Content": "{{post_content}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Notify team",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "channel": "#content",
+                        "text": "📣 New {{platform}} post scheduled for {{scheduled_date}}:\n\n{{post_content}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "notion-1"},
+                {"id": "e2", "source": "notion-1", "target": "slack-1"}
+            ]
+        },
+        {
+            "name": "LinkedIn Lead Gen",
+            "icon": "💼",
+            "description": "Capture LinkedIn leads and add them to your CRM with follow-up.",
+            "summary": "When you connect with someone on LinkedIn, add to CRM and schedule follow-up.",
+            "category": "Lead Generation",
+            "business_types": ["service", "agency", "consulting", "saas"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_form",
+                    "label": "When LinkedIn lead captured",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "airtable-1",
+                    "type": "airtable_create_record",
+                    "label": "Add to LinkedIn CRM",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "base_id": "{{airtable_base_id}}",
+                        "table_name": "LinkedIn Leads",
+                        "fields": {
+                            "Name": "{{lead_name}}",
+                            "Title": "{{lead_title}}",
+                            "Company": "{{lead_company}}",
+                            "LinkedIn URL": "{{linkedin_url}}",
+                            "Status": "New Connection",
+                            "Date Added": "{{today}}"
+                        }
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "delay-1",
+                    "type": "delay",
+                    "label": "Wait 3 days",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {"duration": 3, "unit": "days"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "notify-1",
+                    "type": "send_notification",
+                    "label": "Remind to follow up",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "message": "💼 Time to follow up with {{lead_name}} from {{lead_company}} on LinkedIn!"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "airtable-1"},
+                {"id": "e2", "source": "airtable-1", "target": "delay-1"},
+                {"id": "e3", "source": "delay-1", "target": "notify-1"}
+            ]
+        },
+        {
+            "name": "User Behavior Insights",
+            "icon": "🔥",
+            "description": "Get weekly Hotjar insights on user behavior and heatmaps.",
+            "summary": "Receive automated reports on how users interact with your website.",
+            "category": "Analytics",
+            "business_types": ["saas", "ecommerce", "agency"],
+            "nodes": [
+                {
+                    "id": "start-1",
+                    "type": "start_schedule",
+                    "label": "Run weekly",
+                    "position": {"x": 250, "y": 50},
+                    "parameters": {"schedule": "weekly"},
+                    "requiresApproval": False
+                },
+                {
+                    "id": "hotjar-1",
+                    "type": "hotjar_get_insights",
+                    "label": "Get Hotjar data",
+                    "position": {"x": 250, "y": 200},
+                    "parameters": {
+                        "site_id": "{{hotjar_site_id}}",
+                        "date_range": "last_7_days"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "email-1",
+                    "type": "send_email",
+                    "label": "Send insights report",
+                    "position": {"x": 250, "y": 350},
+                    "parameters": {
+                        "to": "{{product_team_email}}",
+                        "subject": "🔥 Weekly Hotjar Insights - {{site_name}}",
+                        "body": "Hi team,\n\nHere are this week's user behavior insights:\n\n📊 Recordings: {{total_recordings}}\n🔥 Top Heatmaps:\n{{heatmap_summary}}\n\n📝 User Feedback:\n{{feedback_summary}}\n\nView full report: {{hotjar_link}}\n\nBest,\nAivaro"
+                    },
+                    "requiresApproval": False
+                },
+                {
+                    "id": "slack-1",
+                    "type": "slack_send_message",
+                    "label": "Share in product channel",
+                    "position": {"x": 250, "y": 500},
+                    "parameters": {
+                        "channel": "#product",
+                        "text": "🔥 *Weekly Hotjar Report*\n\n📊 {{total_recordings}} recordings this week\n\nKey insights shared via email. Check the full report: {{hotjar_link}}"
+                    },
+                    "requiresApproval": False
+                }
+            ],
+            "edges": [
+                {"id": "e1", "source": "start-1", "target": "hotjar-1"},
+                {"id": "e2", "source": "hotjar-1", "target": "email-1"},
+                {"id": "e3", "source": "email-1", "target": "slack-1"}
+            ]
         }
     ]
     
