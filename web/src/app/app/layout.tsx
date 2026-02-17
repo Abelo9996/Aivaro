@@ -52,11 +52,11 @@ export default function AppLayout({
 
   return (
     <WalkthroughProvider autoStart={isDashboard}>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
-        <div className="flex-1 flex flex-col ml-64">
+        <div className="flex-1 flex flex-col ml-64 min-w-0">
           <Header />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-6 overflow-x-hidden">{children}</main>
         </div>
         
         {/* Global AI Assistant FAB */}

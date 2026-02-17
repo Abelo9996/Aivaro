@@ -304,10 +304,43 @@ class ApiClient {
   }
 
   // AI
-  async generateWorkflow(prompt: string) {
-    return this.request<any>('/api/ai/generate-workflow', {
+  async clarifyWorkflow(prompt: string): Promise<{
+    is_complete: boolean;
+    confidence: number;
+    understood: {
+      trigger?: string | null;
+      data_source?: string | null;
+      actions?: string[];
+      recipients?: string | null;
+      integrations?: string[];
+    };
+    missing_info: string[];
+    questions: Array<{
+      id: string;
+      question: string;
+      why: string;
+      options?: string[] | null;
+      allow_multiple: boolean;
+    }>;
+  }> {
+    return this.request('/api/ai/clarify-workflow', {
       method: 'POST',
       body: JSON.stringify({ prompt }),
+    });
+  }
+
+  async generateWorkflow(
+    prompt: string, 
+    clarifications?: Record<string, any>,
+    skipClarification: boolean = false
+  ): Promise<any> {
+    return this.request<any>('/api/ai/generate-workflow', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        prompt,
+        clarifications,
+        skip_clarification: skipClarification
+      }),
     });
   }
 

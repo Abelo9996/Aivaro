@@ -157,21 +157,21 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="overflow-x-hidden">
-      <div className="mb-8">
+    <div className="max-w-full overflow-x-hidden">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Templates</h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 text-sm">
           Start with a pre-built automation and customize it for your business.
         </p>
       </div>
 
       {/* Category Filter */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition flex-shrink-0 ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition flex-shrink-0 ${
               selectedCategory === cat
                 ? 'bg-primary-600 text-white'
                 : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
@@ -182,10 +182,10 @@ export default function TemplatesPage() {
         ))}
       </div>
 
-      {/* Templates Grid */}
+      {/* Templates Grid - More compact */}
       <div 
         data-walkthrough="templates-grid"
-        className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
       >
         {filteredTemplates.map((template, index) => {
           const IconComponent = getTemplateIcon(template);
@@ -195,31 +195,35 @@ export default function TemplatesPage() {
             <div
               key={template.id}
               data-walkthrough={index === 0 ? "template-card" : undefined}
-              className="bg-white rounded-xl border border-gray-200 p-6 hover:border-primary-300 hover:shadow-md transition group overflow-hidden"
+              className="bg-white rounded-xl border border-gray-200 p-4 hover:border-primary-300 hover:shadow-md transition group"
             >
-              <div className={`w-12 h-12 bg-gradient-to-br ${iconColors} rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition`}>
-                <IconComponent className="w-6 h-6" />
+              <div className="flex items-start gap-3 mb-3">
+                <div className={`w-10 h-10 bg-gradient-to-br ${iconColors} rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition`}>
+                  <IconComponent className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-sm text-gray-900 truncate">{template.name}</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-500 truncate">
+                      {template.category}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      · {template.definition?.nodes?.length || 0} steps
+                    </span>
+                  </div>
+                </div>
               </div>
-              <h3 className="font-semibold mb-2 text-gray-900 truncate">{template.name}</h3>
-              <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+              <p className="text-xs text-gray-500 mb-3 line-clamp-2 min-h-[2.5rem]">
                 {template.description}
               </p>
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full truncate max-w-[120px]">
-                  {template.category}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {template.definition?.nodes?.length || 0} steps
-                </span>
-              </div>
               <button
                 onClick={() => handleUseTemplate(template)}
                 disabled={creatingId === template.id}
-                className="w-full bg-primary-600 text-white py-2 rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-primary-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {creatingId === template.id ? (
                   <>
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -241,14 +245,14 @@ export default function TemplatesPage() {
       )}
 
       {/* Custom Workflow Option */}
-      <div className="mt-12 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-8 text-center">
-        <h3 className="text-lg font-semibold mb-2">Need something custom?</h3>
-        <p className="text-gray-500 mb-4">
+      <div className="mt-8 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 text-center">
+        <h3 className="text-base font-semibold mb-1">Need something custom?</h3>
+        <p className="text-gray-500 text-sm mb-3">
           Build your own workflow from scratch with our visual editor.
         </p>
         <Link
           href="/app/workflows/new"
-          className="inline-block bg-gray-900 text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-800 transition"
+          className="inline-block bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
         >
           Create Custom Workflow
         </Link>

@@ -1,9 +1,315 @@
 import json
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from app.config import get_settings
 
 settings = get_settings()
+
+
+# ============================================================
+# WORKFLOW CLARIFICATION SYSTEM
+# Asks clarifying questions before generating a workflow
+# ============================================================
+
+CLARIFICATION_CATEGORIES = {
+    "trigger": {
+        "question": "What should trigger this workflow?",
+        "options": [
+            "When I manually start it",
+            "When someone fills out a form",
+            "On a schedule (daily, weekly, etc.)",
+            "When I receive an email",
+            "When a webhook is received"
+        ]
+    },
+    "frequency": {
+        "question": "How often should this run?",
+        "applies_to": ["schedule"],
+    },
+    "data_source": {
+        "question": "Where is the data coming from?",
+        "options": [
+            "A form submission",
+            "An email",
+            "A Google Sheet",
+            "An Airtable base",
+            "A Notion database",
+            "An API/webhook"
+        ]
+    },
+    "actions": {
+        "question": "What actions should happen? (Select all that apply)",
+        "options": [
+            "Send an email",
+            "Add to a spreadsheet",
+            "Create a calendar event",
+            "Send a Slack message",
+            "Send an SMS",
+            "Create a payment/invoice",
+            "Update a database record",
+            "Generate AI content"
+        ]
+    },
+    "approval": {
+        "question": "Should any steps require your approval before running?",
+        "options": [
+            "Yes, I want to review emails before they're sent",
+            "Yes, I want to review payments before they're created",
+            "No, run everything automatically"
+        ]
+    }
+}
+
+
+def analyze_prompt_completeness(prompt: str) -> Dict[str, Any]:
+    """
+    Analyze a prompt to determine what clarifying questions are needed.
+    Returns a dict with:
+    - is_complete: Whether the prompt has enough detail to generate
+    - missing_info: List of what's unclear
+    - questions: List of clarifying questions to ask
+    - confidence: 0-100 score of how confident we are
+    """
+    if settings.openai_api_key:
+        return _analyze_with_openai(prompt)
+    return _analyze_deterministic(prompt)
+
+
+def _analyze_with_openai(prompt: str) -> Dict[str, Any]:
+    """Use OpenAI to analyze prompt completeness"""
+    try:
+        import openai
+        
+        client = openai.OpenAI(api_key=settings.openai_api_key)
+        
+        analysis_prompt = """You are a workflow automation expert. Analyze the user's request and determine if it has enough detail to build a reliable workflow.
+
+A COMPLETE request should clearly specify:
+1. TRIGGER: What starts the workflow (form, email, schedule, manual, webhook)
+2. DATA: What data is involved and where it comes from
+3. ACTIONS: What specific actions should happen
+4. RECIPIENTS: Who receives emails/notifications (if applicable)
+5. TIMING: Any delays, schedules, or conditional timing
+6. INTEGRATIONS: Which tools are needed (Gmail, Sheets, Slack, etc.)
+
+Analyze the request and return a JSON object:
+{
+  "is_complete": boolean (true only if ALL necessary details are clear),
+  "confidence": number 0-100 (how confident you are about what to build),
+  "understood": {
+    "trigger": "what you understood about the trigger, or null",
+    "data_source": "what you understood about data, or null",
+    "actions": ["list of actions you understood"],
+    "recipients": "who receives output, or null",
+    "integrations": ["list of tools needed"]
+  },
+  "missing_info": ["list of unclear or missing details"],
+  "questions": [
+    {
+      "id": "unique_id",
+      "question": "The clarifying question to ask",
+      "why": "Brief reason why this matters",
+      "options": ["option1", "option2", "option3"] or null for free-text,
+      "allow_multiple": boolean (true if multiple options can be selected)
+    }
+  ]
+}
+
+IMPORTANT RULES:
+- If confidence < 70, you MUST ask clarifying questions
+- Ask 2-4 focused questions maximum
+- Questions should be specific, not generic
+- Options should cover common use cases
+- Always ask about approval requirements for email/payment workflows
+- For vague requests like "automate my business", ask what specific task they want to start with
+
+Return ONLY valid JSON."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": analysis_prompt},
+                {"role": "user", "content": f"Analyze this workflow request: {prompt}"}
+            ],
+            temperature=0.3,
+            max_tokens=1000
+        )
+        
+        content = response.choices[0].message.content
+        # Strip markdown if present
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        
+        result = json.loads(content.strip())
+        
+        # Ensure required fields exist
+        result.setdefault("is_complete", False)
+        result.setdefault("confidence", 50)
+        result.setdefault("questions", [])
+        result.setdefault("missing_info", [])
+        result.setdefault("understood", {})
+        
+        return result
+        
+    except Exception as e:
+        print(f"OpenAI analysis failed: {e}")
+        return _analyze_deterministic(prompt)
+
+
+def _analyze_deterministic(prompt: str) -> Dict[str, Any]:
+    """Analyze prompt using keyword matching"""
+    prompt_lower = prompt.lower()
+    
+    understood = {
+        "trigger": None,
+        "data_source": None,
+        "actions": [],
+        "recipients": None,
+        "integrations": []
+    }
+    missing = []
+    questions = []
+    confidence = 30  # Start low
+    
+    # Check for trigger
+    trigger_keywords = {
+        "form": ("form", "submitted", "submission", "fills out"),
+        "email": ("email", "receive", "inbox", "gmail"),
+        "schedule": ("daily", "weekly", "every day", "every week", "schedule", "morning", "evening"),
+        "manual": ("manually", "when i click", "on demand"),
+        "webhook": ("webhook", "api call", "external")
+    }
+    
+    for trigger_type, keywords in trigger_keywords.items():
+        if any(kw in prompt_lower for kw in keywords):
+            understood["trigger"] = trigger_type
+            confidence += 15
+            break
+    
+    if not understood["trigger"]:
+        missing.append("What triggers this workflow")
+        questions.append({
+            "id": "trigger",
+            "question": "What should start this workflow?",
+            "why": "I need to know what event kicks off the automation",
+            "options": [
+                "When someone submits a form",
+                "When I receive an email",
+                "On a schedule (daily, weekly, etc.)",
+                "When I manually click 'Run'",
+                "When an external system sends data (webhook)"
+            ],
+            "allow_multiple": False
+        })
+    
+    # Check for actions
+    action_keywords = {
+        "send_email": ("send email", "email them", "reply", "respond"),
+        "spreadsheet": ("spreadsheet", "google sheet", "log", "record"),
+        "calendar": ("calendar", "schedule", "appointment", "booking", "event"),
+        "slack": ("slack", "message team"),
+        "sms": ("sms", "text message", "twilio"),
+        "payment": ("payment", "invoice", "stripe", "charge", "deposit"),
+        "ai": ("ai", "generate", "summarize", "draft")
+    }
+    
+    for action_type, keywords in action_keywords.items():
+        if any(kw in prompt_lower for kw in keywords):
+            understood["actions"].append(action_type)
+            confidence += 10
+    
+    if not understood["actions"]:
+        missing.append("What actions should happen")
+        questions.append({
+            "id": "actions",
+            "question": "What should happen when this workflow runs?",
+            "why": "I need to know what actions to perform",
+            "options": [
+                "Send an email",
+                "Add data to a spreadsheet",
+                "Create a calendar event",
+                "Send a Slack message",
+                "Create a payment link or invoice",
+                "Generate AI content"
+            ],
+            "allow_multiple": True
+        })
+    
+    # Check if email is involved but no recipient clarity
+    if "email" in understood["actions"] or "send_email" in str(understood["actions"]):
+        if not any(word in prompt_lower for word in ["to the", "back to", "reply", "{{", "customer", "client", "user"]):
+            missing.append("Who should receive the email")
+            questions.append({
+                "id": "email_recipient",
+                "question": "Who should receive the email?",
+                "why": "I need to know the recipient",
+                "options": [
+                    "Reply to the person who triggered it (e.g., form submitter, email sender)",
+                    "Send to a specific email address",
+                    "Send to my team/internal"
+                ],
+                "allow_multiple": False
+            })
+    
+    # Check for payment/booking but no amount
+    if any(word in prompt_lower for word in ["payment", "deposit", "charge", "invoice"]):
+        if not any(char.isdigit() for char in prompt):
+            questions.append({
+                "id": "payment_amount",
+                "question": "What should the payment amount be?",
+                "why": "I need to set the correct price",
+                "options": None,  # Free text
+                "allow_multiple": False
+            })
+            confidence -= 10
+    
+    # Always ask about approval for sensitive actions
+    sensitive_actions = ["send_email", "payment", "sms"]
+    if any(action in str(understood["actions"]) for action in sensitive_actions):
+        questions.append({
+            "id": "approval",
+            "question": "Should you review and approve before these actions run?",
+            "why": "This adds a safety check before sending emails or processing payments",
+            "options": [
+                "Yes, I want to review before sending",
+                "No, run automatically"
+            ],
+            "allow_multiple": False
+        })
+    
+    # Determine if complete
+    is_complete = confidence >= 70 and len(questions) <= 1
+    
+    return {
+        "is_complete": is_complete,
+        "confidence": min(confidence, 100),
+        "understood": understood,
+        "missing_info": missing,
+        "questions": questions[:4]  # Max 4 questions
+    }
+
+
+def generate_workflow_with_context(prompt: str, clarifications: Dict[str, Any] = None) -> dict:
+    """
+    Generate a workflow with additional context from clarifying questions.
+    
+    Args:
+        prompt: Original user prompt
+        clarifications: Dict of question_id -> answer from clarifying questions
+    """
+    # Build enhanced prompt with clarifications
+    enhanced_prompt = prompt
+    
+    if clarifications:
+        enhanced_prompt += "\n\nAdditional details:"
+        for question_id, answer in clarifications.items():
+            if isinstance(answer, list):
+                answer = ", ".join(answer)
+            enhanced_prompt += f"\n- {question_id}: {answer}"
+    
+    return generate_workflow_from_prompt(enhanced_prompt)
 
 
 def generate_workflow_from_prompt(prompt: str) -> dict:
