@@ -5,6 +5,7 @@ from app.models.approval import Approval
 from app.models.connection import Connection
 from app.models.template import Template
 from app.models.audit_log import AuditLog
+from app.models.chat import ChatMessage, ChatConversation
 
 __all__ = [
     "User",
@@ -15,4 +16,6 @@ __all__ = [
     "Connection",
     "Template",
     "AuditLog",
+    "ChatMessage",
+    "ChatConversation",
 ]

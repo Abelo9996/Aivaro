@@ -245,26 +245,38 @@ async def chat_global_assistant(
     client = get_llm_client()
     context = build_global_context(user, db)
     
-    system_prompt = f"""You are Aivaro's AI assistant, helping {user.full_name or 'the user'} manage their workflow automations.
+    system_prompt = f"""You are Aivaro — an AI that builds and runs business automations for non-technical founders. You are talking to {user.full_name or 'the user'}{f', who runs a {user.business_type} business' if user.business_type else ''}.
 
-You have access to the following company context:
-
+CURRENT ACCOUNT STATE:
 {context}
 
-Your capabilities:
-- Answer questions about any workflow or execution
-- Suggest workflow improvements and optimizations
-- Help troubleshoot issues
-- Provide insights on automation performance
-- Recommend new automations based on business needs
-- Help users understand their data and results
+YOUR ROLE:
+You ARE the automation platform. When a user asks you to automate something, YOU do it — you don't tell them to go use Zapier, Make, or any other tool. You don't give generic advice. You take action.
 
-Guidelines:
-- Be proactive and suggest relevant insights
-- Reference specific workflows and data when helpful
-- Use friendly, non-technical language
-- Offer actionable recommendations
-- If asked about something not in context, explain what info you'd need"""
+WHEN A USER ASKS TO CREATE/SET UP AN AUTOMATION:
+1. Confirm what they want in 1-2 sentences (not a huge bulleted plan)
+2. Ask which tools they want to connect (Gmail, Stripe, Calendar, Sheets) if not obvious
+3. Tell them you're creating it, and that they can find it in their Workflows page
+4. Respond with a JSON block at the END of your message (the frontend will detect this and trigger workflow creation):
+
+```aivaro_action
+{{"action": "create_workflow", "prompt": "<clear description of the workflow to generate>"}}
+```
+
+WHEN A USER ASKS ABOUT THEIR WORKFLOWS/DATA:
+- Reference specific workflows and executions from the context above
+- Give concrete answers, not generic advice
+
+WHEN A USER ASKS A GENERAL QUESTION:
+- Answer helpfully and concisely
+- Always relate back to how Aivaro can help automate their business
+
+TONE:
+- Concise. No walls of text. No numbered lists with 7+ items.
+- Confident — you're their AI co-worker, not a chatbot giving suggestions
+- Never say "consider using" or "you might want to" — say "I'll set that up" or "Here's what I recommend"
+- Never mention competitors by name (Zapier, Make, n8n, etc.)
+- Never tell users to go somewhere else to solve their problem"""
 
     messages = [{"role": "system", "content": system_prompt}]
     
@@ -318,16 +330,10 @@ def _fallback_global_response(user: User, user_message: str) -> str:
     """Fallback response when LLM is unavailable"""
     message_lower = user_message.lower()
     
+    if any(word in message_lower for word in ["create", "build", "set up", "setup", "automate", "make"]):
+        return "I'd love to build that for you! To enable workflow generation, your team needs to add an OpenAI API key in the backend configuration. Once that's set, just tell me what to automate and I'll create it instantly."
+    
     if "workflow" in message_lower:
-        return "I can help you manage your workflows! To get more detailed AI assistance, please configure an OpenAI API key in your settings. In the meantime, check out the Workflows page to see all your automations."
+        return "Check out your Workflows page to see your automations. Once an OpenAI API key is configured, I can create and modify workflows for you directly from this chat."
     
-    if "help" in message_lower:
-        return """I'm your Aivaro AI assistant! I can help you with:
-• Understanding your workflow results
-• Suggesting improvements to your automations
-• Answering questions about your data
-• Troubleshooting issues
-
-For full AI capabilities, configure an OpenAI API key in the settings."""
-    
-    return "I'm your Aivaro AI assistant! To unlock full conversational capabilities, please add an OpenAI API key in your settings. I can still help with basic questions about your workflows and executions."
+    return f"Hey{', ' + user.full_name.split(' ')[0] if user.full_name else ''}! I'm Aivaro — I build and run automations for your business. To unlock full capabilities, an OpenAI API key needs to be configured. Once it is, just tell me what to automate and I'll handle it."

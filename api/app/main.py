@@ -102,14 +102,10 @@ cors_origins = list(set([o for o in cors_origins if o]))
 logger.info(f"[CORS] Allowed origins: {cors_origins}")
 
 # Add middleware (order matters - first added = last executed)
-# Error handling should be outermost
-app.add_middleware(ErrorHandlingMiddleware)
-
-# Security headers
-app.add_middleware(SecurityHeadersMiddleware)
-
-# Request logging with correlation IDs
-app.add_middleware(RequestLoggingMiddleware)
+# NOTE: BaseHTTPMiddleware breaks SSE streaming - disabled for now
+# app.add_middleware(ErrorHandlingMiddleware)
+# app.add_middleware(SecurityHeadersMiddleware)
+# app.add_middleware(RequestLoggingMiddleware)
 
 # CORS must be after custom middleware
 app.add_middleware(

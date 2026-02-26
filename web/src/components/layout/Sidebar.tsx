@@ -5,18 +5,19 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
-import { 
-  LayoutDashboard, 
-  Zap, 
-  FileText, 
-  BarChart3, 
-  CheckCircle2, 
+import {
+  LayoutDashboard,
+  Zap,
+  FileText,
+  BarChart3,
+  CheckCircle2,
   Link2,
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/app', label: 'Dashboard', Icon: LayoutDashboard, walkthrough: 'nav-dashboard' },
+  { href: '/app', label: 'Chat', Icon: MessageSquare, walkthrough: 'nav-dashboard' },
   { href: '/app/workflows', label: 'Workflows', Icon: Zap, walkthrough: 'nav-workflows' },
   { href: '/app/templates', label: 'Templates', Icon: FileText, walkthrough: 'nav-templates' },
   { href: '/app/executions', label: 'Run History', Icon: BarChart3, walkthrough: 'nav-executions' },
@@ -33,11 +34,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-6">
         <Link href="/app" className="flex items-center gap-2">
-          <Image 
-            src="/logo-dark.png" 
-            alt="Aivaro" 
-            width={140} 
-            height={49} 
+          <Image
+            src="/logo-dark.png"
+            alt="Aivaro"
+            width={140}
+            height={49}
             className="h-10 w-auto"
             priority
           />
@@ -48,10 +49,10 @@ export default function Sidebar() {
       <nav className="flex-1 px-3">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || 
+            const isActive = pathname === item.href ||
               (item.href !== '/app' && pathname.startsWith(item.href));
             const Icon = item.Icon;
-            
+
             return (
               <li key={item.href}>
                 <Link

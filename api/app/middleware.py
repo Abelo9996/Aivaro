@@ -22,6 +22,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Skip middleware for SSE streaming endpoints (BaseHTTPMiddleware breaks streaming)
+        if "/stream" in request.url.path:
+            return await call_next(request)
+
         # Generate or extract correlation ID
         correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())[:8]
         set_correlation_id(correlation_id)
@@ -90,6 +94,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     EXEMPT_PATHS = ["/api/health", "/docs", "/openapi.json"]
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if "/stream" in request.url.path:
+            return await call_next(request)
         path = request.url.path
         
         # Skip rate limiting for exempt paths
@@ -132,6 +138,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if "/stream" in request.url.path:
+            return await call_next(request)
         response = await call_next(request)
         
         # Security headers
@@ -153,6 +161,8 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if "/stream" in request.url.path:
+            return await call_next(request)
         try:
             return await call_next(request)
         except RateLimitExceeded as e:
