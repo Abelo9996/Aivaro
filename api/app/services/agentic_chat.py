@@ -139,7 +139,7 @@ TOOLS = [
                 "properties": {
                     "step_type": {
                         "type": "string",
-                        "description": "The step type (e.g. start_form, send_email, google_calendar_create, stripe_create_payment_link, append_row, delay, etc.)"
+                        "description": "The step type (e.g. start_form, send_email, google_calendar_create, stripe_create_payment_link, stripe_create_invoice, append_row, delay, ai_reply, slack_send_message, twilio_send_sms, twilio_send_whatsapp, twilio_make_call, airtable_create_record, airtable_update_record, airtable_list_records, airtable_find_record, etc.)"
                     }
                 },
                 "required": ["step_type"]
@@ -289,6 +289,57 @@ NODE_REQUIREMENTS = {
         "user_setup": "No connection needed — just provide the URL and method. Useful for custom integrations.",
         "data_provided": ["response_body", "status_code"],
         "parameters": {"url": "API endpoint", "method": "GET/POST/PUT/DELETE"},
+    },
+    # ========== Twilio (SMS / WhatsApp / Voice) ==========
+    "twilio_send_sms": {
+        "service": "twilio",
+        "description": "Sends an SMS text message via Twilio",
+        "user_setup": "Connect Twilio with your Account SID, Auth Token, and a Twilio phone number. SMS is sent from that number.",
+        "data_provided": ["twilio_message_sid", "twilio_sms_sent"],
+        "parameters": {"to": "recipient phone (can use {{phone}})", "body": "message text with {{variables}}", "from_number": "optional — defaults to your Twilio number"},
+    },
+    "twilio_send_whatsapp": {
+        "service": "twilio",
+        "description": "Sends a WhatsApp message via Twilio",
+        "user_setup": "Connect Twilio. Requires a Twilio WhatsApp-enabled number or sandbox. Messages sent via WhatsApp Business API.",
+        "data_provided": ["twilio_message_sid", "twilio_whatsapp_sent"],
+        "parameters": {"to": "recipient phone (can use {{phone}})", "body": "message text with {{variables}}", "media_url": "optional image/doc URL"},
+    },
+    "twilio_make_call": {
+        "service": "twilio",
+        "description": "Makes an outbound phone call via Twilio",
+        "user_setup": "Connect Twilio. Call plays a spoken message or TwiML instructions.",
+        "data_provided": ["twilio_call_sid", "twilio_call_made"],
+        "parameters": {"to": "recipient phone (can use {{phone}})", "message": "text to speak on the call", "twiml_url": "optional URL returning TwiML"},
+    },
+    # ========== Airtable ==========
+    "airtable_create_record": {
+        "service": "airtable",
+        "description": "Creates a new record in an Airtable table",
+        "user_setup": "Connect Airtable. Specify the base and table. Field values can use {{variables}} from previous steps.",
+        "data_provided": ["airtable_record_id", "airtable_created"],
+        "parameters": {"base_id": "Airtable base ID", "table_name": "table name", "fields": "dict of field_name: value pairs"},
+    },
+    "airtable_update_record": {
+        "service": "airtable",
+        "description": "Updates an existing Airtable record",
+        "user_setup": "Connect Airtable. Updates specific fields on a record by ID.",
+        "data_provided": ["airtable_updated"],
+        "parameters": {"base_id": "Airtable base ID", "table_name": "table name", "record_id": "record ID (can use {{airtable_record_id}})", "fields": "dict of field_name: value pairs"},
+    },
+    "airtable_list_records": {
+        "service": "airtable",
+        "description": "Lists records from an Airtable table with optional filters",
+        "user_setup": "Connect Airtable. Can filter by formula, sort, and limit results.",
+        "data_provided": ["airtable_records", "airtable_count"],
+        "parameters": {"base_id": "Airtable base ID", "table_name": "table name", "filter_formula": "optional Airtable formula", "max_records": "optional limit"},
+    },
+    "airtable_find_record": {
+        "service": "airtable",
+        "description": "Finds a record in Airtable by matching a field value",
+        "user_setup": "Connect Airtable. Searches for a record where a specific field matches a value.",
+        "data_provided": ["airtable_record", "airtable_record_id", "airtable_found"],
+        "parameters": {"base_id": "Airtable base ID", "table_name": "table name", "field_name": "field to search", "field_value": "value to match (can use {{variables}})"},
     },
 }
 
@@ -563,6 +614,10 @@ WHEN ASKED ABOUT HOW A STEP WORKS:
 - For **Stripe steps**: Payments/deposits go to their Stripe account. Payment links are generated per-trigger.
 - For **Calendar steps**: Events created in their Google Calendar with data from the trigger.
 - For **Sheets steps (append_row)**: Adds a row with data from previous steps. They specify which spreadsheet.
+- For **SMS steps (twilio_send_sms)**: Sends a text message via Twilio. Great for appointment reminders, payment nudges, confirmations. Uses {{phone}} from the trigger. Requires Twilio connection.
+- For **WhatsApp steps (twilio_send_whatsapp)**: Sends WhatsApp messages via Twilio. Same as SMS but via WhatsApp. Requires Twilio connection with WhatsApp-enabled number.
+- For **Call steps (twilio_make_call)**: Makes an outbound phone call that speaks a message. Useful for urgent reminders. Requires Twilio connection.
+- For **Airtable steps (airtable_create_record, airtable_update_record, airtable_list_records, airtable_find_record)**: Full CRUD on Airtable bases. Create records to log data, update records to change status, list/find records to look up info. Requires Airtable connection.
 - Always explain what DATA flows between steps — e.g., a form trigger provides {{name}}, {{email}}, {{phone}} that later steps can use.
 
 WHEN ASKED "HOW DOES THE FORM KNOW?" or "WHERE IS THE FORM?":
