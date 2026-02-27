@@ -121,7 +121,7 @@ function Header() {
                     whileHover={{ scale: 1.05, boxShadow: '0 4px 20px rgba(139, 92, 246, 0.4)' }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Start Free
+                    Start Free Trial — No Card Required
                   </motion.div>
                 </Link>
               </div>
@@ -162,7 +162,7 @@ function Header() {
                 <div style={{ background: 'transparent', color: styles.textPrimary, padding: '14px 24px', borderRadius: 8, fontSize: 16, border: '1.5px solid rgba(139, 92, 246, 0.3)', textAlign: 'center' }}>Sign in</div>
               </Link>
               <Link href="/signup" style={{ textDecoration: 'none' }}>
-                <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', color: '#ffffff', padding: '14px 24px', borderRadius: 8, fontSize: 16, fontWeight: 600, textAlign: 'center' }}>Start Free</div>
+                <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', color: '#ffffff', padding: '14px 24px', borderRadius: 8, fontSize: 16, fontWeight: 600, textAlign: 'center' }}>Start Free Trial</div>
               </Link>
             </div>
           </div>
@@ -632,12 +632,13 @@ function PricingSection() {
 
   const plans = [
     {
-      name: 'Starter',
-      price: null,
-      period: '',
-      description: 'For solo business owners getting started',
-      features: ['1 user', '3 active workflows', 'Core integrations (Gmail, Sheets, Calendar)', 'Email triggers', 'Email support'],
-      cta: 'Contact Us',
+      name: 'Free Trial',
+      price: '$0',
+      period: '/7 days',
+      description: 'See the magic — no credit card required',
+      features: ['1 active workflow', '10 workflow runs', '3 knowledge entries', 'Core integrations (Gmail, Sheets, Calendar)', 'Email triggers'],
+      limitations: ['No AI agent tasks', 'No file import', 'No Stripe integration'],
+      cta: 'Start Free Trial',
       popular: false,
     },
     {
@@ -645,7 +646,8 @@ function PricingSection() {
       price: null,
       period: '',
       description: 'For growing businesses automating more',
-      features: ['3 users', '10 active workflows', 'All integrations (incl. Stripe)', 'Approval workflows', 'AI data extraction', 'Priority support'],
+      features: ['3 users', '10 active workflows', 'Unlimited runs', 'All integrations (incl. Stripe)', 'AI agent tasks', 'File import to knowledge base', 'Approval workflows', 'Priority support'],
+      limitations: [],
       cta: 'Contact Us',
       popular: true,
     },
@@ -654,7 +656,8 @@ function PricingSection() {
       price: null,
       period: '',
       description: 'For teams scaling operations',
-      features: ['10 users', 'Unlimited workflows', 'All integrations', 'Advanced analytics', 'Dedicated support', 'Custom triggers'],
+      features: ['10 users', 'Unlimited workflows', 'Unlimited runs', 'All integrations', 'Advanced analytics', 'Dedicated support', 'Custom triggers'],
+      limitations: [],
       cta: 'Contact Us',
       popular: false,
     },
@@ -710,7 +713,7 @@ function PricingSection() {
                   <span style={{ fontSize: 20, fontWeight: 600, color: styles.primary }}>Contact us for pricing</span>
                 )}
               </div>
-              <ul style={{ listStyle: 'none', padding: 0, marginBottom: 28 }}>
+              <ul style={{ listStyle: 'none', padding: 0, marginBottom: 12 }}>
                 {plan.features.map((f, j) => (
                   <li key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                     <Check size={16} style={{ color: styles.accent, flexShrink: 0 }} />
@@ -718,6 +721,17 @@ function PricingSection() {
                   </li>
                 ))}
               </ul>
+              {plan.limitations && plan.limitations.length > 0 && (
+                <ul style={{ listStyle: 'none', padding: 0, marginBottom: 28 }}>
+                  {plan.limitations.map((l: string, j: number) => (
+                    <li key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <X size={14} style={{ color: '#9ca3af', flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: '#9ca3af' }}>{l}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!plan.limitations?.length && <div style={{ marginBottom: 28 }} />}
               <Link href="/signup" style={{ textDecoration: 'none' }}>
                 <motion.div
                   style={{

@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
-from app.models import Workflow, Execution, ExecutionNode, Approval, Connection
+from app.models import Workflow, Execution, ExecutionNode, Approval, Connection, User
 from app.services.node_executor import execute_node
 from app.utils.timezone import now_local, now_utc, today_local, current_time_local
 
@@ -44,6 +44,19 @@ class WorkflowRunner:
     def run(self, trigger_data: Optional[dict] = None) -> Execution:
         """Execute the workflow"""
         try:
+            # Enforce plan limits
+            from app.services.plan_limits import check_can_run_workflow, increment_run_count
+            user = self.db.query(User).filter(User.id == self.workflow.user_id).first()
+            if user:
+                try:
+                    check_can_run_workflow(user)
+                except Exception as limit_err:
+                    self.execution.status = "failed"
+                    self.execution.error = str(getattr(limit_err, 'detail', {}).get('message', 'Plan limit reached'))
+                    self.db.commit()
+                    return self.execution
+                increment_run_count(user, self.db)
+
             start_nodes = self.get_start_nodes()
             
             if not start_nodes:

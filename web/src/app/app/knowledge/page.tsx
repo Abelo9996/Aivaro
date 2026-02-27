@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Info, Plus, Pencil, Trash2, X, Check,
+  Info, Plus, Pencil, Trash2, X, Check, Upload,
   Building2, DollarSign, ShieldCheck, Users,
-  CalendarClock, TrendingUp, HelpCircle, Mail, Tag
+  CalendarClock, TrendingUp, HelpCircle, Mail, Tag, FileText
 } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -68,6 +68,10 @@ export default function KnowledgePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ category: 'business_info', title: '', content: '', priority: 0 });
   const [saving, setSaving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -139,6 +143,39 @@ export default function KnowledgePage() {
     }
   };
 
+  const handleFileImport = async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const entries = await api.importKnowledgeFile(file);
+      await loadEntries();
+      setImportResult(`Imported ${entries.length} knowledge ${entries.length === 1 ? 'entry' : 'entries'} from "${file.name}"`);
+      setTimeout(() => setImportResult(null), 5000);
+    } catch (err: any) {
+      setImportResult(`Failed: ${err.message}`);
+      setTimeout(() => setImportResult(null), 5000);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileImport(file);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
   // Group entries by category
   const grouped = entries.reduce((acc, e) => {
     acc[e.category] = acc[e.category] || [];
@@ -155,7 +192,32 @@ export default function KnowledgePage() {
   }
 
   return (
-    <div>
+    <div
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      className="relative"
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 bg-primary-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-2xl border-2 border-dashed border-primary-400 p-12 text-center shadow-xl">
+            <Upload className="w-12 h-12 text-primary-500 mx-auto mb-4" />
+            <p className="text-lg font-semibold text-gray-900">Drop file to import</p>
+            <p className="text-sm text-gray-500 mt-1">PDF, TXT, CSV, DOCX, MD, JSON, HTML</p>
+          </div>
+        </div>
+      )}
+
+      {/* Import result toast */}
+      {importResult && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
+          importResult.startsWith('Failed') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+        }`}>
+          {importResult}
+        </div>
+      )}
+
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Knowledge Base</h1>
@@ -163,17 +225,47 @@ export default function KnowledgePage() {
             Teach Aivaro about your business. This context is used when replying to emails, creating workflows, and running tasks.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setForm({ category: activeCategory || 'business_info', title: '', content: '', priority: 0 });
-            setEditingId(null);
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          Add Knowledge
-        </button>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.rtf,.html,.htm"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFileImport(file);
+              e.target.value = '';
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+          >
+            {importing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                Importing...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Import File
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setForm({ category: activeCategory || 'business_info', title: '', content: '', priority: 0 });
+              setEditingId(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            Add Knowledge
+          </button>
+        </div>
       </div>
 
       {/* Category Filters */}
@@ -285,15 +377,25 @@ export default function KnowledgePage() {
 
       {/* Entries */}
       {entries.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div
+          className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center cursor-pointer hover:border-primary-400 hover:bg-primary-50/30 transition"
+          onClick={() => fileInputRef.current?.click()}
+        >
           <div className="text-5xl mb-4">🧠</div>
           <h3 className="text-lg font-semibold mb-2">Your knowledge base is empty</h3>
           <p className="text-gray-500 mb-4 max-w-md mx-auto">
             Add information about your business so Aivaro can write better emails,
             create smarter workflows, and handle tasks with full context.
           </p>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg text-sm font-medium">
+              <Upload className="w-4 h-4" />
+              Drop a file or click to import
+            </div>
+          </div>
           <div className="text-sm text-gray-400 space-y-1">
-            <p>Try adding: business hours, pricing, cancellation policy, FAQ answers</p>
+            <p>Supports PDF, TXT, CSV, DOCX, MD, JSON, HTML files</p>
+            <p>Or manually add: business hours, pricing, cancellation policy, FAQ answers</p>
           </div>
         </div>
       ) : (
@@ -371,6 +473,9 @@ export default function KnowledgePage() {
           <li><strong>Building workflows</strong> — suggests steps that match your business</li>
           <li><strong>Chatting with you</strong> — understands your business context</li>
         </ul>
+        <p className="text-sm text-blue-600 mt-3">
+          <strong>Tip:</strong> Drag and drop files (PDF, TXT, CSV, DOCX) to auto-import business documents.
+        </p>
       </div>
     </div>
   );

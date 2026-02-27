@@ -79,7 +79,12 @@ async def update_workflow(
         )
     
     update_dict = update_data.model_dump(exclude_unset=True)
-    
+
+    # Enforce limit when activating a workflow
+    if update_dict.get("is_active") and not workflow.is_active:
+        from app.services.plan_limits import check_can_activate_workflow
+        check_can_activate_workflow(current_user, db)
+
     if "nodes" in update_dict and update_dict["nodes"] is not None:
         update_dict["nodes"] = [n.model_dump() if hasattr(n, 'model_dump') else n for n in update_dict["nodes"]]
     if "edges" in update_dict and update_dict["edges"] is not None:

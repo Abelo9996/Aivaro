@@ -39,6 +39,15 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE workflows ADD COLUMN is_agent_task BOOLEAN DEFAULT FALSE"))
             conn.commit()
 
+        user_columns = [c["name"] for c in inspector.get_columns("users")]
+        if "plan" not in user_columns:
+            logger.info("[migration] Adding plan/trial columns to users")
+            conn.execute(text("ALTER TABLE users ADD COLUMN plan VARCHAR DEFAULT 'trial'"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN trial_started_at TIMESTAMP"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN total_runs_used INTEGER DEFAULT 0"))
+            conn.execute(text("UPDATE users SET trial_started_at = NOW() WHERE trial_started_at IS NULL"))
+            conn.commit()
+
         kb_columns = [c["name"] for c in inspector.get_columns("knowledge_entries")] if "knowledge_entries" in inspector.get_table_names() else []
         # knowledge_entries table is created by create_all above, no extra migration needed
 

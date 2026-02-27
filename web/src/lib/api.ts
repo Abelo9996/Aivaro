@@ -411,6 +411,26 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  async importKnowledgeFile(file: File) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${this.baseUrl}/api/knowledge/import`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || 'Import failed');
+    }
+    return res.json();
+  }
+
+  async getUsage() {
+    return this.request<any>('/api/auth/me/usage', { method: 'GET' });
+  }
 }
 
 export const api = new ApiClient();

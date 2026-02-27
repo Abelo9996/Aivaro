@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
 import {
   LayoutDashboard,
   Zap,
@@ -14,7 +16,8 @@ import {
   Link2,
   LogOut,
   MessageSquare,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 
 const navItems = [
@@ -26,6 +29,69 @@ const navItems = [
   { href: '/app/knowledge', label: 'Knowledge Base', Icon: BookOpen, walkthrough: 'nav-knowledge' },
   { href: '/app/connections', label: 'Connections', Icon: Link2, walkthrough: 'nav-connections' },
 ];
+
+function TrialBanner() {
+  const [usage, setUsage] = useState<any>(null);
+
+  useEffect(() => {
+    api.getUsage().then(setUsage).catch(() => {});
+  }, []);
+
+  if (!usage || !usage.is_trial) return null;
+
+  const expired = usage.trial_expired;
+  const daysLeft = usage.trial_days_left;
+  const runsUsed = usage.usage?.total_runs?.used || 0;
+  const runsLimit = usage.usage?.total_runs?.limit || 10;
+  const wfUsed = usage.usage?.active_workflows?.used || 0;
+  const wfLimit = usage.usage?.active_workflows?.limit || 1;
+
+  return (
+    <div className={cn(
+      "mx-3 mb-3 rounded-lg p-3 text-xs",
+      expired
+        ? "bg-red-50 border border-red-200"
+        : daysLeft <= 2
+          ? "bg-amber-50 border border-amber-200"
+          : "bg-primary-50 border border-primary-200"
+    )}>
+      {expired ? (
+        <>
+          <p className="font-semibold text-red-700 mb-1">Trial Expired</p>
+          <p className="text-red-600 mb-2">Upgrade to continue using Aivaro.</p>
+        </>
+      ) : (
+        <>
+          <p className="font-semibold text-gray-800 mb-1">
+            Free Trial — {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+          </p>
+          <div className="space-y-1 text-gray-600 mb-2">
+            <div className="flex justify-between">
+              <span>Workflows</span>
+              <span className="font-medium">{wfUsed}/{wfLimit}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Runs</span>
+              <span className="font-medium">{runsUsed}/{runsLimit}</span>
+            </div>
+          </div>
+        </>
+      )}
+      <a
+        href="mailto:abel@aivaro-ai.com?subject=Upgrade%20Inquiry"
+        className={cn(
+          "block w-full text-center py-1.5 rounded-md font-medium text-xs",
+          expired
+            ? "bg-red-600 text-white hover:bg-red-700"
+            : "bg-primary-600 text-white hover:bg-primary-700"
+        )}
+      >
+        <Sparkles className="w-3 h-3 inline mr-1" />
+        Upgrade
+      </a>
+    </div>
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -75,6 +141,9 @@ export default function Sidebar() {
           })}
         </ul>
       </nav>
+
+      {/* Trial Banner */}
+      <TrialBanner />
 
       {/* User */}
       <div className="p-4 border-t border-gray-100">

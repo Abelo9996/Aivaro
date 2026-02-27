@@ -110,3 +110,13 @@ async def update_me(
     db.refresh(current_user)
     
     return UserResponse.model_validate(current_user)
+
+
+@router.get("/me/usage")
+async def get_usage(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get current plan usage and limits."""
+    from app.services.plan_limits import get_usage_summary
+    return get_usage_summary(current_user, db)

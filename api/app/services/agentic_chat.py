@@ -653,6 +653,13 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
     Run an agent task synchronously (from the chat tool executor).
     Collects all events and returns a summary.
     """
+    from app.services.plan_limits import check_can_use_agent
+    try:
+        check_can_use_agent(user)
+    except Exception as e:
+        detail = getattr(e, 'detail', {})
+        msg = detail.get('message', 'Agent tasks not available on your plan') if isinstance(detail, dict) else str(detail)
+        return json.dumps({"error": msg, "code": "agent_locked"})
     from app.services.agent_executor import run_agent_task
 
     goal = args.get("goal", "")
