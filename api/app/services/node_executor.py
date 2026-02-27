@@ -316,10 +316,16 @@ class NodeExecutor:
                 import openai
                 client = openai.OpenAI(api_key=settings.openai_api_key)
                 
-                system_prompt = f"""You are an email assistant. Generate a {tone} reply to the following email.
+                # Build knowledge context
+                knowledge_ctx = input_data.get("__knowledge_context", "")
+                knowledge_section = ""
+                if knowledge_ctx:
+                    knowledge_section = f"\n\nIMPORTANT BUSINESS CONTEXT (use this to personalize your reply):\n{knowledge_ctx}"
+                
+                system_prompt = f"""You are an email assistant for a business owner. Generate a {tone} reply to the following email.
 Keep the response concise, helpful, and appropriate for the context: {context}
 Do not include a subject line, just the email body.
-Sign off appropriately but don't include the sender's name (it will be added automatically)."""
+Sign off appropriately but don't include the sender's name (it will be added automatically).{knowledge_section}"""
                 
                 user_prompt = f"""Email from: {email_from}
 Subject: {email_subject}

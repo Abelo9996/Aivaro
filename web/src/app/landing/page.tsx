@@ -207,7 +207,7 @@ function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Aivaro automates your bookings, deposits, reminders, and revenue tracking. Describe what you need in plain English — it runs 24/7.
+              Aivaro automates your bookings, deposits, reminders, and client communication. Tell it what you need in plain English — or let it handle one-off tasks like an AI assistant. It runs 24/7.
             </motion.p>
           </div>
 
@@ -258,7 +258,7 @@ function HeroSection() {
               </div>
               <div style={{ padding: isMobile ? '20px 16px' : '28px 24px' }}>
                 <p style={{ fontSize: isMobile ? 16 : 20, color: styles.textPrimary, margin: 0, lineHeight: 1.6, fontStyle: 'italic' }}>
-                  "When someone books an appointment, collect a $50 deposit, send them a reminder the day before, and if they no-show, flag it in my spreadsheet."
+                  "When someone books a pickup, collect a $50 deposit via Stripe, send them a confirmation with our cancellation policy, and text me a reminder the day before."
                 </p>
               </div>
               <div style={{ padding: isMobile ? '16px' : '20px 24px', background: 'rgba(139, 92, 246, 0.06)', borderTop: '1px solid rgba(139, 92, 246, 0.15)' }}>
@@ -267,7 +267,7 @@ function HeroSection() {
                   <span style={{ fontSize: 13, color: styles.accent, fontWeight: 600 }}>Aivaro generates & runs:</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {['Booking trigger', 'Stripe deposit', 'Email reminder', 'Calendar event', 'Sheets logging', 'No-show detection'].map((step, i) => (
+                  {['Booking form', 'Stripe $50 deposit', 'Confirmation email', 'Calendar event', 'SMS reminder', 'No-show tracking'].map((step, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '6px 12px', borderRadius: 8,
@@ -353,9 +353,9 @@ function HowItWorksSection() {
   const { isMobile, isTablet } = useResponsive();
 
   const steps = [
-    { number: '1', title: 'Connect your tools', description: 'Gmail, Google Calendar, Sheets, and Stripe — one-click OAuth. Takes 30 seconds.', icon: <Zap size={24} /> },
-    { number: '2', title: 'Tell Aivaro what to do', description: 'Describe your workflow in plain English. Or pick a template and customize it. No coding ever.', icon: <MessageSquare size={24} /> },
-    { number: '3', title: 'It runs. You work.', description: 'Aivaro executes your workflows automatically, 24/7. You get notified when something needs your approval.', icon: <TrendingUp size={24} /> },
+    { number: '1', title: 'Connect your tools', description: 'Gmail, Calendar, Sheets, Stripe, Slack, Twilio, Airtable — one-click OAuth. Takes 30 seconds.', icon: <Zap size={24} /> },
+    { number: '2', title: 'Tell Aivaro what to do', description: 'Describe your workflow in plain English. Aivaro asks the right questions — deposit amounts, email tone, who to notify — then builds it precisely.', icon: <MessageSquare size={24} /> },
+    { number: '3', title: 'It learns & runs 24/7', description: 'Aivaro remembers your pricing, policies, and preferences in a knowledge base. Workflows run automatically — you approve what matters.', icon: <TrendingUp size={24} /> },
   ];
 
   return (
@@ -533,10 +533,12 @@ function WhatItAutomates() {
   const { isMobile, isTablet } = useResponsive();
 
   const workflows = [
-    { icon: <Calendar size={24} />, title: 'Booking → Deposit → Reminder', description: 'Automatically collect deposits when someone books, send reminders before their appointment, track attendance.', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' },
-    { icon: <Mail size={24} />, title: 'Lead → Follow-up → Close', description: 'Respond to inquiries instantly, send follow-up sequences, notify you when someone is ready to buy.', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' },
-    { icon: <DollarSign size={24} />, title: 'Payment → Invoice → Report', description: 'Track every payment, auto-generate invoices, get weekly profit/loss summaries in your inbox.', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
-    { icon: <Bell size={24} />, title: 'Custom → Whatever You Need', description: 'Describe any business workflow in plain English. Aivaro builds it, connects your tools, and runs it.', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
+    { icon: <Calendar size={24} />, title: 'Booking → Deposit → Reminder', description: 'Collect deposits via Stripe when someone books, send SMS or email reminders before their appointment, track no-shows automatically.', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' },
+    { icon: <Mail size={24} />, title: 'Lead → Follow-up → Close', description: 'Auto-reply to inquiries via email or WhatsApp, send follow-up sequences on a schedule, notify your team on Slack when someone is ready to buy.', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' },
+    { icon: <DollarSign size={24} />, title: 'Payment → Invoice → Report', description: 'Create Stripe payment links and invoices, log transactions to Sheets or Airtable, get automated profit summaries.', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
+    { icon: <Bot size={24} />, title: 'AI Agent → Smart Replies', description: 'AI reads your emails and generates context-aware replies using your business knowledge base. It knows your pricing, policies, and tone.', gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' },
+    { icon: <Bell size={24} />, title: 'Notify → SMS, Email, Slack', description: 'Send notifications through any channel — SMS and WhatsApp via Twilio, email via Gmail, or messages to Slack channels.', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
+    { icon: <MessageSquare size={24} />, title: 'Custom → Whatever You Need', description: 'Describe any business workflow in plain English. Aivaro asks the right questions, builds it precisely, and runs it 24/7.', gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' },
   ];
 
   return (
@@ -555,7 +557,7 @@ function WhatItAutomates() {
           </p>
         </motion.div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(2, 1fr)', gap: isMobile ? 16 : 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 20 }}>
           {workflows.map((wf, i) => (
             <motion.div
               key={i}
@@ -597,9 +599,13 @@ function WhatItAutomates() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
             {[
               { name: 'Gmail', icon: '/icons/gmail.svg' },
-              { name: 'Google Sheets', icon: '/icons/sheets.svg' },
               { name: 'Google Calendar', icon: '/icons/calendar.svg' },
+              { name: 'Google Sheets', icon: '/icons/sheets.svg' },
               { name: 'Stripe', icon: '/icons/stripe.svg' },
+              { name: 'Slack', icon: '/icons/slack.svg' },
+              { name: 'Twilio SMS', icon: '/icons/twilio.svg' },
+              { name: 'Airtable', icon: '/icons/airtable.svg' },
+              { name: 'Mailchimp', icon: '/icons/mailchimp.svg' },
             ].map((tool, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -607,12 +613,12 @@ function WhatItAutomates() {
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.1)',
               }}>
-                <img src={tool.icon} alt={tool.name} style={{ width: 20, height: 20 }} />
+                <img src={tool.icon} alt={tool.name} style={{ width: 20, height: 20 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 <span style={{ fontSize: 14, color: styles.textPrimary, fontWeight: 500 }}>{tool.name}</span>
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 13, color: styles.textMuted, marginTop: 12 }}>More integrations coming every week — Slack, Twilio, Airtable, and more.</p>
+          <p style={{ fontSize: 13, color: styles.textMuted, marginTop: 12 }}>Plus Notion, Calendly, WhatsApp, and more being added regularly.</p>
         </motion.div>
       </div>
     </div>

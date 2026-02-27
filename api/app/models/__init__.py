@@ -6,6 +6,7 @@ from app.models.connection import Connection
 from app.models.template import Template
 from app.models.audit_log import AuditLog
 from app.models.chat import ChatMessage, ChatConversation
+from app.models.knowledge import KnowledgeEntry
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "AuditLog",
     "ChatMessage",
     "ChatConversation",
+    "KnowledgeEntry",
 ]

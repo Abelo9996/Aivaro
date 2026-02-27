@@ -71,7 +71,11 @@ export interface Approval {
   node_type: string;
   status: 'pending' | 'approved' | 'rejected';
   message?: string;
+  action_summary?: string;
   action_data?: Record<string, any>;
+  action_details?: Record<string, any>;
+  workflow_name?: string;
+  step_label?: string;
   approved_at?: string;
   rejection_reason?: string;
   created_at: string;

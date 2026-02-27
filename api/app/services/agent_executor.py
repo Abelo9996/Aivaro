@@ -513,6 +513,7 @@ def _build_agent_system_prompt(
     user: User,
     connections: dict[str, bool],
     context: Optional[dict] = None,
+    knowledge_context: str = "",
 ) -> str:
     """Build the system prompt that tells the agent who it is and what it can do."""
 
@@ -582,7 +583,8 @@ RULES:
 10. When sending confirmations or reminders, be professional and friendly.
 11. DO NOT call tools that are unavailable - escalate instead.
 12. In TEST MODE, tools simulate actions without actually sending. A result with "test_mode": true and success: true means the action was validated and WOULD work in production. Do NOT retry — move on to the next step.
-{context_block}"""
+{context_block}
+{knowledge_context}"""
 
 
 # ---------------------------------------------------------------------------
@@ -666,8 +668,13 @@ class AgentExecutor:
 
         client = openai.OpenAI(api_key=settings.openai_api_key)
 
+        # Get knowledge base context
+        from app.services.knowledge_service import get_knowledge_context
+        knowledge_ctx = get_knowledge_context(self.user.id, self.db)
+
         system_prompt = _build_agent_system_prompt(
-            self.user, self.connections_map, context
+            self.user, self.connections_map, context,
+            knowledge_context=knowledge_ctx,
         )
 
         messages = [
@@ -978,7 +985,7 @@ async def run_agent_task(
     """
     # Create or get workflow
     if not workflow_id:
-        # Create a transient agent-task workflow
+        # Create a transient agent-task workflow (hidden from UI)
         workflow = Workflow(
             user_id=user.id,
             name=f"Agent: {goal[:50]}",
@@ -986,6 +993,7 @@ async def run_agent_task(
             nodes=[],
             edges=[],
             is_active=False,
+            is_agent_task=True,
         )
         db.add(workflow)
         db.commit()

@@ -54,6 +54,13 @@ class WorkflowRunner:
             
             # Build the current data - merge base data with trigger data
             current_data = self._build_input_data(trigger_data)
+            
+            # Inject knowledge base context for AI nodes
+            from app.services.knowledge_service import get_knowledge_context
+            knowledge_ctx = get_knowledge_context(self.workflow.user_id, self.db)
+            if knowledge_ctx:
+                current_data["__knowledge_context"] = knowledge_ctx
+            
             print(f"[WorkflowRunner] Starting execution from node {start_nodes[0]['id']} with data keys: {list(current_data.keys())}")
             print(f"[WorkflowRunner] Has real trigger data: {trigger_data is not None and len(trigger_data) > 0}")
             self._execute_from_node(start_nodes[0]["id"], current_data)
@@ -214,31 +221,123 @@ class WorkflowRunner:
         params = node.get("parameters", {})
         
         if node_type == "send_email":
-            recipient = params.get("to", input_data.get("email", "recipient"))
-            recipient = self._interpolate(recipient, input_data)
-            return f"Send an email to {recipient}"
+            recipient = self._interpolate(params.get("to", input_data.get("email", "recipient")), input_data)
+            subject = self._interpolate(params.get("subject", ""), input_data)
+            return f"Send email to {recipient}: \"{subject}\""
+        elif node_type == "stripe_create_payment_link":
+            amount = params.get("amount", "?")
+            product = self._interpolate(params.get("product_name", "payment"), input_data)
+            return f"Create ${amount} payment link for \"{product}\""
+        elif node_type == "stripe_create_invoice":
+            amount = self._interpolate(str(params.get("amount", "?")), input_data)
+            customer = self._interpolate(params.get("customer_email", "customer"), input_data)
+            auto_send = params.get("auto_send", "false")
+            suffix = " (will auto-send to customer)" if auto_send == "true" else " (draft, not sent yet)"
+            return f"Create ${amount} Stripe invoice for {customer}{suffix}"
+        elif node_type == "stripe_send_invoice":
+            return "Send Stripe invoice to customer"
+        elif node_type == "twilio_send_sms":
+            to = self._interpolate(params.get("to", "recipient"), input_data)
+            body_preview = self._interpolate(params.get("body", ""), input_data)[:80]
+            return f"Send SMS to {to}: \"{body_preview}\""
+        elif node_type == "twilio_send_whatsapp":
+            to = self._interpolate(params.get("to", "recipient"), input_data)
+            return f"Send WhatsApp message to {to}"
+        elif node_type == "twilio_make_call":
+            to = self._interpolate(params.get("to", "recipient"), input_data)
+            return f"Make automated phone call to {to}"
+        elif node_type == "mailchimp_send_campaign":
+            subject = self._interpolate(params.get("subject", "campaign"), input_data)
+            return f"Send email campaign: \"{subject}\" (IRREVERSIBLE - sends to entire audience)"
         elif node_type == "append_row":
             sheet = params.get("spreadsheet", "your spreadsheet")
-            return f"Add a row to {sheet}"
+            return f"Add a row to \"{sheet}\""
+        elif node_type == "google_calendar_create":
+            title = self._interpolate(params.get("title", "event"), input_data)
+            date = self._interpolate(params.get("date", ""), input_data)
+            return f"Create calendar event: \"{title}\" on {date}"
+        elif node_type == "airtable_create_record":
+            table = params.get("table_name", "table")
+            return f"Create record in Airtable table \"{table}\""
+        elif node_type == "airtable_update_record":
+            table = params.get("table_name", "table")
+            return f"Update record in Airtable table \"{table}\""
         else:
-            return f"Execute {node.get('label', node_type)}"
+            label = node.get("label", node_type)
+            return f"Execute: {label}"
     
     def _generate_action_details(self, node: dict, input_data: dict) -> dict:
-        """Generate detailed preview of the action"""
+        """Generate detailed preview of the action with interpolated values"""
         node_type = node["type"]
         params = node.get("parameters", {})
         
         if node_type == "send_email":
-            to = self._interpolate(params.get("to", input_data.get("email", "")), input_data)
-            subject = self._interpolate(params.get("subject", ""), input_data)
-            body = self._interpolate(params.get("body", ""), input_data)
             return {
                 "type": "email",
-                "to": to,
-                "subject": subject,
-                "body_preview": body[:500] + ("..." if len(body) > 500 else "")
+                "to": self._interpolate(params.get("to", input_data.get("email", "")), input_data),
+                "subject": self._interpolate(params.get("subject", ""), input_data),
+                "body_preview": self._interpolate(params.get("body", ""), input_data)[:500],
             }
-        return {"type": node_type, "parameters": params}
+        elif node_type == "stripe_create_payment_link":
+            return {
+                "type": "payment_link",
+                "amount": params.get("amount"),
+                "product_name": self._interpolate(params.get("product_name", ""), input_data),
+                "success_message": self._interpolate(params.get("success_message", ""), input_data),
+            }
+        elif node_type == "stripe_create_invoice":
+            return {
+                "type": "invoice",
+                "customer_email": self._interpolate(params.get("customer_email", ""), input_data),
+                "amount": self._interpolate(str(params.get("amount", "")), input_data),
+                "description": self._interpolate(params.get("description", ""), input_data),
+                "due_days": params.get("due_days"),
+                "auto_send": params.get("auto_send", "false"),
+            }
+        elif node_type == "twilio_send_sms":
+            return {
+                "type": "sms",
+                "to": self._interpolate(params.get("to", ""), input_data),
+                "body": self._interpolate(params.get("body", ""), input_data),
+            }
+        elif node_type == "twilio_send_whatsapp":
+            return {
+                "type": "whatsapp",
+                "to": self._interpolate(params.get("to", ""), input_data),
+                "body": self._interpolate(params.get("body", ""), input_data),
+                "media_url": params.get("media_url"),
+            }
+        elif node_type == "twilio_make_call":
+            return {
+                "type": "phone_call",
+                "to": self._interpolate(params.get("to", ""), input_data),
+                "message": self._interpolate(params.get("message", ""), input_data),
+                "note": "Uses automated text-to-speech voice",
+            }
+        elif node_type == "mailchimp_send_campaign":
+            return {
+                "type": "email_campaign",
+                "subject": self._interpolate(params.get("subject", ""), input_data),
+                "from_name": params.get("from_name", ""),
+                "warning": "This is irreversible. The campaign will be sent immediately to your entire audience.",
+            }
+        elif node_type == "google_calendar_create":
+            return {
+                "type": "calendar_event",
+                "title": self._interpolate(params.get("title", ""), input_data),
+                "date": self._interpolate(params.get("date", ""), input_data),
+                "start_time": self._interpolate(params.get("start_time", ""), input_data),
+                "duration_hours": params.get("duration"),
+            }
+        else:
+            # Interpolate all string parameter values for generic fallback
+            interpolated = {}
+            for k, v in params.items():
+                if isinstance(v, str):
+                    interpolated[k] = self._interpolate(v, input_data)
+                else:
+                    interpolated[k] = v
+            return {"type": node_type, "label": node.get("label", node_type), "parameters": interpolated}
     
     def _interpolate(self, template: str, data: dict) -> str:
         """Replace {{variable}} with values from data"""

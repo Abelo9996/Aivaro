@@ -17,6 +17,7 @@ class Workflow(Base):
     nodes = Column(JSON, default=list)
     edges = Column(JSON, default=list)
     is_active = Column(Boolean, default=False)
+    is_agent_task = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -348,7 +348,7 @@ IMPORTANT: When the user mentions receiving emails, getting emails, or email tri
 
 Available ACTION node types:
 - send_email: Send an email. Parameters: {to: "{{from}}", subject: "Re: {{subject}}", body: "..."}
-- ai_reply: Generate an AI response to an email. Parameters: {context: "...", tone: "professional/friendly/casual"}
+- ai_reply: Generate an AI response to an email. IMPORTANT: This only GENERATES a reply — it does NOT send it. You MUST add a send_email step after ai_reply to actually deliver the response. Parameters: {context: "...", tone: "professional/friendly/casual"}. Output: {{ai_response}}
 - ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
 - append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", sheet_name: "Sheet1", columns: [{name: "...", value: "{{...}}"}]}
 - read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "...", range: "A1:D10"}
@@ -400,16 +400,23 @@ IMPORTANT RULES:
 1. For booking/appointment workflows with deposits → use google_calendar_create + stripe_create_payment_link
 2. For payment reminders → use delay + stripe_check_payment + condition
 3. When user says "when I receive an email", "when I get an email", "when an email comes in", "emails from X", etc. → ALWAYS use start_email trigger. This monitors their connected Gmail inbox.
-4. For auto-reply workflows → use ai_reply node to generate smart responses
-5. For CRM/database workflows → prefer airtable_create_record or notion_create_page for storing customer data
-6. For marketing/newsletter workflows → use mailchimp_add_subscriber to add contacts
-7. For SMS notifications → use twilio_send_sms for text confirmations
-8. For scheduling links → use calendly_create_link to generate booking links
-9. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}
-10. Always connect nodes with edges
-11. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
-12. Set requiresApproval: true for emails that need human review before sending
-13. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
+4. For auto-reply workflows → use ai_reply node to generate smart responses, then ALWAYS follow with a send_email node to actually send the reply. ai_reply generates the text, send_email delivers it. Never create an email reply workflow without a send_email step.
+5. COMPLETE EMAIL REPLY PATTERN: start_email → ai_reply → send_email (to={{from}}, subject="Re: {{subject}}", body="{{ai_response}}").
+6. For Stripe invoices with auto_send=false → MUST add a stripe_send_invoice step after stripe_create_invoice.
+7. For Stripe invoices with auto_send=true → no additional send step needed, but tell the user the invoice will be auto-sent.
+8. mailchimp_send_campaign creates AND immediately sends — this is irreversible. ALWAYS set requiresApproval=true on this node.
+9. twilio_make_call uses text-to-speech (robotic voice). Note this in the step label or description.
+10. PLACEHOLDER VALUES: When using Airtable (base_id: "appXXX"), Notion (database_id), Calendly (event_type_uuid), or Mailchimp (list_id) — these are placeholders. The user MUST fill them in from their actual account. Flag these clearly.
+11. For CRM/database workflows → prefer airtable_create_record or notion_create_page for storing customer data
+12. For marketing/newsletter workflows → use mailchimp_add_subscriber to add contacts
+13. For SMS notifications → use twilio_send_sms for text confirmations
+14. For scheduling links → use calendly_create_link to generate booking links
+15. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}, {{ai_response}}
+16. Always connect nodes with edges
+17. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
+18. Set requiresApproval: true for: emails to external recipients, payment processing, campaign sends, phone calls. Set to false for: internal notifications, logging to sheets, calendar events.
+19. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
+20. NEVER use node types not listed above. Only use the exact types defined here.
 
 Example for "booking automation with deposit":
 {
@@ -543,7 +550,7 @@ def _template_booking_workflow(email_trigger: bool = False, prompt: str = "") ->
                         "product_name": "Booking Deposit - {{service}}",
                         "success_message": "Your booking is confirmed! We'll see you on {{pickup_date}}."
                     },
-                    "requiresApproval": False
+                    "requiresApproval": True
                 },
                 {
                     "id": "email-1",
@@ -555,7 +562,7 @@ def _template_booking_workflow(email_trigger: bool = False, prompt: str = "") ->
                         "subject": "Confirm your booking - $20 deposit required",
                         "body": "Hi {{customer_name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
                     },
-                    "requiresApproval": False
+                    "requiresApproval": True
                 },
                 {
                     "id": "sheet-1",
@@ -635,7 +642,7 @@ def _template_booking_workflow(email_trigger: bool = False, prompt: str = "") ->
                         "product_name": "Booking Deposit - {{service}}",
                         "success_message": "Your booking is confirmed! We'll see you on {{pickup_date}}."
                     },
-                    "requiresApproval": False
+                    "requiresApproval": True
                 },
                 {
                     "id": "email-1",
@@ -647,7 +654,7 @@ def _template_booking_workflow(email_trigger: bool = False, prompt: str = "") ->
                         "subject": "Confirm your booking - $20 deposit required",
                         "body": "Hi {{name}},\n\nYour {{service}} pickup is scheduled for {{pickup_date}} at {{pickup_time}}.\n\nTo confirm your booking, please pay the $20 deposit:\n{{payment_link_url}}\n\nOnce paid, your booking is locked in!\n\nThank you!"
                     },
-                    "requiresApproval": False
+                    "requiresApproval": True
                 },
                 {
                     "id": "sheet-1",
@@ -865,7 +872,7 @@ def _template_invoice_workflow() -> dict:
                     "due_days": 30,
                     "auto_send": "true"
                 },
-                "requiresApproval": False
+                "requiresApproval": True
             },
             {
                 "id": "sheet-1",

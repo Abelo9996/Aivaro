@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Bot, User, Send, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -106,7 +107,13 @@ export default function ChatPanel({
                   : 'bg-gray-100 text-gray-900 rounded-bl-md'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'user' ? (
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              ) : (
+                <div className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-headings:text-gray-900 prose-strong:text-gray-900 prose-a:text-primary-600">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              )}
               {message.timestamp && (
                 <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-primary-100' : 'text-gray-400'}`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

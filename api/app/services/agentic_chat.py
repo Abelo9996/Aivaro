@@ -27,7 +27,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "create_workflow",
-            "description": "Create a new automated workflow from a plain-English description. Use this when the user asks to automate something, set up a workflow, or build an automation.",
+            "description": "Create a new automated workflow. IMPORTANT: Only call this AFTER gathering requirements from the user. The description should include all specifics (amounts, recipients, message content, timing, conditions). Vague descriptions produce vague workflows.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -172,6 +172,48 @@ TOOLS = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_knowledge",
+            "description": "Save business information to the knowledge base. Use when the user shares facts about their business, asks you to remember something, or says 'save this'. Examples: pricing, policies, business hours, contacts, deadlines, FAQ answers.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": ["business_info", "pricing", "policies", "contacts", "deadlines", "financials", "faq", "email_templates", "custom"],
+                        "description": "Category for the knowledge entry"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Short label (e.g. 'Cancellation Policy', 'Business Hours', 'Deposit Amount')"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The actual information to remember"
+                    }
+                },
+                "required": ["category", "title", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_knowledge",
+            "description": "List what's in the knowledge base. Use when the user asks 'what do you know about my business?', 'show my knowledge base', or wants to review saved info.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Optional category filter"
+                    }
+                }
+            }
+        }
+    },
 ]
 
 # Human-friendly labels for tool calls
@@ -186,6 +228,8 @@ TOOL_LABELS = {
     "get_webhook_url": "Getting your form/webhook URL",
     "get_step_info": "Looking up step details",
     "run_agent_task": "Running agent task",
+    "save_knowledge": "Saving to knowledge base",
+    "list_knowledge": "Checking knowledge base",
 }
 
 
@@ -228,9 +272,9 @@ NODE_REQUIREMENTS = {
     },
     "ai_reply": {
         "service": "gmail",
-        "description": "AI generates and sends a reply to an email",
+        "description": "AI generates a smart reply to an email",
         "user_setup": "Connect Gmail. AI drafts a reply based on context you provide. You can set the tone.",
-        "data_provided": ["generated reply text"],
+        "data_provided": ["ai_response"],
         "parameters": {"context": "instructions for the AI", "tone": "professional/friendly/casual"},
     },
     "send_notification": {
@@ -371,9 +415,23 @@ NODE_REQUIREMENTS = {
 }
 
 def _get_user_connections(user: User, db: Session) -> dict:
-    """Returns dict of service_type -> connection info"""
+    """Returns dict of service_type -> connection info.
+    Also maps sub-services (gmail, google_calendar) to their parent connection type (google).
+    """
     connections = db.query(Connection).filter(Connection.user_id == user.id).all()
-    return {c.type: {"name": c.name, "connected": c.is_connected} for c in connections}
+    conn_map = {c.type: {"name": c.name, "connected": c.is_connected} for c in connections}
+    
+    # Map sub-service names used in NODE_REQUIREMENTS to actual connection types
+    SERVICE_ALIASES = {
+        "gmail": "google",
+        "google_calendar": "google",
+        "google_sheets": "google",
+    }
+    for alias, parent in SERVICE_ALIASES.items():
+        if alias not in conn_map and parent in conn_map:
+            conn_map[alias] = conn_map[parent]
+    
+    return conn_map
 
 
 # --- Tool Execution ---
@@ -399,6 +457,10 @@ def execute_tool(tool_name: str, arguments: dict, user: User, db: Session) -> st
         return _tool_get_step_info(arguments)
     elif tool_name == "run_agent_task":
         return _tool_run_agent_task(arguments, user, db)
+    elif tool_name == "save_knowledge":
+        return _tool_save_knowledge(arguments, user, db)
+    elif tool_name == "list_knowledge":
+        return _tool_list_knowledge(arguments, user, db)
     return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
 
@@ -444,6 +506,14 @@ def _tool_create_workflow(args: dict, user: User, db: Session) -> str:
                 "requirement_description": req["description"],
             })
 
+        # Compute already-connected services
+        required_services = set()
+        for n in result.get("nodes", []):
+            req = NODE_REQUIREMENTS.get(n.get("type", ""), {"service": None})
+            if req["service"]:
+                required_services.add(req["service"])
+        already_connected = list(required_services - missing_connections)
+
         return json.dumps({
             "success": True, "workflow_id": workflow.id,
             "workflow_name": workflow.name,
@@ -451,6 +521,13 @@ def _tool_create_workflow(args: dict, user: User, db: Session) -> str:
             "summary": result.get("summary", ""),
             "steps": steps_with_reqs,
             "missing_connections": list(missing_connections),
+            "already_connected": already_connected,
+            "connection_status": "all_connected" if not missing_connections else "some_missing",
+            "connection_note": (
+                "ALL required tools are already connected. User can activate immediately — do NOT tell them to connect anything."
+                if not missing_connections
+                else f"Missing: {', '.join(missing_connections)}. Already connected: {', '.join(already_connected) or 'none'}. Only mention the MISSING ones."
+            ),
         })
     except Exception as e:
         logger.error(f"create_workflow error: {e}")
@@ -458,19 +535,19 @@ def _tool_create_workflow(args: dict, user: User, db: Session) -> str:
 
 
 def _tool_list_workflows(user: User, db: Session) -> str:
-    workflows = db.query(Workflow).filter(Workflow.user_id == user.id).order_by(Workflow.updated_at.desc()).all()
+    workflows = db.query(Workflow).filter(Workflow.user_id == user.id, Workflow.is_agent_task == False).order_by(Workflow.updated_at.desc()).all()
     if not workflows:
         return json.dumps({"workflows": [], "message": "No workflows yet."})
     return json.dumps({"workflows": [
         {"name": w.name, "id": w.id, "active": w.is_active, "steps": len(w.nodes or []),
          "updated": w.updated_at.strftime("%B %d, %Y") if w.updated_at else None}
         for w in workflows
-    ], "count": len(workflows), "note": "Always include workflow names when listing them."})
+    ], "count": len(workflows), "note": "IMPORTANT: Always include the 'name' field for every workflow in your response. Never omit workflow names."})
 
 
 def _tool_get_workflow_details(args: dict, user: User, db: Session) -> str:
     name_query = args.get("workflow_name", "").lower()
-    workflows = db.query(Workflow).filter(Workflow.user_id == user.id).all()
+    workflows = db.query(Workflow).filter(Workflow.user_id == user.id, Workflow.is_agent_task == False).all()
     match = next((w for w in workflows if name_query in (w.name or "").lower()), None)
     if not match:
         return json.dumps({"error": f"No workflow found matching '{args.get('workflow_name')}'"})
@@ -640,12 +717,79 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
         "is_test": is_test,
     })
 
+
+def _tool_save_knowledge(args: dict, user: User, db: Session) -> str:
+    """Save a knowledge entry from chat."""
+    from app.models import KnowledgeEntry
+    
+    category = args.get("category", "custom")
+    title = args.get("title", "").strip()
+    content = args.get("content", "").strip()
+    
+    if not title or not content:
+        return json.dumps({"success": False, "error": "Title and content are required."})
+    
+    valid_cats = {"business_info", "pricing", "policies", "contacts", "deadlines", "financials", "faq", "email_templates", "custom"}
+    if category not in valid_cats:
+        category = "custom"
+    
+    # Check for existing entry with same title in same category
+    existing = db.query(KnowledgeEntry).filter(
+        KnowledgeEntry.user_id == user.id,
+        KnowledgeEntry.category == category,
+        KnowledgeEntry.title == title,
+    ).first()
+    
+    if existing:
+        existing.content = content
+        db.commit()
+        return json.dumps({"success": True, "action": "updated", "title": title, "category": category,
+                           "message": f"Updated existing entry '{title}' in {category}."})
+    
+    entry = KnowledgeEntry(
+        user_id=user.id,
+        category=category,
+        title=title,
+        content=content,
+        priority=0,
+    )
+    db.add(entry)
+    db.commit()
+    return json.dumps({"success": True, "action": "created", "title": title, "category": category,
+                       "message": f"Saved '{title}' to your knowledge base under {category}."})
+
+
+def _tool_list_knowledge(args: dict, user: User, db: Session) -> str:
+    """List knowledge base entries."""
+    from app.models import KnowledgeEntry
+    
+    category = args.get("category")
+    query = db.query(KnowledgeEntry).filter(KnowledgeEntry.user_id == user.id)
+    if category:
+        query = query.filter(KnowledgeEntry.category == category)
+    entries = query.order_by(KnowledgeEntry.priority.desc(), KnowledgeEntry.category).all()
+    
+    if not entries:
+        return json.dumps({"entries": [], "count": 0, "message": "Your knowledge base is empty. Tell me about your business and I'll save it!"})
+    
+    grouped = {}
+    for e in entries:
+        grouped.setdefault(e.category, []).append({"title": e.title, "content": e.content, "priority": e.priority})
+    
+    return json.dumps({"entries": grouped, "count": len(entries),
+                       "note": "Present this as a readable summary grouped by category. Include all titles and content."})
+
+
 # --- System Prompt ---
 
 def build_system_prompt(user: User, db: Session) -> str:
     name = user.full_name or user.email
     biz = f" who runs a {user.business_type} business" if user.business_type else ""
     wf_count = db.query(Workflow).filter(Workflow.user_id == user.id).count()
+    
+    # Get knowledge base context
+    from app.services.knowledge_service import get_knowledge_context
+    knowledge_ctx = get_knowledge_context(user.id, db)
     
     # Get actual connections
     user_conns = _get_user_connections(user, db)
@@ -678,19 +822,133 @@ def build_system_prompt(user: User, db: Session) -> str:
 ACCOUNT: {wf_count} workflows.
 {conn_summary}
 {exec_summary}
+{knowledge_ctx}
 
-YOU ARE THE PRODUCT. When someone says "automate my bookings," use create_workflow immediately. Don't describe what you'd do — do it.
+YOU ARE THE PRODUCT. You build and run automations — but you build them RIGHT.
+
+BEFORE CREATING A WORKFLOW — GATHER REQUIREMENTS (MANDATORY):
+⚠️ NEVER call create_workflow on the first message. Always gather requirements first.
+
+When a user asks to automate something:
+
+STEP 1 — Check what you already know:
+- Call list_knowledge to check the knowledge base for relevant business context (pricing, policies, contacts, hours, etc.)
+- Review what the user told you in the current conversation
+
+STEP 2 — Ask what's missing:
+For EVERY workflow type, there are critical details you MUST know before building. DO NOT guess these — ASK:
+
+**Booking/appointment workflows:**
+- What service/product is being booked?
+- Deposit amount? (don't default to $20 or any number)
+- What should the confirmation email say? Professional/casual/custom?
+- Cancellation policy?
+- Should a calendar event be created? Which calendar?
+- Who gets notified when a booking comes in?
+
+**Email reply automations:**
+- Trigger: from specific sender, or any email, or keyword in subject?
+- What should the reply contain? What tone?
+- Should it CC anyone?
+- Should certain emails be excluded?
+
+**Payment/invoice workflows:**
+- Amount? Fixed or variable?
+- What's the payment for?
+- Due date?
+- What happens if they don't pay? Follow-up?
+
+**Notification workflows:**
+- Who gets notified?
+- Via what channel (email, SMS, Slack)?
+- What info should be included?
+- When should it fire?
+
+STEP 3 — Ask 2-4 targeted questions in ONE message:
+- Group related questions together
+- Offer options where possible: "Should the confirmation be (a) professional, (b) friendly/casual, or (c) you want to write custom copy?"
+- If the knowledge base has info, confirm it: "I see your deposit is $50 — should I use that?"
+- Do NOT ask about technical implementation — ask about BUSINESS requirements
+
+STEP 4 — Build with full details:
+Only AFTER the user answers, call create_workflow with a description that includes every specific detail they gave you. The description should read like a complete spec, not a vague summary.
+
+EXCEPTIONS — skip questions and build immediately ONLY if:
+- The user's message already contains ALL critical details (amounts, recipients, content, timing)
+- AND you have confirmed business context in the knowledge base
+- Even then, state your assumptions: "Using your $50 deposit rate and 24h cancellation policy."
+
 When someone asks you to DO something right now (send a message, confirm an appointment, follow up with a client), use run_agent_task. The agent will autonomously execute the task using their connected tools.
 
 TWO MODES:
 - **Workflows** (create_workflow): For repeatable automations that run on triggers. "Set up a booking flow." "When I get an email from X, do Y." "Whenever someone fills a form, send a confirmation."
 - **Agent tasks** (run_agent_task): For one-off or dynamic tasks that need doing NOW. "Send John a reminder about tomorrow's appointment." "Check my calendar for tomorrow." The agent thinks and acts autonomously, choosing what tools to use at each step.
+- **Knowledge base** (save_knowledge/list_knowledge): When the user shares business info ("we charge $50 per pickup", "our hours are 9-5", "remember that Sarah handles bookings"), save it. When they ask "what do you know about my business?" or "show my knowledge base", list it.
+
+KNOWLEDGE BASE:
+- Actively save business information the user shares — don't wait for them to say "save this". If they mention pricing, policies, hours, contacts, or deadlines in conversation, use save_knowledge.
+- When the user explicitly says "remember", "save", "note that", "keep in mind" — always use save_knowledge.
+- You can also call list_knowledge to review what you know before answering questions about their business.
 
 CHOOSING THE RIGHT MODE:
 - If the user says "whenever", "when I receive", "automatically", "set up", "every time" → create_workflow
 - If the user says "send", "check", "do this now", "right now" → run_agent_task
+- If the user says "test run", "give it a test", "try it out", "run it now" after creating a workflow → use run_agent_task to simulate the workflow's behavior. Do NOT refuse or say you can't test. Do NOT tell the user to activate the workflow first. Just run the task.
 - Email automations like "when I get an email from X, reply with Y" → create_workflow with start_email trigger
 - NEVER tell users to go configure Gmail filters or Outlook rules. YOU are the automation platform. Use create_workflow.
+
+TEST RUNS:
+- When a user asks to "test" or "run" a workflow they just created, use run_agent_task to execute the same logic the workflow would.
+- For email summary workflows: fetch the most recent email, generate a summary, and send it to the specified recipient.
+- For booking workflows: walk through the steps with sample/real data.
+- NEVER say "the workflow is inactive so I can't test it." You CAN test it using the agent.
+- NEVER say "activate the workflow first." The whole point of a test run is to try before activating.
+- Be explicit about what happened: "I grabbed your latest email from [sender] about [subject], generated a casual summary, and sent it to [recipient]."
+
+WORKFLOW STATUS ON CREATION:
+- Workflows are created in **Inactive** status by default. This is intentional — it lets the user review and connect any required tools before going live.
+- ALWAYS tell the user the workflow is inactive and they need to activate it when ready.
+- Say: "The workflow is **inactive** for now. Once you've reviewed it, head to **Workflows** and activate it to start running."
+- Never leave the user wondering about the status. Be explicit.
+
+APPROVAL STEPS:
+- Some workflow steps may have requiresApproval=true (e.g., sending emails, creating payments).
+- When a workflow has approval steps, ALWAYS tell the user which steps require their approval and why.
+- Format it clearly: "**Steps requiring your approval:** Step 3 (Send email) — you'll review the email before it's sent."
+- If NO steps require approval, say: "All steps run automatically — no manual approval needed."
+- If the user wants to change approval settings, tell them they can toggle it in the workflow editor under each step.
+- NEVER silently add approval requirements without telling the user.
+- If the user says a workflow is missing a step, is incomplete, or asks "but you don't [do X]?", that means the WORKFLOW needs fixing — NOT that you should run an agent task instead.
+- NEVER fall back to run_agent_task when the user is complaining about a workflow you just created. Instead, acknowledge the gap, explain what the workflow should have included, and offer to recreate it with the missing steps using create_workflow.
+- Example: User says "but you don't send the email back?" after an email automation → The workflow is missing a send_email step. Recreate it with the correct steps. Do NOT run a one-off agent task.
+
+INTEGRATION-SPECIFIC RULES (always follow these when creating workflows):
+
+**Gmail (email):**
+- ai_reply ONLY generates text — it does NOT send. Always follow ai_reply with send_email.
+- Pattern: start_email → ai_reply → send_email(to={{from}}, subject="Re: {{subject}}", body="{{ai_response}}")
+
+**Stripe (payments):**
+- stripe_create_invoice with auto_send="false" → MUST add stripe_send_invoice step after.
+- stripe_create_invoice with auto_send="true" → tell user the invoice auto-sends immediately.
+- For payment collection workflows, consider adding stripe_check_payment + delay to follow up on unpaid.
+- Always tell user the payment amount and what the customer sees.
+
+**Twilio (SMS/WhatsApp/Voice):**
+- twilio_make_call uses text-to-speech (automated voice). Tell the user: "The call uses an automated voice to read your message."
+- There is NO inbound SMS trigger — only outbound. If user asks "when I receive a text", explain this limitation.
+
+**Airtable / Notion / Calendly / Mailchimp:**
+- These require account-specific IDs (base_id, database_id, event_type_uuid, list_id) that the generator fills with placeholders.
+- ALWAYS tell the user: "You'll need to update [specific field] with your actual [Airtable base ID / Notion database ID / etc.] in the workflow editor."
+- Don't pretend these will work out-of-the-box.
+
+**Mailchimp:**
+- mailchimp_send_campaign is IRREVERSIBLE — it creates and immediately sends. Always set requiresApproval=true and warn the user.
+
+**Approval defaults:**
+- requiresApproval=true for: send_email (to external recipients), stripe_create_payment_link, stripe_create_invoice, stripe_send_invoice, mailchimp_send_campaign, twilio_make_call
+- requiresApproval=false for: send_notification, append_row, google_calendar_create, delay, condition, airtable_* (CRUD), ai_reply, ai_summarize
 
 RULES:
 - Use tools provided. Don't just describe steps — execute them.
@@ -712,11 +970,24 @@ Head to **Workflows** to review and activate it.
 
   - Never write a single run-on paragraph. Always break into structured pieces.
 
+WHEN LISTING WORKFLOWS (list_workflows):
+- ALWAYS include the workflow **name** for every workflow. The tool returns names — use them.
+- Format as a bullet list with name, status, and step count. Example:
+
+Here are your workflows:
+- **Booking Confirmation** — Active, 4 steps
+- **Follow-Up Reminder** — Inactive, 3 steps
+- **Payment Collection** — Inactive, 2 steps
+
+Never list workflows without their names.
+
 AFTER CREATING A WORKFLOW:
-- Check which connections are missing from the tool result (missing_connections field).
-- If connections are missing, tell the user exactly which ones they need to connect and why.
-- Example: "To activate this, you'll need to connect **Google Calendar** and **Stripe** at [Connections](/app/connections)."
-- Be specific: don't say "connect your tools" — say which tools.
+- Check the steps array in the tool result. Each step has a "connected" field (true/false) and "requires" field (service name or null).
+- If ALL required services are already connected (connected=true), tell the user: "All your tools are connected — you're ready to activate this!"
+- If some connections are missing, tell the user ONLY about the missing ones. Don't mention services that are already connected as needing setup.
+- Example (some missing): "Gmail is already connected. You'll also need to connect **Stripe** at [Connections](/app/connections) to activate this."
+- Example (all connected): "You already have Gmail and Stripe connected — head to **Workflows** to activate it!"
+- Be specific: don't say "connect your tools" — say which tools. And acknowledge what's already connected.
 
 WHEN ASKED ABOUT HOW A STEP WORKS:
 - Use the get_step_info tool to look up exact details, then explain clearly.
@@ -757,6 +1028,23 @@ async def agentic_chat_stream(
     # Save user message
     db.add(ChatMessage(user_id=user.id, role="user", content=user_message, conversation_id=conversation_id))
     db.commit()
+
+    # Auto-extract knowledge from user message (background, non-blocking, own DB session)
+    try:
+        from app.services.knowledge_extractor import extract_knowledge_from_message
+        from app.database import SessionLocal
+        _kb_executor = ThreadPoolExecutor(max_workers=1)
+        
+        def _extract_bg(uid, msg):
+            bg_db = SessionLocal()
+            try:
+                extract_knowledge_from_message(uid, msg, bg_db)
+            finally:
+                bg_db.close()
+        
+        asyncio.get_event_loop().run_in_executor(_kb_executor, _extract_bg, user.id, user_message)
+    except Exception:
+        pass  # Never block chat on knowledge extraction failure
 
     # Auto-title: if conversation has <=1 messages, generate title from first user message
     if conversation_id:

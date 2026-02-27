@@ -5,10 +5,10 @@ import asyncio
 import os
 import logging
 
-from app.routers import auth, workflows, executions, approvals, connections, templates, ai, chat, webhooks
+from app.routers import auth, workflows, executions, approvals, connections, templates, ai, chat, webhooks, knowledge
 from app.routers import health
 from app.database import engine, Base, SessionLocal
-from app.models import user, workflow, execution, approval, connection, template
+from app.models import user, workflow, execution, approval, connection, template, knowledge as knowledge_model
 from app.config import settings
 from app.utils.logging import setup_logging
 from app.middleware import (
@@ -129,6 +129,7 @@ app.include_router(connections.router, prefix="/api/connections", tags=["Connect
 app.include_router(templates.router, prefix="/api/templates", tags=["Templates"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge Base"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 
 

@@ -79,8 +79,10 @@ class EmailTriggerService:
         from_filter = params.get("from", "")
         subject_filter = params.get("subject", "")
         
-        # Build Gmail query
-        query_parts = ["is:unread"]
+        # Build Gmail query — only match emails after workflow was activated
+        # Use after: epoch to skip old emails
+        activated_epoch = int(workflow.updated_at.timestamp()) if workflow.updated_at else int(workflow.created_at.timestamp())
+        query_parts = [f"is:unread after:{activated_epoch}"]
         if from_filter:
             query_parts.append(f"from:{from_filter}")
         if subject_filter:

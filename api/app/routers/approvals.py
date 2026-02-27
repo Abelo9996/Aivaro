@@ -26,7 +26,7 @@ async def list_approvals(
         query = query.filter(Approval.status == status_filter)
     
     approvals = query.order_by(Approval.created_at.desc()).all()
-    return [ApprovalResponse.model_validate(a) for a in approvals]
+    return [_enrich_approval(a, db) for a in approvals]
 
 
 @router.get("/{approval_id}", response_model=ApprovalResponse)
@@ -46,7 +46,54 @@ async def get_approval(
             detail="Approval not found"
         )
     
-    return ApprovalResponse.model_validate(approval)
+    return _enrich_approval(approval, db)
+
+
+def _enrich_approval(approval: Approval, db: Session) -> ApprovalResponse:
+    """Add workflow context, node type, and friendly labels to approval responses."""
+    execution = approval.execution
+    workflow = execution.workflow if execution else None
+    
+    # Find the node in the workflow to get type and label
+    node_type = None
+    step_label = None
+    if workflow and workflow.nodes:
+        for node in workflow.nodes:
+            if node.get("id") == approval.node_id:
+                node_type = node.get("type", "unknown")
+                step_label = node.get("label", node_type)
+                break
+    
+    # Build friendly node type label
+    type_labels = {
+        "send_email": "Send Email",
+        "stripe_create_payment_link": "Create Payment Link",
+        "stripe_create_invoice": "Create Invoice",
+        "stripe_send_invoice": "Send Invoice",
+        "twilio_send_sms": "Send SMS",
+        "twilio_send_whatsapp": "Send WhatsApp",
+        "twilio_make_call": "Make Phone Call",
+        "mailchimp_send_campaign": "Send Campaign",
+        "ai_reply": "AI Reply",
+    }
+    friendly_type = type_labels.get(node_type, step_label or node_type or "Action")
+    
+    return ApprovalResponse(
+        id=approval.id,
+        execution_id=approval.execution_id,
+        node_id=approval.node_id,
+        node_type=friendly_type,
+        status=approval.status,
+        action_summary=approval.action_summary,
+        action_details=approval.action_details,
+        message=approval.action_summary or f"Approve: {friendly_type}",
+        action_data=approval.action_details,
+        workflow_name=workflow.name if workflow else None,
+        step_label=step_label,
+        approved_at=approval.approved_at,
+        rejection_reason=approval.rejection_reason,
+        created_at=approval.created_at,
+    )
 
 
 @router.post("/{approval_id}/action", response_model=ApprovalResponse)

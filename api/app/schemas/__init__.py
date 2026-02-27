@@ -20,6 +20,12 @@ from app.schemas.connection import (
     ConnectionResponse
 )
 from app.schemas.template import TemplateResponse
+from app.schemas.knowledge import (
+    KnowledgeCreate,
+    KnowledgeUpdate,
+    KnowledgeResponse,
+    VALID_CATEGORIES,
+)
 
 __all__ = [
     "UserCreate",
@@ -40,4 +46,8 @@ __all__ = [
     "ConnectionCreate",
     "ConnectionResponse",
     "TemplateResponse",
+    "KnowledgeCreate",
+    "KnowledgeUpdate",
+    "KnowledgeResponse",
+    "VALID_CATEGORIES",
 ]

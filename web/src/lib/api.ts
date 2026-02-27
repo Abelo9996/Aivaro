@@ -381,6 +381,36 @@ class ApiClient {
       capabilities: string[];
     }>('/api/chat/assistant/context');
   }
+
+  // Knowledge Base
+  async getKnowledgeCategories() {
+    return this.request<{ id: string; description: string }[]>('/api/knowledge/categories');
+  }
+
+  async getKnowledge(category?: string) {
+    const params = category ? `?category=${category}` : '';
+    return this.request<any[]>(`/api/knowledge${params}`);
+  }
+
+  async createKnowledge(data: { category: string; title: string; content: string; priority?: number }) {
+    return this.request<any>('/api/knowledge', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateKnowledge(id: string, data: { category?: string; title?: string; content?: string; priority?: number }) {
+    return this.request<any>(`/api/knowledge/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteKnowledge(id: string) {
+    return this.request<void>(`/api/knowledge/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient();

@@ -15,7 +15,7 @@ async def list_workflows(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    workflows = db.query(Workflow).filter(Workflow.user_id == current_user.id).order_by(Workflow.updated_at.desc()).all()
+    workflows = db.query(Workflow).filter(Workflow.user_id == current_user.id, Workflow.is_agent_task == False).order_by(Workflow.updated_at.desc()).all()
     return [WorkflowResponse.model_validate(w) for w in workflows]
 
 
