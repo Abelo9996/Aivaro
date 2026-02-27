@@ -27,6 +27,26 @@ logger = logging.getLogger(__name__)
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
+# Run lightweight migrations for new columns
+def _run_migrations():
+    """Add columns that may be missing from existing tables."""
+    from sqlalchemy import text, inspect
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+        columns = [c["name"] for c in inspector.get_columns("workflows")]
+        if "is_agent_task" not in columns:
+            logger.info("[migration] Adding is_agent_task column to workflows")
+            conn.execute(text("ALTER TABLE workflows ADD COLUMN is_agent_task BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+
+        kb_columns = [c["name"] for c in inspector.get_columns("knowledge_entries")] if "knowledge_entries" in inspector.get_table_names() else []
+        # knowledge_entries table is created by create_all above, no extra migration needed
+
+try:
+    _run_migrations()
+except Exception as e:
+    logger.warning(f"[migration] Non-critical migration error: {e}")
+
 # Background task for email polling
 async def poll_email_triggers_task():
     """Background task that polls for email triggers every 60 seconds."""
