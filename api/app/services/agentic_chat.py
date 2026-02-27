@@ -462,10 +462,10 @@ def _tool_list_workflows(user: User, db: Session) -> str:
     if not workflows:
         return json.dumps({"workflows": [], "message": "No workflows yet."})
     return json.dumps({"workflows": [
-        {"name": w.name, "active": w.is_active, "steps": len(w.nodes or []),
-         "updated": w.updated_at.strftime("%Y-%m-%d %H:%M") if w.updated_at else None}
+        {"name": w.name, "id": w.id, "active": w.is_active, "steps": len(w.nodes or []),
+         "updated": w.updated_at.strftime("%B %d, %Y") if w.updated_at else None}
         for w in workflows
-    ], "count": len(workflows)})
+    ], "count": len(workflows), "note": "Always include workflow names when listing them."})
 
 
 def _tool_get_workflow_details(args: dict, user: User, db: Session) -> str:
@@ -683,11 +683,18 @@ YOU ARE THE PRODUCT. When someone says "automate my bookings," use create_workfl
 When someone asks you to DO something right now (send a message, confirm an appointment, follow up with a client), use run_agent_task. The agent will autonomously execute the task using their connected tools.
 
 TWO MODES:
-- **Workflows** (create_workflow): For repeatable automations that run on triggers. "Set up a booking flow."
-- **Agent tasks** (run_agent_task): For one-off or dynamic tasks that need doing NOW. "Send John a reminder about tomorrow's appointment." The agent thinks and acts autonomously, choosing what tools to use at each step.
+- **Workflows** (create_workflow): For repeatable automations that run on triggers. "Set up a booking flow." "When I get an email from X, do Y." "Whenever someone fills a form, send a confirmation."
+- **Agent tasks** (run_agent_task): For one-off or dynamic tasks that need doing NOW. "Send John a reminder about tomorrow's appointment." "Check my calendar for tomorrow." The agent thinks and acts autonomously, choosing what tools to use at each step.
+
+CHOOSING THE RIGHT MODE:
+- If the user says "whenever", "when I receive", "automatically", "set up", "every time" → create_workflow
+- If the user says "send", "check", "do this now", "right now" → run_agent_task
+- Email automations like "when I get an email from X, reply with Y" → create_workflow with start_email trigger
+- NEVER tell users to go configure Gmail filters or Outlook rules. YOU are the automation platform. Use create_workflow.
 
 RULES:
 - Use tools provided. Don't just describe steps — execute them.
+- NEVER tell users to go do something manually (set up Gmail filters, configure Outlook rules, etc.). You ARE the automation. Build it.
 - Be confident: "I've created that" not "I can help you create that."
 - Never mention Zapier, Make, n8n, or competitors.
 - FORMATTING IS MANDATORY. Structure every response with markdown:
