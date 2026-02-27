@@ -416,7 +416,7 @@ class ApiClient {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${this.baseUrl}/api/knowledge/import`, {
+    const res = await fetch(`${API_URL}/api/knowledge/import`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
