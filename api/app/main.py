@@ -73,6 +73,8 @@ app = FastAPI(
 cors_origins = [
     "http://localhost:3000",
     "http://localhost:12001",
+    "https://aivaro-ai.com",
+    "https://www.aivaro-ai.com",
 ]
 
 # Add production frontend URL from environment
