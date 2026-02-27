@@ -176,6 +176,10 @@ class NodeExecutor:
             "transform": self._execute_transform,
             # Google Calendar
             "google_calendar_create": self._execute_google_calendar_create,
+            "google_calendar_list": self._execute_google_calendar_list,
+            # Google Gmail read
+            "gmail_list_messages": self._execute_gmail_list_messages,
+            "gmail_get_message": self._execute_gmail_get_message,
             # Stripe integrations
             "stripe_create_invoice": self._execute_stripe_create_invoice,
             "stripe_send_invoice": self._execute_stripe_send_invoice,
@@ -1454,6 +1458,135 @@ Extract: {fields_to_extract}"""
                 "output": input_data,
                 "logs": logs
             }
+
+    # ==================== GOOGLE CALENDAR LIST ====================
+
+    async def _execute_google_calendar_list(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List upcoming Google Calendar events."""
+        time_min = params.get("time_min", "")
+        time_max = params.get("time_max", "")
+        max_results = params.get("max_results", 20)
+        calendar_id = params.get("calendar_id", "primary")
+
+        logs = f"[{datetime.utcnow().isoformat()}] Listing calendar events\n"
+        logs += f"  Calendar: {calendar_id}\n"
+        if time_min: logs += f"  From: {time_min}\n"
+        if time_max: logs += f"  Until: {time_max}\n"
+
+        if is_test:
+            logs += "  [TEST] Returning mock events\n"
+            mock_events = [
+                {"id": "evt1", "summary": "Team Meeting", "start": "2026-02-27T10:00:00", "end": "2026-02-27T11:00:00", "attendees": ["alice@example.com"]},
+                {"id": "evt2", "summary": "Client Call - John", "start": "2026-02-27T14:00:00", "end": "2026-02-27T15:00:00", "attendees": ["john@example.com"]},
+            ]
+            return {
+                "success": True,
+                "output": {**input_data, "calendar_events": mock_events, "event_count": len(mock_events)},
+                "logs": logs,
+            }
+
+        google = await self.get_google_service()
+        if not google:
+            logs += "  Google not connected\n"
+            return {"success": False, "output": input_data, "logs": logs, "error": "Google not connected"}
+
+        try:
+            events = await google.list_events(
+                calendar_id=calendar_id,
+                time_min=time_min or None,
+                time_max=time_max or None,
+                max_results=max_results,
+            )
+            simplified = []
+            for e in events:
+                start = e.get("start", {})
+                end = e.get("end", {})
+                simplified.append({
+                    "id": e.get("id"),
+                    "summary": e.get("summary", "(No title)"),
+                    "start": start.get("dateTime", start.get("date", "")),
+                    "end": end.get("dateTime", end.get("date", "")),
+                    "location": e.get("location", ""),
+                    "attendees": [a.get("email", "") for a in e.get("attendees", [])],
+                    "status": e.get("status", ""),
+                })
+            logs += f"  Found {len(simplified)} events\n"
+            return {
+                "success": True,
+                "output": {**input_data, "calendar_events": simplified, "event_count": len(simplified)},
+                "logs": logs,
+            }
+        except Exception as e:
+            logs += f"  Error: {str(e)}\n"
+            return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
+
+    # ==================== GMAIL READ ====================
+
+    async def _execute_gmail_list_messages(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List recent Gmail messages."""
+        query = params.get("query", "")
+        max_results = params.get("max_results", 10)
+
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Gmail messages\n"
+        if query: logs += f"  Query: {query}\n"
+        logs += f"  Max results: {max_results}\n"
+
+        if is_test:
+            logs += "  [TEST] Returning mock messages\n"
+            mock = [
+                {"id": "msg1", "from": "john@example.com", "subject": "Re: Appointment", "snippet": "Yes I can make it at 2pm", "date": "2026-02-26T10:00:00"},
+                {"id": "msg2", "from": "jane@example.com", "subject": "Invoice question", "snippet": "Can you send me the invoice again?", "date": "2026-02-26T09:00:00"},
+            ]
+            return {
+                "success": True,
+                "output": {**input_data, "emails": mock, "email_count": len(mock)},
+                "logs": logs,
+            }
+
+        google = await self.get_google_service()
+        if not google:
+            logs += "  Google not connected\n"
+            return {"success": False, "output": input_data, "logs": logs, "error": "Google not connected"}
+
+        try:
+            messages = await google.list_messages(query=query, max_results=max_results)
+            logs += f"  Found {len(messages)} messages\n"
+            return {
+                "success": True,
+                "output": {**input_data, "emails": messages, "email_count": len(messages)},
+                "logs": logs,
+            }
+        except Exception as e:
+            logs += f"  Error: {str(e)}\n"
+            return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
+
+    async def _execute_gmail_get_message(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Get a specific Gmail message by ID."""
+        message_id = params.get("message_id", "")
+
+        logs = f"[{datetime.utcnow().isoformat()}] Getting Gmail message {message_id}\n"
+
+        if is_test:
+            logs += "  [TEST] Returning mock message\n"
+            return {
+                "success": True,
+                "output": {**input_data, "email": {"id": message_id, "from": "test@example.com", "subject": "Test", "body": "Test email body", "date": "2026-02-26T10:00:00"}},
+                "logs": logs,
+            }
+
+        google = await self.get_google_service()
+        if not google:
+            return {"success": False, "output": input_data, "logs": logs + "  Google not connected\n", "error": "Google not connected"}
+
+        try:
+            message = await google.get_message(message_id)
+            return {
+                "success": True,
+                "output": {**input_data, "email": message},
+                "logs": logs + "  Message retrieved\n",
+            }
+        except Exception as e:
+            return {"success": False, "output": input_data, "logs": logs + f"  Error: {str(e)}\n", "error": str(e)}
 
     # ========== Notion Node Executors ==========
     

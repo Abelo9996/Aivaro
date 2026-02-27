@@ -146,6 +146,32 @@ TOOLS = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_agent_task",
+            "description": "Run an AI agent to autonomously execute a task using the user's connected tools. Unlike workflows (static step sequences), the agent dynamically decides what to do at each step based on results. Use this when the user wants something done RIGHT NOW — e.g. 'send John a reminder', 'confirm tomorrow's appointments', 'check if payments came in and follow up'. The agent will take real actions (send emails, SMS, create events, etc.) autonomously.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "goal": {
+                        "type": "string",
+                        "description": "Clear description of what the agent should accomplish"
+                    },
+                    "context": {
+                        "type": "object",
+                        "description": "Any relevant context data (names, emails, phone numbers, dates, amounts, etc.)",
+                        "additionalProperties": True
+                    },
+                    "is_test": {
+                        "type": "boolean",
+                        "description": "If true, simulates actions without actually sending emails/SMS/etc. Only set to true if the user explicitly asks to test/simulate. Default false — always execute for real unless told otherwise."
+                    }
+                },
+                "required": ["goal"]
+            }
+        }
+    },
 ]
 
 # Human-friendly labels for tool calls
@@ -159,6 +185,7 @@ TOOL_LABELS = {
     "deactivate_workflow": "Pausing workflow",
     "get_webhook_url": "Getting your form/webhook URL",
     "get_step_info": "Looking up step details",
+    "run_agent_task": "Running agent task",
 }
 
 
@@ -370,6 +397,8 @@ def execute_tool(tool_name: str, arguments: dict, user: User, db: Session) -> st
         return _tool_get_webhook_url(arguments, user, db)
     elif tool_name == "get_step_info":
         return _tool_get_step_info(arguments)
+    elif tool_name == "run_agent_task":
+        return _tool_run_agent_task(arguments, user, db)
     return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
 
@@ -541,6 +570,76 @@ def _tool_get_step_info(args: dict) -> str:
         "parameters": info.get("parameters", {}),
     })
 
+
+def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
+    """
+    Run an agent task synchronously (from the chat tool executor).
+    Collects all events and returns a summary.
+    """
+    from app.services.agent_executor import run_agent_task
+
+    goal = args.get("goal", "")
+    context = args.get("context", None)
+    is_test = args.get("is_test", False)
+
+    if not goal:
+        return json.dumps({"success": False, "error": "No goal provided"})
+
+    # Run the async agent in the current event loop
+    events = []
+    steps_taken = []
+    summary = ""
+    status = "unknown"
+
+    async def _collect():
+        nonlocal summary, status
+        async for event in run_agent_task(
+            db=db, user=user, goal=goal, context=context, is_test=is_test
+        ):
+            events.append(event)
+            if event["type"] == "tool_result":
+                steps_taken.append({
+                    "tool": event["tool"],
+                    "success": event["success"],
+                    "step": event["step"],
+                })
+            elif event["type"] == "complete":
+                summary = event.get("summary", "Done")
+                status = "completed"
+            elif event["type"] == "escalate":
+                summary = event.get("reason", "Needs input")
+                status = "escalated"
+            elif event["type"] == "error":
+                summary = event.get("content", "Error")
+                status = "failed"
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # We're inside an async context (FastAPI) — use nest_asyncio pattern
+            # or run in a new thread. Since execute_tool is called via run_in_executor
+            # already, we can create a new event loop.
+            import concurrent.futures
+            new_loop = asyncio.new_event_loop()
+            try:
+                new_loop.run_until_complete(_collect())
+            finally:
+                new_loop.close()
+        else:
+            loop.run_until_complete(_collect())
+    except RuntimeError:
+        # No event loop at all
+        asyncio.run(_collect())
+
+    return json.dumps({
+        "success": status == "completed",
+        "status": status,
+        "summary": summary,
+        "steps_taken": steps_taken,
+        "step_count": len(steps_taken),
+        "is_test": is_test,
+    })
+
 # --- System Prompt ---
 
 def build_system_prompt(user: User, db: Session) -> str:
@@ -581,6 +680,11 @@ ACCOUNT: {wf_count} workflows.
 {exec_summary}
 
 YOU ARE THE PRODUCT. When someone says "automate my bookings," use create_workflow immediately. Don't describe what you'd do — do it.
+When someone asks you to DO something right now (send a message, confirm an appointment, follow up with a client), use run_agent_task. The agent will autonomously execute the task using their connected tools.
+
+TWO MODES:
+- **Workflows** (create_workflow): For repeatable automations that run on triggers. "Set up a booking flow."
+- **Agent tasks** (run_agent_task): For one-off or dynamic tasks that need doing NOW. "Send John a reminder about tomorrow's appointment." The agent thinks and acts autonomously, choosing what tools to use at each step.
 
 RULES:
 - Use tools provided. Don't just describe steps — execute them.
@@ -735,9 +839,76 @@ async def agentic_chat_stream(
 
                 yield {"type": "step", "index": step_index, "label": label, "status": "running"}
 
-                result = await asyncio.get_event_loop().run_in_executor(
-                    _executor, execute_tool, fn_name, fn_args, user, db
-                )
+                # --- Special handling for run_agent_task: stream events directly ---
+                if fn_name == "run_agent_task":
+                    from app.services.agent_executor import run_agent_task as _run_agent
+
+                    goal = fn_args.get("goal", "")
+                    context = fn_args.get("context", None)
+                    is_test = fn_args.get("is_test", False)
+
+                    agent_steps = []
+                    agent_summary = ""
+                    agent_status = "unknown"
+
+                    async for agent_event in _run_agent(
+                        db=db, user=user, goal=goal, context=context, is_test=is_test
+                    ):
+                        evt_type = agent_event.get("type")
+                        if evt_type == "thinking":
+                            yield {"type": "agent_thinking", "content": agent_event.get("content", "")}
+                        elif evt_type == "tool_start":
+                            step_index += 1
+                            yield {
+                                "type": "step",
+                                "index": step_index,
+                                "label": f'Agent: {agent_event.get("tool", "working")}',
+                                "status": "running",
+                                "agent_tool": agent_event.get("tool"),
+                                "agent_args": agent_event.get("args", {}),
+                            }
+                        elif evt_type == "tool_result":
+                            agent_steps.append({
+                                "tool": agent_event.get("tool"),
+                                "success": agent_event.get("success"),
+                            })
+                            tool_label = f'Agent: {agent_event.get("tool", "action")}'
+                            status = "done" if agent_event.get("success") else "error"
+                            step_event = {"index": step_index, "label": tool_label, "status": status}
+                            collected_steps.append(step_event)
+                            yield {"type": "step", **step_event}
+                        elif evt_type == "complete":
+                            agent_summary = agent_event.get("summary", "Done")
+                            agent_status = "completed"
+                            step_index += 1
+                            step_event = {"index": step_index, "label": "Agent task complete", "status": "done", "detail": agent_summary}
+                            collected_steps.append(step_event)
+                            yield {"type": "step", **step_event}
+                        elif evt_type == "escalate":
+                            agent_summary = agent_event.get("reason", "Needs input")
+                            agent_status = "escalated"
+                            yield {"type": "agent_escalate", "reason": agent_summary, "question": agent_event.get("question", "")}
+                        elif evt_type == "error":
+                            agent_summary = agent_event.get("content", "Error")
+                            agent_status = "failed"
+                            step_event = {"index": step_index, "label": "Agent error", "status": "error", "detail": agent_summary}
+                            collected_steps.append(step_event)
+                            yield {"type": "step", **step_event}
+                        elif evt_type == "message":
+                            yield {"type": "agent_message", "content": agent_event.get("content", "")}
+
+                    result = json.dumps({
+                        "success": agent_status == "completed",
+                        "status": agent_status,
+                        "summary": agent_summary,
+                        "steps_taken": agent_steps,
+                        "step_count": len(agent_steps),
+                        "is_test": is_test,
+                    })
+                else:
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        _executor, execute_tool, fn_name, fn_args, user, db
+                    )
 
                 # Parse result for richer step info
                 try:

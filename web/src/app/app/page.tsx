@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Bot, User as UserIcon, Loader2, Sparkles, Zap, Clock, ChevronRight,
   BarChart3, CheckCircle2, AlertCircle, ArrowRight, Plus, X, MessageSquare,
-  Trash2, MoreHorizontal,
+  Trash2, MoreHorizontal, Play, Cpu,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -131,7 +131,12 @@ function StepProgress({ steps }: { steps: StepEvent[] }) {
                 step.status === 'running' ? 'text-primary-700' :
                 step.status === 'done' ? 'text-green-700' :
                 'text-red-700'
-              }`}>{step.label}</span>
+              }`}>
+                {step.label?.startsWith('Agent:') && (
+                  <Cpu className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                )}
+                {step.label}
+              </span>
               {step.detail && !step.workflow_steps && (
                 <span className="text-xs text-gray-500 ml-1.5">• {step.detail}</span>
               )}
@@ -222,7 +227,7 @@ function ThinkingIndicator({ text }: { text: string }) {
 const SUGGESTIONS = [
   { text: 'Create a booking & deposit workflow', icon: <Zap size={14} /> },
   { text: 'Set up automatic lead follow-ups', icon: <Sparkles size={14} /> },
-  { text: 'Build a weekly profit report', icon: <BarChart3 size={14} /> },
+  { text: 'Send a test reminder to confirm an appointment', icon: <Play size={14} /> },
   { text: 'Show me my active workflows', icon: <CheckCircle2 size={14} /> },
 ];
 
@@ -402,7 +407,7 @@ export default function DashboardPage() {
               if (event.conversation_id && !activeConvoId) {
                 setActiveConvoId(event.conversation_id);
               }
-            } else if (event.type === 'thinking') {
+            } else if (event.type === 'thinking' || event.type === 'agent_thinking') {
               setCurrentThinking(event.content);
             } else if (event.type === 'step') {
               setCurrentThinking(null);
@@ -411,6 +416,22 @@ export default function DashboardPage() {
                 const existing = updated.findIndex(s => s.index === event.index);
                 if (existing >= 0) updated[existing] = event;
                 else updated.push(event);
+                collectedSteps = updated;
+                return updated;
+              });
+            } else if (event.type === 'agent_message') {
+              // Agent reasoning — show as thinking text
+              setCurrentThinking(event.content);
+            } else if (event.type === 'agent_escalate') {
+              setCurrentThinking(null);
+              const escalateStep = {
+                index: collectedSteps.length,
+                label: `Needs input: ${event.question || event.reason}`,
+                status: 'error' as const,
+                detail: event.reason,
+              };
+              setCurrentSteps(prev => {
+                const updated = [...prev, escalateStep];
                 collectedSteps = updated;
                 return updated;
               });

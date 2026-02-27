@@ -16,6 +16,7 @@ from app.models.chat import ChatMessage as ChatMessageModel, ChatConversation
 from app.routers.auth import get_current_user
 from app.services.chat_service import chat_about_execution
 from app.services.agentic_chat import agentic_chat, agentic_chat_stream
+from app.services.agent_executor import run_agent_task
 
 router = APIRouter()
 
@@ -210,6 +211,37 @@ async def chat_assistant(
         convo_id = convo.id
     response = await agentic_chat(user=current_user, db=db, user_message=request.message, conversation_id=convo_id)
     return ChatResponse(response=response, context_type="global", conversation_id=convo_id)
+
+
+# --- Agent Execution SSE endpoint ---
+
+class AgentTaskRequest(BaseModel):
+    goal: str
+    context: Optional[dict] = None
+    is_test: Optional[bool] = False
+
+@router.post("/agent/run")
+async def run_agent(
+    request: AgentTaskRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    SSE endpoint for running an agent task directly.
+    Streams real-time events as the agent thinks and acts.
+    """
+    async def event_stream():
+        async for event in run_agent_task(
+            db=db,
+            user=current_user,
+            goal=request.goal,
+            context=request.context,
+            is_test=request.is_test or False,
+        ):
+            yield f"data: {json.dumps(event)}\n\n"
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 # --- Legacy endpoints (backwards compat) ---
