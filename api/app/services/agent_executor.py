@@ -380,6 +380,118 @@ AGENT_TOOLS = [
             },
         },
     },
+    # --- Calendly tools ---
+    {
+        "type": "function",
+        "function": {
+            "name": "calendly_list_events",
+            "description": "List upcoming Calendly events/appointments. Use to check today's schedule, see what's booked, or find upcoming meetings.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["active", "canceled"], "description": "Event status filter (default: active)"},
+                    "count": {"type": "integer", "description": "Max events to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "calendly_get_event",
+            "description": "Get details of a specific Calendly event by its UUID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "event_uuid": {"type": "string", "description": "Calendly event UUID"},
+                },
+                "required": ["event_uuid"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "calendly_cancel_event",
+            "description": "Cancel a Calendly event.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "event_uuid": {"type": "string", "description": "Calendly event UUID to cancel"},
+                    "reason": {"type": "string", "description": "Cancellation reason"},
+                },
+                "required": ["event_uuid"],
+            },
+        },
+    },
+    # --- Notion tools ---
+    {
+        "type": "function",
+        "function": {
+            "name": "notion_search",
+            "description": "Search Notion for pages or databases by query.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query"},
+                    "filter_type": {"type": "string", "enum": ["page", "database", "all"], "description": "Filter by type (default: all)"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "notion_query_database",
+            "description": "Query a Notion database to list/filter entries.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "database_id": {"type": "string", "description": "Notion database ID"},
+                    "page_size": {"type": "integer", "description": "Max results (default 100)"},
+                },
+                "required": ["database_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "notion_create_page",
+            "description": "Create a page in a Notion database.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "database_id": {"type": "string", "description": "Notion database ID"},
+                    "title": {"type": "string", "description": "Page title"},
+                    "content": {"type": "string", "description": "Page content"},
+                    "properties": {"type": "object", "description": "Additional database properties", "additionalProperties": True},
+                },
+                "required": ["database_id"],
+            },
+        },
+    },
+    # --- Mailchimp tools ---
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_add_subscriber",
+            "description": "Add a subscriber to a Mailchimp audience/list.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "list_id": {"type": "string", "description": "Mailchimp audience/list ID"},
+                    "email": {"type": "string", "description": "Subscriber email"},
+                    "first_name": {"type": "string", "description": "First name"},
+                    "last_name": {"type": "string", "description": "Last name"},
+                    "status": {"type": "string", "enum": ["subscribed", "pending", "unsubscribed"], "description": "Subscription status (default: subscribed)"},
+                },
+                "required": ["list_id", "email"],
+            },
+        },
+    },
 ]
 
 
@@ -407,6 +519,16 @@ TOOL_TO_NODE_TYPE = {
     "airtable_update_record": "airtable_update_record",
     "airtable_list_records": "airtable_list_records",
     "wait": "delay",
+    # Calendly
+    "calendly_list_events": "calendly_list_events",
+    "calendly_get_event": "calendly_get_event",
+    "calendly_cancel_event": "calendly_cancel_event",
+    # Notion
+    "notion_search": "notion_search",
+    "notion_query_database": "notion_query_database",
+    "notion_create_page": "notion_create_page",
+    # Mailchimp
+    "mailchimp_add_subscriber": "mailchimp_add_subscriber",
 }
 
 
@@ -502,6 +624,10 @@ def _build_node_params(tool_name: str, args: dict) -> dict:
     if tool_name == "wait":
         return {"duration": args["duration"], "unit": args["unit"]}
 
+    # Calendly, Notion, Mailchimp — pass through as-is (params match node executor expectations)
+    if tool_name.startswith(("calendly_", "notion_", "mailchimp_")):
+        return args
+
     return args
 
 
@@ -543,6 +669,13 @@ def _build_agent_system_prompt(
         "airtable_find_record": "airtable",
         "airtable_update_record": "airtable",
         "airtable_list_records": "airtable",
+        "calendly_list_events": "calendly",
+        "calendly_get_event": "calendly",
+        "calendly_cancel_event": "calendly",
+        "notion_search": "notion",
+        "notion_query_database": "notion",
+        "notion_create_page": "notion",
+        "mailchimp_add_subscriber": "mailchimp",
     }
 
     for tool_name, service in tool_connection_map.items():
