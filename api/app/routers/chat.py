@@ -47,7 +47,11 @@ async def list_conversations(
     """List user's conversations, most recent first."""
     convos = (
         db.query(ChatConversation)
-        .filter(ChatConversation.user_id == current_user.id, ChatConversation.is_archived == False)
+        .filter(
+            ChatConversation.user_id == current_user.id,
+            ChatConversation.is_archived == False,
+            ~ChatConversation.title.like("Execution %"),
+        )
         .order_by(ChatConversation.updated_at.desc())
         .limit(limit)
         .all()
@@ -304,12 +308,9 @@ async def chat_execution(
         raise HTTPException(status_code=403, detail="Not authorized")
     history = [{"role": m.role, "content": m.content} for m in request.history] if request.history else None
     
-    # Build execution context and prepend to user message
+    # Build execution context
     from app.services.chat_service import build_execution_context
     exec_context = build_execution_context(execution, workflow)
-    
-    # Use agentic chat with execution context injected, collecting SSE events into a single response
-    enriched_message = f"[EXECUTION CONTEXT for run {execution_id}]\n{exec_context}\n[END CONTEXT]\n\nUser question: {request.message}"
     
     # Create a conversation for this execution chat (reuse if one exists for this execution)
     from app.models.chat import ChatMessage as ChatMessageModel
@@ -323,11 +324,12 @@ async def chat_execution(
         db.commit()
         db.refresh(convo)
     
-    # Collect the full response from the agentic stream
+    # Collect the full response from the agentic stream (context injected into system prompt, not user message)
     full_response = ""
     try:
         async for event in agentic_chat_stream(
-            user=current_user, db=db, user_message=enriched_message, conversation_id=convo.id
+            user=current_user, db=db, user_message=request.message, conversation_id=convo.id,
+            extra_context=f"The user is asking about execution run {execution_id}:\n{exec_context}"
         ):
             if event.get("type") == "message":
                 full_response += event.get("content", "")

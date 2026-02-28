@@ -1142,6 +1142,7 @@ async def agentic_chat_stream(
     db: Session,
     user_message: str,
     conversation_id: str = None,
+    extra_context: str = None,
 ) -> AsyncGenerator[dict, None]:
     """
     Stream chat events as SSE. Events:
@@ -1151,7 +1152,7 @@ async def agentic_chat_stream(
     - {"type": "done"}
     """
 
-    # Save user message
+    # Save user message (clean, without extra_context)
     db.add(ChatMessage(user_id=user.id, role="user", content=user_message, conversation_id=conversation_id))
     db.commit()
 
@@ -1196,7 +1197,11 @@ async def agentic_chat_stream(
         ).order_by(ChatMessage.created_at.desc()).limit(30).all()
     recent.reverse()
 
-    messages = [{"role": "system", "content": build_system_prompt(user, db)}]
+    system_prompt = build_system_prompt(user, db)
+    if extra_context:
+        system_prompt += f"\n\n--- ADDITIONAL CONTEXT ---\n{extra_context}\n--- END ADDITIONAL CONTEXT ---"
+    
+    messages = [{"role": "system", "content": system_prompt}]
     for m in recent:
         messages.append({"role": m.role, "content": m.content})
     # user_message is already in `recent` (saved above), don't duplicate
