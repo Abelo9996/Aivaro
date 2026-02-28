@@ -121,9 +121,10 @@ export default function TemplatesPage() {
       setCreatingId(template.id);
       const workflow = await api.createWorkflowFromTemplate(template.id);
       router.push(`/app/workflows/${workflow.id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create workflow from template:', err);
-      setError('Failed to create workflow. Please try again.');
+      const message = err?.detail?.message || err?.message || 'Failed to create workflow. Please try again.';
+      setError(message);
       setCreatingId(null);
     }
   };

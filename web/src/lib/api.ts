@@ -42,7 +42,9 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'An error occurred' }));
-      throw new Error(error.detail || 'An error occurred');
+      const detail = error.detail;
+      const message = typeof detail === 'object' && detail !== null ? (detail.message || JSON.stringify(detail)) : (detail || 'An error occurred');
+      throw new Error(message);
     }
 
     return response.json();
