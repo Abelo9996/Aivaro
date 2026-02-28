@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Workflow } from '@/types';
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     loadWorkflows();
@@ -29,13 +31,18 @@ export default function WorkflowsPage() {
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this workflow?')) return;
-    
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.deleteWorkflow(id);
-      setWorkflows(workflows.filter(w => w.id !== id));
+      await api.deleteWorkflow(deleteTarget);
+      setWorkflows(workflows.filter(w => w.id !== deleteTarget));
     } catch (err) {
       console.error('Failed to delete workflow:', err);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -177,6 +184,15 @@ export default function WorkflowsPage() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete workflow"
+        message="This will permanently delete this workflow and all its configuration. Any scheduled runs will stop. This cannot be undone."
+        confirmLabel="Delete workflow"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

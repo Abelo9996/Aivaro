@@ -7,6 +7,7 @@ import {
   CalendarClock, TrendingUp, HelpCircle, Mail, Tag, FileText
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 interface KnowledgeEntry {
   id: string;
@@ -71,6 +72,7 @@ export default function KnowledgePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -134,12 +136,18 @@ export default function KnowledgePage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this knowledge entry?')) return;
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.deleteKnowledge(id);
+      await api.deleteKnowledge(deleteTarget);
       await loadEntries();
     } catch (err) {
       console.error('Failed to delete:', err);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -477,6 +485,15 @@ export default function KnowledgePage() {
           <strong>Tip:</strong> Drag and drop files (PDF, TXT, CSV, DOCX) to auto-import business documents.
         </p>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete knowledge entry"
+        message="This will permanently remove this entry from your knowledge base. Aivaro will no longer have access to this information."
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

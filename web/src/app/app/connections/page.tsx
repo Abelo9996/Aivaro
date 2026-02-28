@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Key, X, Search, Filter } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import ServiceIcon from '@/components/ui/ServiceIcon';
@@ -84,6 +85,7 @@ export default function ConnectionsPage() {
   const [apiKey, setApiKey] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   // Filter connections based on search and category
@@ -186,14 +188,19 @@ export default function ConnectionsPage() {
   };
 
   const handleDisconnect = async (id: string) => {
-    if (!confirm('Are you sure you want to disconnect this service?')) return;
-    
+    setDisconnectTarget(id);
+  };
+
+  const confirmDisconnect = async () => {
+    if (!disconnectTarget) return;
     try {
-      await api.deleteConnection(id);
+      await api.deleteConnection(disconnectTarget);
       setMessage({ type: 'success', text: 'Connection removed successfully' });
       loadConnections();
     } catch (err) {
       console.error('Failed to disconnect:', err);
+    } finally {
+      setDisconnectTarget(null);
     }
   };
 
@@ -561,6 +568,15 @@ export default function ConnectionsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!disconnectTarget}
+        title="Disconnect service"
+        message="This will remove the connection. Any workflows using this service will stop working until you reconnect."
+        confirmLabel="Disconnect"
+        onConfirm={confirmDisconnect}
+        onCancel={() => setDisconnectTarget(null)}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import ActionNode from '@/components/workflow/nodes/ActionNode';
 import ConditionNode from '@/components/workflow/nodes/ConditionNode';
 import ApprovalNode from '@/components/workflow/nodes/ApprovalNode';
 import ExecutionProgress from '@/components/workflow/ExecutionProgress';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Workflow, WorkflowNode } from '@/types';
 
 const nodeTypes = {
@@ -67,6 +68,7 @@ export default function WorkflowEditorPage() {
   const [completedSteps, setCompletedSteps] = useState(0);
   const [currentStep, setCurrentStep] = useState<string | undefined>();
   const [executionId, setExecutionId] = useState<string | undefined>();
+  const [showRunConfirm, setShowRunConfirm] = useState(false);
 
   const workflowId = params.id as string;
   const isNew = workflowId === 'new';
@@ -317,9 +319,7 @@ export default function WorkflowEditorPage() {
   };
 
   const handleRealRun = async () => {
-    if (!confirm('This will run the workflow for real. Emails will be sent, sheets will be modified, etc. Continue?')) {
-      return;
-    }
+    setShowRunConfirm(false);
     
     // Initialize progress UI
     setShowProgress(true);
@@ -423,7 +423,7 @@ export default function WorkflowEditorPage() {
                 🧪 Test
               </button>
               <button
-                onClick={handleRealRun}
+                onClick={() => setShowRunConfirm(true)}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
               >
                 ▶ Run Now
@@ -508,6 +508,16 @@ export default function WorkflowEditorPage() {
             router.push(`/app/executions/${executionId}`);
           }
         }}
+      />
+
+      <ConfirmDialog
+        open={showRunConfirm}
+        title="Run workflow"
+        message="This will run the workflow for real. Emails will be sent, sheets will be modified, and any connected services will be triggered. Continue?"
+        confirmLabel="Run workflow"
+        variant="warning"
+        onConfirm={handleRealRun}
+        onCancel={() => setShowRunConfirm(false)}
       />
     </div>
   );

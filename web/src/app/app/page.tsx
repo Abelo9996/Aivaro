@@ -8,6 +8,7 @@ import {
   BarChart3, CheckCircle2, AlertCircle, ArrowRight, Plus, X, MessageSquare,
   Trash2, MoreHorizontal, Play, Cpu,
 } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { formatDate } from '@/lib/utils';
@@ -252,6 +253,7 @@ export default function DashboardPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [deleteConvoTarget, setDeleteConvoTarget] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -305,14 +307,21 @@ export default function DashboardPage() {
 
   const deleteConversation = async (convoId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setDeleteConvoTarget(convoId);
+  };
+
+  const confirmDeleteConversation = async () => {
+    if (!deleteConvoTarget) return;
     try {
-      await api.request(`/api/chat/conversations/${convoId}`, { method: 'DELETE' });
-      setConversations(prev => prev.filter(c => c.id !== convoId));
-      if (activeConvoId === convoId) {
+      await api.request(`/api/chat/conversations/${deleteConvoTarget}`, { method: 'DELETE' });
+      setConversations(prev => prev.filter(c => c.id !== deleteConvoTarget));
+      if (activeConvoId === deleteConvoTarget) {
         startNewConversation();
       }
     } catch (err) {
       console.error('Failed to delete conversation:', err);
+    } finally {
+      setDeleteConvoTarget(null);
     }
   };
 
@@ -723,6 +732,15 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteConvoTarget}
+        title="Delete conversation"
+        message="This will permanently delete this conversation and all its messages. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteConversation}
+        onCancel={() => setDeleteConvoTarget(null)}
+      />
     </div>
   );
 }
