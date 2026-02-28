@@ -54,6 +54,10 @@ async def use_template(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Check plan limits before creating workflow from template
+    from app.services.plan_limits import check_can_create_workflow
+    check_can_create_workflow(current_user, db)
+    
     template = db.query(Template).filter(Template.id == template_id).first()
     
     if not template:
