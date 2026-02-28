@@ -311,11 +311,17 @@ async def chat_execution(
     # Use agentic chat with execution context injected, collecting SSE events into a single response
     enriched_message = f"[EXECUTION CONTEXT for run {execution_id}]\n{exec_context}\n[END CONTEXT]\n\nUser question: {request.message}"
     
-    # Create a temporary conversation for this execution chat
-    convo = ChatConversation(user_id=current_user.id, title=f"Execution {execution_id[:8]}")
-    db.add(convo)
-    db.commit()
-    db.refresh(convo)
+    # Create a conversation for this execution chat (reuse if one exists for this execution)
+    from app.models.chat import ChatMessage as ChatMessageModel
+    convo = db.query(ChatConversation).filter(
+        ChatConversation.user_id == current_user.id,
+        ChatConversation.title == f"Execution {execution_id[:8]}"
+    ).first()
+    if not convo:
+        convo = ChatConversation(user_id=current_user.id, title=f"Execution {execution_id[:8]}")
+        db.add(convo)
+        db.commit()
+        db.refresh(convo)
     
     # Collect the full response from the agentic stream
     full_response = ""
@@ -329,9 +335,5 @@ async def chat_execution(
         import traceback
         print(f"[Execution Chat] Error: {e}\n{traceback.format_exc()}")
         full_response = f"Sorry, I encountered an error: {str(e)}"
-    
-    # Clean up the temporary conversation
-    db.delete(convo)
-    db.commit()
     
     return {"response": full_response or "I couldn't generate a response. Please try again.", "context_type": "execution"}
