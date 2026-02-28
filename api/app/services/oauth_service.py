@@ -33,7 +33,7 @@ OAUTH_CONFIGS = {
         "client_secret": settings.slack_client_secret or "",
         "auth_url": "https://slack.com/oauth/v2/authorize",
         "token_url": "https://slack.com/api/oauth.v2.access",
-        "scopes": ["channels:read", "chat:write", "users:read"],
+        "scopes": ["channels:read", "chat:write", "chat:write.public", "users:read"],
     },
     "notion": {
         "client_id": settings.notion_client_id or "",
@@ -259,14 +259,15 @@ async def get_user_info(provider: str, access_token: str) -> Optional[dict]:
             if response.status_code == 200:
                 return response.json()
         elif provider == "slack":
+            # For Slack bot tokens, use auth.test instead of users.identity
             response = await client.get(
-                "https://slack.com/api/users.identity",
+                "https://slack.com/api/auth.test",
                 headers={"Authorization": f"Bearer {access_token}"},
             )
             if response.status_code == 200:
                 data = response.json()
                 if data.get("ok"):
-                    return data.get("user")
+                    return {"name": data.get("user", "Slack User"), "id": data.get("user_id"), "team": data.get("team")}
     
     return None
 

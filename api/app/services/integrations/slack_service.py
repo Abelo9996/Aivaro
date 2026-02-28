@@ -46,7 +46,12 @@ class SlackService:
         data = response.json()
         if not data.get("ok"):
             error = data.get("error", "Unknown error")
-            raise Exception(f"Slack API error: {error}")
+            needed = data.get("needed", "")
+            provided = data.get("provided", "")
+            detail = f"Slack API error: {error}"
+            if needed:
+                detail += f" (needed scope: {needed}, provided: {provided})"
+            raise Exception(detail)
         
         return data
     
