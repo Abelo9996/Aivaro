@@ -167,11 +167,7 @@ async def poll_schedule_triggers():
                 def _run_workflow(wf_id, exec_id, trigger_data):
                     run_db = _SessionLocal()
                     try:
-                        wf = run_db.query(Workflow).filter(Workflow.id == wf_id).first()
-                        ex = run_db.query(Execution).filter(Execution.id == exec_id).first()
-                        if not wf or not ex:
-                            return None
-                        runner = WorkflowRunner(workflow=wf, execution=ex, db=run_db)
+                        runner = WorkflowRunner(run_db, exec_id)
                         result = runner.run(trigger_data=trigger_data)
                         return result.status
                     except Exception as e:
