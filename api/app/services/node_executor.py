@@ -12,7 +12,7 @@ from app.utils.timezone import now_local, parse_datetime, format_iso, get_defaul
 class NodeExecutor:
     """Executes workflow nodes with real or mock integrations."""
     
-    def __init__(self, connections: Optional[dict] = None):
+    def __init__(self, connections: Optional[dict] = None, user_id: Optional[str] = None, db=None):
         """
         Initialize with user's connections.
         connections should be a dict like:
@@ -22,6 +22,8 @@ class NodeExecutor:
         }
         """
         self.connections = connections or {}
+        self.user_id = user_id
+        self.db = db
         self._google_service = None
         self._slack_service = None
     
@@ -246,6 +248,7 @@ class NodeExecutor:
         to = params.get("to", input_data.get("email", ""))
         subject = params.get("subject", "No subject")
         body = params.get("body", "")
+        personalize = params.get("personalize", False)
         
         # Interpolate variables
         subject = _interpolate(subject, input_data)
@@ -255,6 +258,18 @@ class NodeExecutor:
         logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending email\n"
         logs += f"  To: {to}\n"
         logs += f"  Subject: {subject}\n"
+        
+        # Personalize message using Knowledge Base
+        if personalize and self.user_id and self.db:
+            try:
+                from app.services.message_personalizer import personalize_message
+                recipient_ctx = params.get("recipient_context", "")
+                style_instructions = params.get("style_instructions", "")
+                body = await personalize_message(body, "email_body", self.user_id, self.db, recipient_context=recipient_ctx, additional_instructions=style_instructions)
+                subject = await personalize_message(subject, "email_subject", self.user_id, self.db, recipient_context=recipient_ctx)
+                logs += "  ✨ Message personalized using Knowledge Base\n"
+            except Exception as e:
+                logs += f"  ⚠️ Personalization failed (using original): {str(e)}\n"
         
         if is_test:
             logs += "  Email NOT sent (test mode)\n"
@@ -801,6 +816,7 @@ Extract: {fields_to_extract}"""
         """Send message to Slack."""
         channel = params.get("channel", "#general")
         message = params.get("message", "")
+        personalize = params.get("personalize", False)
         
         message = _interpolate(message, input_data)
         channel = _interpolate(channel, input_data)
@@ -808,6 +824,15 @@ Extract: {fields_to_extract}"""
         logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending Slack message\n"
         logs += f"  Channel: {channel}\n"
         logs += f"  Message: {message[:100]}{'...' if len(message) > 100 else ''}\n"
+        
+        # Personalize message
+        if personalize and self.user_id and self.db:
+            try:
+                from app.services.message_personalizer import personalize_message
+                message = await personalize_message(message, "slack", self.user_id, self.db, recipient_context=params.get("recipient_context", ""))
+                logs += "  ✨ Message personalized\n"
+            except Exception as e:
+                logs += f"  ⚠️ Personalization failed: {str(e)}\n"
         
         if is_test:
             logs += "  Message NOT sent (test mode)\n"
@@ -2338,6 +2363,7 @@ Extract: {fields_to_extract}"""
         to = params.get("to", input_data.get("phone", ""))
         body = params.get("body", "")
         from_number = params.get("from_number", None)
+        personalize = params.get("personalize", False)
         
         to = _interpolate(to, input_data)
         body = _interpolate(body, input_data)
@@ -2345,6 +2371,15 @@ Extract: {fields_to_extract}"""
         logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending SMS via Twilio\n"
         logs += f"  To: {to}\n"
         logs += f"  Body: {body[:50]}{'...' if len(body) > 50 else ''}\n"
+        
+        # Personalize message
+        if personalize and self.user_id and self.db:
+            try:
+                from app.services.message_personalizer import personalize_message
+                body = await personalize_message(body, "sms", self.user_id, self.db, recipient_context=params.get("recipient_context", ""))
+                logs += "  ✨ Message personalized\n"
+            except Exception as e:
+                logs += f"  ⚠️ Personalization failed: {str(e)}\n"
         
         if is_test:
             logs += "  SMS NOT sent (test mode)\n"
@@ -2376,6 +2411,7 @@ Extract: {fields_to_extract}"""
         to = params.get("to", input_data.get("phone", ""))
         body = params.get("body", "")
         media_url = params.get("media_url", None)
+        personalize = params.get("personalize", False)
         
         to = _interpolate(to, input_data)
         body = _interpolate(body, input_data)
@@ -2383,6 +2419,15 @@ Extract: {fields_to_extract}"""
         logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending WhatsApp via Twilio\n"
         logs += f"  To: {to}\n"
         logs += f"  Body: {body[:50]}{'...' if len(body) > 50 else ''}\n"
+        
+        # Personalize message
+        if personalize and self.user_id and self.db:
+            try:
+                from app.services.message_personalizer import personalize_message
+                body = await personalize_message(body, "whatsapp", self.user_id, self.db, recipient_context=params.get("recipient_context", ""))
+                logs += "  ✨ Message personalized\n"
+            except Exception as e:
+                logs += f"  ⚠️ Personalization failed: {str(e)}\n"
         
         if is_test:
             logs += "  WhatsApp NOT sent (test mode)\n"
@@ -2790,10 +2835,12 @@ def execute_node(
     parameters: dict[str, Any],
     input_data: dict[str, Any],
     is_test: bool = False,
-    connections: Optional[dict] = None
+    connections: Optional[dict] = None,
+    user_id: Optional[str] = None,
+    db=None,
 ) -> dict[str, Any]:
     """Execute a single node (sync wrapper for backward compatibility)."""
-    executor = NodeExecutor(connections)
+    executor = NodeExecutor(connections, user_id=user_id, db=db)
     
     # Check if we're already in an async context
     try:

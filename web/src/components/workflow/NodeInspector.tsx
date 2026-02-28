@@ -434,6 +434,34 @@ export default function NodeInspector({
           </div>
         ))}
 
+        {/* Personalize Toggle - show for outbound communication nodes */}
+        {['send_email', 'twilio_send_sms', 'twilio_send_whatsapp', 'send_slack'].includes(nodeType) && (
+          <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-purple-900">✨ Personalize Message</div>
+                <div className="text-xs text-purple-700 mt-0.5">AI rewrites messages in your business&apos;s voice using your Knowledge Base</div>
+              </div>
+              <button
+                onClick={() => {
+                  const params = node.data.config || {};
+                  const newVal = !params.personalize;
+                  onUpdate(node.id, { config: { ...params, personalize: newVal } });
+                }}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  (node.data.config || {}).personalize ? 'bg-purple-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    (node.data.config || {}).personalize ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Approval Toggle - show for non-trigger, non-approval nodes */}
         {!nodeType.startsWith('start_') && nodeType !== 'approval' && nodeType !== 'delay' && nodeType !== 'condition' && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-lg">

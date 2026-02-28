@@ -896,6 +896,10 @@ def _build_node_params(tool_name: str, args: dict) -> dict:
     if tool_name.startswith(("calendly_", "notion_", "mailchimp_")):
         return args
 
+    # Enable personalization for all outbound communication from agent tasks
+    if tool_name in ("send_email", "send_sms", "send_whatsapp", "send_slack_message", "send_slack_dm"):
+        args["personalize"] = True
+
     return args
 
 
@@ -1008,6 +1012,7 @@ RULES:
 10. When sending confirmations or reminders, be professional and friendly.
 11. DO NOT call tools that are unavailable - escalate instead.
 12. In TEST MODE, tools simulate actions without actually sending. A result with "test_mode": true and success: true means the action was validated and WOULD work in production. Do NOT retry — move on to the next step.
+13. COMMUNICATION STYLE: When composing any outbound message (email, SMS, WhatsApp, Slack), write it in the business owner's natural voice based on the knowledge base. Messages will be automatically personalized, but you should STILL write a good first draft that captures the right intent, tone, and details. Don't write robotic templates — write like a human would.
 {context_block}
 {knowledge_context}"""
 
@@ -1068,7 +1073,7 @@ class AgentExecutor:
         """
         # Initialize
         creds = self._load_connections()
-        self.node_executor = NodeExecutor(connections=creds)
+        self.node_executor = NodeExecutor(connections=creds, user_id=str(self.user.id), db=self.db)
 
         try:
             async for event in self._agent_loop(goal, context):

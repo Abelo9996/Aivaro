@@ -177,7 +177,9 @@ class WorkflowRunner:
                 parameters=node.get("parameters", {}),
                 input_data=input_data,
                 is_test=self.execution.is_test,
-                connections=self.connections
+                connections=self.connections,
+                user_id=str(self.workflow.user_id),
+                db=self.db,
             )
         except Exception as e:
             import traceback
@@ -416,7 +418,9 @@ class WorkflowRunner:
             parameters=node.get("parameters", {}),
             input_data=exec_node.input_data,
             is_test=self.execution.is_test,
-            connections=self.connections
+            connections=self.connections,
+            user_id=str(self.workflow.user_id),
+            db=self.db,
         )
         
         exec_node.output_data = result.get("output", {})

@@ -1061,6 +1061,14 @@ APPROVAL STEPS:
 
 INTEGRATION-SPECIFIC RULES (always follow these when creating workflows):
 
+**Message Personalization:**
+- All outbound communication nodes (send_email, twilio_send_sms, twilio_send_whatsapp, send_slack) support a "personalize" parameter.
+- When personalize=true, the message is rewritten by AI to match the business's voice from their Knowledge Base before sending.
+- For agent tasks (run_agent_task), personalization is ALWAYS enabled automatically.
+- For workflows, set personalize=true on send_email/SMS/WhatsApp nodes when the user wants natural-sounding messages.
+- Tell the user: "Messages will be personalized to match your business's communication style."
+- If the user says messages sound too robotic or template-like, enable personalization on those nodes.
+
 **Gmail (email):**
 - ai_reply ONLY generates text — it does NOT send. Always follow ai_reply with send_email.
 - Pattern: start_email → ai_reply → send_email(to={{from}}, subject="Re: {{subject}}", body="{{ai_response}}")
