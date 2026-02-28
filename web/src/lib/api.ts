@@ -52,7 +52,7 @@ class ApiClient {
 
   // Auth
   async signup(email: string, password: string, fullName?: string) {
-    return this.request<{ access_token: string; user: any }>('/api/auth/signup', {
+    return this.request<{ access_token: string; user: any; requires_verification?: boolean; email?: string; message?: string }>('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, full_name: fullName }),
     });
