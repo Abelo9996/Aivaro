@@ -4,6 +4,8 @@ export interface User {
   full_name?: string;
   business_type?: string;
   onboarding_completed: boolean;
+  email_verified?: boolean;
+  plan?: string;
   created_at: string;
 }
 

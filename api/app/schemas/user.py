@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     business_type: Optional[str]
     onboarding_completed: bool
+    email_verified: Optional[bool] = True
     plan: Optional[str] = "trial"
     trial_days_left: Optional[int] = None
     created_at: datetime

@@ -57,6 +57,15 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE executions ADD COLUMN error TEXT"))
             conn.commit()
 
+        user_columns2 = [c["name"] for c in inspector.get_columns("users")]
+        if "email_verified" not in user_columns2:
+            logger.info("[migration] Adding email verification columns to users")
+            conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN verification_token VARCHAR"))
+            # Mark existing users as verified (they signed up before this feature)
+            conn.execute(text("UPDATE users SET email_verified = TRUE WHERE email_verified IS NULL OR email_verified = FALSE"))
+            conn.commit()
+
 try:
     _run_migrations()
 except Exception as e:

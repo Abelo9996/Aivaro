@@ -38,6 +38,8 @@ class User(Base):
     plan = Column(String, default="trial")  # trial, starter, growth, pro
     trial_started_at = Column(DateTime, default=datetime.utcnow)
     total_runs_used = Column(Integer, default=0)
+    email_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

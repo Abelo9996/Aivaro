@@ -61,6 +61,22 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         )
     
     user = create_user(db, user_data)
+    
+    # Generate verification token and send email
+    from app.services.email_verification import generate_verification_token, send_verification_email
+    token = generate_verification_token()
+    user.verification_token = token
+    user.email_verified = False
+    db.commit()
+    
+    email_sent = send_verification_email(user.email, user.full_name, token)
+    
+    if not email_sent:
+        # If SMTP not configured, auto-verify (dev/fallback mode)
+        user.email_verified = True
+        user.verification_token = None
+        db.commit()
+    
     access_token = create_access_token(
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
@@ -70,6 +86,41 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         access_token=access_token,
         user=UserResponse.model_validate(user)
     )
+
+
+@router.get("/verify")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """Verify a user's email address via token."""
+    user = db.query(User).filter(User.verification_token == token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
+    
+    user.email_verified = True
+    user.verification_token = None
+    db.commit()
+    
+    return {"message": "Email verified successfully", "email": user.email}
+
+
+@router.post("/resend-verification")
+async def resend_verification(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Resend verification email."""
+    if current_user.email_verified:
+        return {"message": "Email already verified"}
+    
+    from app.services.email_verification import generate_verification_token, send_verification_email
+    token = generate_verification_token()
+    current_user.verification_token = token
+    db.commit()
+    
+    sent = send_verification_email(current_user.email, current_user.full_name, token)
+    if not sent:
+        raise HTTPException(status_code=500, detail="Failed to send verification email. Please try again later.")
+    
+    return {"message": "Verification email sent"}
 
 
 @router.post("/login", response_model=Token)
