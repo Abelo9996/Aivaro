@@ -303,5 +303,30 @@ async def chat_execution(
     if not workflow or workflow.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     history = [{"role": m.role, "content": m.content} for m in request.history] if request.history else None
-    response = await chat_about_execution(execution=execution, workflow=workflow, user_message=request.message, chat_history=history)
-    return {"response": response, "context_type": "execution"}
+    
+    # Build execution context and prepend to user message
+    from app.services.chat_service import build_execution_context
+    exec_context = build_execution_context(execution, workflow)
+    
+    # Use agentic chat with execution context injected, collecting SSE events into a single response
+    enriched_message = f"[EXECUTION CONTEXT for run {execution_id}]\n{exec_context}\n[END CONTEXT]\n\nUser question: {request.message}"
+    
+    # Create a temporary conversation for this execution chat
+    convo = ChatConversation(user_id=current_user.id, title=f"Execution {execution_id[:8]}")
+    db.add(convo)
+    db.commit()
+    db.refresh(convo)
+    
+    # Collect the full response from the agentic stream
+    full_response = ""
+    async for event in agentic_chat_stream(
+        user=current_user, db=db, user_message=enriched_message, conversation_id=convo.id
+    ):
+        if event.get("type") == "content":
+            full_response += event.get("text", "")
+    
+    # Clean up the temporary conversation
+    db.delete(convo)
+    db.commit()
+    
+    return {"response": full_response or "I couldn't generate a response. Please try again.", "context_type": "execution"}
