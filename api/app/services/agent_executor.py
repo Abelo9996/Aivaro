@@ -1011,6 +1011,10 @@ async def run_agent_task(
     db.commit()
     db.refresh(execution)
 
+    # Increment run count for plan tracking
+    from app.services.plan_limits import increment_run_count
+    increment_run_count(user, db)
+
     agent = AgentExecutor(db=db, user=user, execution=execution)
 
     async for event in agent.run(goal=goal, context=context):
