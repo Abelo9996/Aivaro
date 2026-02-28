@@ -389,7 +389,7 @@ class ApiClient {
 
   async getKnowledge(category?: string) {
     const params = category ? `?category=${category}` : '';
-    return this.request<any[]>(`/api/knowledge${params}`);
+    return this.request<any[]>(`/api/knowledge/${params}`);
   }
 
   async createKnowledge(data: { category: string; title: string; content: string; priority?: number }) {

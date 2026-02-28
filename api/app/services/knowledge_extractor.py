@@ -62,16 +62,6 @@ def extract_knowledge_from_message(
         import openai
         client = openai.OpenAI(api_key=settings.openai_api_key)
         
-        # Check plan limits before extracting
-        from app.models import User as UserModel
-        user = db.query(UserModel).filter(UserModel.id == user_id).first()
-        if user:
-            limits = user.limits
-            count = db.query(KnowledgeEntry).filter(KnowledgeEntry.user_id == user_id).count()
-            if count >= limits.get("max_knowledge_entries", 3):
-                logger.debug(f"[knowledge-extract] Skipping: user at knowledge limit ({count}/{limits.get('max_knowledge_entries')})")
-                return []
-        
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[

@@ -826,14 +826,6 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
 def _tool_save_knowledge(args: dict, user: User, db: Session) -> str:
     """Save a knowledge entry from chat."""
     from app.models import KnowledgeEntry
-    from app.services.plan_limits import check_can_add_knowledge
-    
-    try:
-        check_can_add_knowledge(user, db)
-    except Exception as e:
-        detail = getattr(e, 'detail', {})
-        msg = detail.get('message', 'Knowledge base limit reached') if isinstance(detail, dict) else str(detail)
-        return json.dumps({"success": False, "error": msg, "code": "knowledge_limit"})
     
     category = args.get("category", "custom")
     title = args.get("title", "").strip()
@@ -1147,23 +1139,21 @@ async def agentic_chat_stream(
     db.commit()
 
     # Auto-extract knowledge from user message (background, non-blocking, own DB session)
-    # Skip for trial users — their limited entries should be intentional, not auto-consumed
-    if not user.is_trial:
-        try:
-            from app.services.knowledge_extractor import extract_knowledge_from_message
-            from app.database import SessionLocal
-            _kb_executor = ThreadPoolExecutor(max_workers=1)
-            
-            def _extract_bg(uid, msg):
-                bg_db = SessionLocal()
-                try:
-                    extract_knowledge_from_message(uid, msg, bg_db)
-                finally:
-                    bg_db.close()
-            
-            asyncio.get_event_loop().run_in_executor(_kb_executor, _extract_bg, user.id, user_message)
-        except Exception:
-            pass  # Never block chat on knowledge extraction failure
+    try:
+        from app.services.knowledge_extractor import extract_knowledge_from_message
+        from app.database import SessionLocal
+        _kb_executor = ThreadPoolExecutor(max_workers=1)
+        
+        def _extract_bg(uid, msg):
+            bg_db = SessionLocal()
+            try:
+                extract_knowledge_from_message(uid, msg, bg_db)
+            finally:
+                bg_db.close()
+        
+        asyncio.get_event_loop().run_in_executor(_kb_executor, _extract_bg, user.id, user_message)
+    except Exception:
+        pass  # Never block chat on knowledge extraction failure
 
     # Auto-title: if conversation has <=1 messages, generate title from first user message
     if conversation_id:

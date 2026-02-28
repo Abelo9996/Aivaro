@@ -49,9 +49,6 @@ async def create_knowledge(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from app.services.plan_limits import check_can_add_knowledge
-    check_can_add_knowledge(current_user, db)
-
     if data.category not in VALID_CATEGORIES:
         raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}")
     
