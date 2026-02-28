@@ -79,13 +79,24 @@ async def poll_email_triggers_task():
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     # Start background email polling task
-    task = asyncio.create_task(poll_email_triggers_task())
+    email_task = asyncio.create_task(poll_email_triggers_task())
     print("[Email Trigger] Background polling started (every 60 seconds)")
+    
+    # Start background schedule polling task
+    from app.services.schedule_trigger_service import poll_schedule_triggers_task
+    schedule_task = asyncio.create_task(poll_schedule_triggers_task())
+    print("[Schedule Trigger] Background polling started (every 60 seconds)")
+    
     yield
     # Cleanup on shutdown
-    task.cancel()
+    email_task.cancel()
+    schedule_task.cancel()
     try:
-        await task
+        await email_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await schedule_task
     except asyncio.CancelledError:
         pass
 
