@@ -114,10 +114,15 @@ async def poll_schedule_triggers():
                 continue
             
             node = schedule_nodes[0]
-            params = node.get("params", node.get("data", {}))
+            params = node.get("parameters", node.get("params", node.get("data", {})))
             
-            if not _should_run_now(params, now):
+            logger.info(f"[Schedule Trigger] Checking workflow '{workflow.name}' (id={workflow.id}), schedule params: {params}")
+            
+            should_run = _should_run_now(params, now)
+            if not should_run:
                 continue
+            
+            logger.info(f"[Schedule Trigger] Time match for workflow '{workflow.name}'!")
             
             # Dedup: don't trigger same workflow twice in same minute window
             freq = params.get("frequency", "daily").lower()
