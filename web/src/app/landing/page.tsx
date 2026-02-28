@@ -207,7 +207,7 @@ function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Aivaro automates your bookings, deposits, reminders, and client communication. Tell it what you need in plain English — or let it handle one-off tasks like an AI assistant. It runs 24/7.
+              Aivaro automates your bookings, deposits, reminders, and client communication. Tell it what you need in plain English, pick a template, or let it handle tasks like an AI assistant. It learns your business and runs 24/7.
             </motion.p>
           </div>
 
@@ -354,8 +354,8 @@ function HowItWorksSection() {
 
   const steps = [
     { number: '1', title: 'Connect your tools', description: 'Gmail, Calendar, Sheets, Stripe, Slack, Twilio, Airtable — one-click OAuth. Takes 30 seconds.', icon: <Zap size={24} /> },
-    { number: '2', title: 'Tell Aivaro what to do', description: 'Describe your workflow in plain English. Aivaro asks the right questions — deposit amounts, email tone, who to notify — then builds it precisely.', icon: <MessageSquare size={24} /> },
-    { number: '3', title: 'It learns & runs 24/7', description: 'Aivaro remembers your pricing, policies, and preferences in a knowledge base. Workflows run automatically — you approve what matters.', icon: <TrendingUp size={24} /> },
+    { number: '2', title: 'Tell Aivaro what to do', description: 'Describe your workflow in plain English or pick a ready-made template. Aivaro asks the right questions — deposit amounts, email tone, who to notify — then builds it.', icon: <MessageSquare size={24} /> },
+    { number: '3', title: 'It learns & runs 24/7', description: 'Aivaro stores your pricing, policies, and preferences in a knowledge base. Workflows trigger on emails, schedules, or webhooks — automatically.', icon: <TrendingUp size={24} /> },
   ];
 
   return (
@@ -537,7 +537,7 @@ function WhatItAutomates() {
     { icon: <Mail size={24} />, title: 'Lead → Follow-up → Close', description: 'Auto-reply to inquiries via email or WhatsApp, send follow-up sequences on a schedule, notify your team on Slack when someone is ready to buy.', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' },
     { icon: <DollarSign size={24} />, title: 'Payment → Invoice → Report', description: 'Create Stripe payment links and invoices, log transactions to Sheets or Airtable, get automated profit summaries.', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
     { icon: <Bot size={24} />, title: 'AI Agent → Smart Replies', description: 'AI reads your emails and generates context-aware replies using your business knowledge base. It knows your pricing, policies, and tone.', gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' },
-    { icon: <Bell size={24} />, title: 'Notify → SMS, Email, Slack', description: 'Send notifications through any channel — SMS and WhatsApp via Twilio, email via Gmail, or messages to Slack channels.', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
+    { icon: <Bell size={24} />, title: 'Schedule → Trigger → Notify', description: 'Run workflows on a schedule — daily reports, weekly summaries, monthly invoices. Set the time and timezone, Aivaro handles the rest.', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
     { icon: <MessageSquare size={24} />, title: 'Custom → Whatever You Need', description: 'Describe any business workflow in plain English. Aivaro asks the right questions, builds it precisely, and runs it 24/7.', gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' },
   ];
 
@@ -636,7 +636,7 @@ function PricingSection() {
       price: '$0',
       period: '/7 days',
       description: 'See the magic — no credit card required',
-      features: ['1 active workflow', '10 workflow runs', '3 knowledge entries', 'Core integrations (Gmail, Sheets, Calendar)', 'Email triggers'],
+      features: ['1 active workflow', '10 workflow runs', 'Unlimited knowledge entries', 'Core integrations (Gmail, Sheets, Calendar)', 'Email & schedule triggers', 'Template library'],
       limitations: ['No AI agent tasks', 'No file import', 'No Stripe integration'],
       cta: 'Start Free Trial',
       popular: false,
@@ -646,7 +646,7 @@ function PricingSection() {
       price: null,
       period: '',
       description: 'For growing businesses automating more',
-      features: ['3 users', '10 active workflows', 'Unlimited runs', 'All integrations (incl. Stripe)', 'AI agent tasks', 'File import to knowledge base', 'Approval workflows', 'Priority support'],
+      features: ['3 users', '10 active workflows', 'Unlimited runs', 'All integrations (incl. Stripe, Twilio)', 'AI agent tasks', 'File import to knowledge base', 'Scheduled & email triggers', 'Template library', 'Approval workflows', 'Priority support'],
       limitations: [],
       cta: 'Contact Us',
       popular: true,
@@ -656,7 +656,7 @@ function PricingSection() {
       price: null,
       period: '',
       description: 'For teams scaling operations',
-      features: ['10 users', 'Unlimited workflows', 'Unlimited runs', 'All integrations', 'Advanced analytics', 'Dedicated support', 'Custom triggers'],
+      features: ['10 users', 'Unlimited workflows', 'Unlimited runs', 'All integrations', 'Advanced analytics', 'Dedicated support', 'Custom triggers', 'Webhook triggers'],
       limitations: [],
       cta: 'Contact Us',
       popular: false,
@@ -786,7 +786,7 @@ function CTASection() {
             Your next missed lead costs more than trying Aivaro
           </h2>
           <p style={{ fontSize: isMobile ? 16 : 18, color: styles.textSecondary, marginBottom: 28, maxWidth: 550, margin: '0 auto 28px' }}>
-            Free for 14 days. First workflow running in 10 minutes. Cancel anytime.
+            Free for 7 days. First workflow running in 10 minutes. No credit card required.
           </p>
           <Link href="/signup" style={{ textDecoration: 'none' }}>
             <motion.div

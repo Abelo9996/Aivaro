@@ -208,10 +208,12 @@ export default function DemoPage() {
             gap: 20
           }}>
             {[
-              { title: 'AI Workflow Generation', desc: 'Describe your workflow in plain English and watch AI build it instantly' },
-              { title: 'Email-Triggered Automation', desc: 'See how workflows trigger automatically when matching emails arrive' },
-              { title: 'Google & Stripe Integration', desc: 'One-click OAuth connections to Gmail, Sheets, Calendar, and Stripe' },
-              { title: 'Human Approval Guardrails', desc: 'Sensitive actions pause for your approval before executing' },
+              { title: 'AI Workflow Generation', desc: 'Describe your workflow in plain English and watch AI build it instantly with the right integrations' },
+              { title: 'Template Library', desc: 'Start from pre-built templates for common workflows — booking, payments, follow-ups — and customize in seconds' },
+              { title: 'Knowledge Base', desc: 'Aivaro learns your pricing, policies, and preferences to generate context-aware emails and replies' },
+              { title: 'Scheduled & Email Triggers', desc: 'Workflows trigger automatically on schedules (daily, weekly, monthly) or when matching emails arrive' },
+              { title: 'Multi-Channel Notifications', desc: 'Send via Gmail, Twilio SMS, WhatsApp, Slack — all configured with one-click OAuth' },
+              { title: 'Human Approval Guardrails', desc: 'Sensitive actions like payments and emails pause for your approval before executing' },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -253,7 +255,7 @@ export default function DemoPage() {
             Ready to Automate Your Business?
           </h2>
           <p style={{ fontSize: 16, color: styles.textSecondary, marginBottom: 24 }}>
-            Start building your first workflow in minutes. No credit card required.
+            Start your 7-day free trial and build your first workflow in minutes. No credit card required.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/signup" style={{ textDecoration: 'none' }}>
