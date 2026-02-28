@@ -19,6 +19,27 @@ def check_trial_active(user: User):
         )
 
 
+def check_can_create_workflow(user: User, db: Session):
+    """Check if user can create another workflow (not just activate)."""
+    check_trial_active(user)
+    limits = user.limits
+    total_count = db.query(Workflow).filter(
+        Workflow.user_id == user.id,
+        Workflow.is_agent_task == False,
+    ).count()
+    if total_count >= limits["max_active_workflows"]:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "workflow_limit",
+                "message": f"Free trial allows {limits['max_active_workflows']} workflow. Upgrade for unlimited workflows.",
+                "limit": limits["max_active_workflows"],
+                "current": total_count,
+                "plan": user.plan,
+            },
+        )
+
+
 def check_can_activate_workflow(user: User, db: Session):
     """Check if user can activate another workflow."""
     check_trial_active(user)

@@ -118,6 +118,27 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "modify_workflow",
+            "description": "Modify an existing workflow by regenerating it with an updated description. Use this instead of create_workflow when the user wants to change, fix, or update a workflow that already exists. The existing workflow's nodes/edges will be replaced.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "workflow_name": {
+                        "type": "string",
+                        "description": "Name or partial name of the existing workflow to modify"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Updated description of what the workflow should do (full spec, not just the change)"
+                    }
+                },
+                "required": ["workflow_name", "description"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_webhook_url",
             "description": "Get the webhook/form URL for a workflow that has a form or webhook trigger. Use this when users ask how to connect their form, how the trigger works, or how to test a workflow.",
             "parameters": {
@@ -165,7 +186,7 @@ TOOLS = [
                     },
                     "is_test": {
                         "type": "boolean",
-                        "description": "If true, simulates actions without actually sending emails/SMS/etc. Only set to true if the user explicitly asks to test/simulate. Default false — always execute for real unless told otherwise."
+                        "description": "ONLY set to true if the user explicitly says 'simulate' or 'dry run'. For 'test run', 'give it a test', or 'try it out', keep this FALSE — the user wants real execution with real data, just on-demand rather than waiting for the trigger. Default false."
                     }
                 },
                 "required": ["goal"]
@@ -228,6 +249,7 @@ TOOL_LABELS = {
     "get_webhook_url": "Getting your form/webhook URL",
     "get_step_info": "Looking up step details",
     "run_agent_task": "Running agent task",
+    "modify_workflow": "Updating your workflow",
     "save_knowledge": "Saving to knowledge base",
     "list_knowledge": "Checking knowledge base",
 }
@@ -451,6 +473,8 @@ def execute_tool(tool_name: str, arguments: dict, user: User, db: Session) -> st
         return _tool_toggle_workflow(arguments, user, db, activate=True)
     elif tool_name == "deactivate_workflow":
         return _tool_toggle_workflow(arguments, user, db, activate=False)
+    elif tool_name == "modify_workflow":
+        return _tool_modify_workflow(arguments, user, db)
     elif tool_name == "get_webhook_url":
         return _tool_get_webhook_url(arguments, user, db)
     elif tool_name == "get_step_info":
@@ -466,6 +490,14 @@ def execute_tool(tool_name: str, arguments: dict, user: User, db: Session) -> st
 
 def _tool_create_workflow(args: dict, user: User, db: Session) -> str:
     try:
+        from app.services.plan_limits import check_can_create_workflow
+        try:
+            check_can_create_workflow(user, db)
+        except Exception as e:
+            detail = getattr(e, 'detail', {})
+            msg = detail.get('message', 'Workflow limit reached') if isinstance(detail, dict) else str(detail)
+            return json.dumps({"success": False, "error": msg, "code": "workflow_limit"})
+        
         description = args["description"]
         name = args.get("name", "New Workflow")
         result = generate_workflow_from_prompt(description)
@@ -531,6 +563,72 @@ def _tool_create_workflow(args: dict, user: User, db: Session) -> str:
         })
     except Exception as e:
         logger.error(f"create_workflow error: {e}")
+        return json.dumps({"success": False, "error": str(e)})
+
+
+def _tool_modify_workflow(args: dict, user: User, db: Session) -> str:
+    """Modify an existing workflow by regenerating its nodes/edges."""
+    try:
+        name_query = args.get("workflow_name", "").lower()
+        description = args.get("description", "")
+        if not description:
+            return json.dumps({"success": False, "error": "Description is required."})
+
+        workflows = db.query(Workflow).filter(Workflow.user_id == user.id, Workflow.is_agent_task == False).all()
+        match = next((w for w in workflows if name_query in (w.name or "").lower()), None)
+        if not match:
+            return json.dumps({"error": f"No workflow found matching '{args.get('workflow_name')}'"})
+
+        result = generate_workflow_from_prompt(description)
+        if not result or not result.get("nodes"):
+            return json.dumps({"success": False, "error": "Failed to generate updated workflow."})
+
+        match.nodes = result.get("nodes", [])
+        match.edges = result.get("edges", [])
+        match.description = result.get("summary", description)
+        if result.get("workflowName"):
+            match.name = result["workflowName"]
+        db.commit()
+        db.refresh(match)
+
+        user_connections = _get_user_connections(user, db)
+        steps_with_reqs = []
+        missing_connections = set()
+        for n in result.get("nodes", []):
+            ntype = n.get("type", "")
+            req = NODE_REQUIREMENTS.get(ntype, {"service": None, "description": "Unknown step type"})
+            service = req["service"]
+            connected = service is None or (service in user_connections and user_connections[service].get("connected", False))
+            if service and not connected:
+                missing_connections.add(service)
+            steps_with_reqs.append({
+                "type": ntype,
+                "label": n.get("label", n.get("type", "Step")),
+                "requires": service,
+                "connected": connected,
+                "requirement_description": req["description"],
+            })
+
+        required_services = {NODE_REQUIREMENTS.get(n.get("type", ""), {"service": None})["service"] for n in result.get("nodes", [])} - {None}
+        already_connected = list(required_services - missing_connections)
+
+        return json.dumps({
+            "success": True, "workflow_id": match.id,
+            "workflow_name": match.name, "action": "modified",
+            "node_count": len(result.get("nodes", [])),
+            "summary": result.get("summary", ""),
+            "steps": steps_with_reqs,
+            "missing_connections": list(missing_connections),
+            "already_connected": already_connected,
+            "connection_status": "all_connected" if not missing_connections else "some_missing",
+            "connection_note": (
+                "ALL required tools are already connected."
+                if not missing_connections
+                else f"Missing: {', '.join(missing_connections)}. Already connected: {', '.join(already_connected) or 'none'}."
+            ),
+        })
+    except Exception as e:
+        logger.error(f"modify_workflow error: {e}")
         return json.dumps({"success": False, "error": str(e)})
 
 
@@ -728,6 +826,14 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
 def _tool_save_knowledge(args: dict, user: User, db: Session) -> str:
     """Save a knowledge entry from chat."""
     from app.models import KnowledgeEntry
+    from app.services.plan_limits import check_can_add_knowledge
+    
+    try:
+        check_can_add_knowledge(user, db)
+    except Exception as e:
+        detail = getattr(e, 'detail', {})
+        msg = detail.get('message', 'Knowledge base limit reached') if isinstance(detail, dict) else str(detail)
+        return json.dumps({"success": False, "error": msg, "code": "knowledge_limit"})
     
     category = args.get("category", "custom")
     title = args.get("title", "").strip()
@@ -888,7 +994,7 @@ EXCEPTIONS — skip questions and build immediately ONLY if:
 When someone asks you to DO something right now (send a message, confirm an appointment, follow up with a client), use run_agent_task. The agent will autonomously execute the task using their connected tools.
 
 TWO MODES:
-- **Workflows** (create_workflow): For repeatable automations that run on triggers. "Set up a booking flow." "When I get an email from X, do Y." "Whenever someone fills a form, send a confirmation."
+- **Workflows** (create_workflow / modify_workflow): For repeatable automations that run on triggers. Use create_workflow for new workflows, and modify_workflow when the user wants to change or fix an existing one. NEVER create a second workflow when the user is asking to adjust or fix one you already created — use modify_workflow instead.
 - **Agent tasks** (run_agent_task): For one-off or dynamic tasks that need doing NOW. "Send John a reminder about tomorrow's appointment." "Check my calendar for tomorrow." The agent thinks and acts autonomously, choosing what tools to use at each step.
 - **Knowledge base** (save_knowledge/list_knowledge): When the user shares business info ("we charge $50 per pickup", "our hours are 9-5", "remember that Sarah handles bookings"), save it. When they ask "what do you know about my business?" or "show my knowledge base", list it.
 
@@ -906,6 +1012,7 @@ CHOOSING THE RIGHT MODE:
 
 TEST RUNS:
 - When a user asks to "test" or "run" a workflow they just created, use run_agent_task to execute the same logic the workflow would.
+- CRITICAL: Set is_test=false (the default). "Test run" means "run it now for real" — NOT "simulate with fake data". The user wants to see real results from their real integrations. Only set is_test=true if the user explicitly says "simulate" or "dry run".
 - For email summary workflows: fetch the most recent email, generate a summary, and send it to the specified recipient.
 - For booking workflows: walk through the steps with sample/real data.
 - NEVER say "the workflow is inactive so I can't test it." You CAN test it using the agent.
@@ -917,6 +1024,7 @@ WORKFLOW STATUS ON CREATION:
 - ALWAYS tell the user the workflow is inactive and they need to activate it when ready.
 - Say: "The workflow is **inactive** for now. Once you've reviewed it, head to **Workflows** and activate it to start running."
 - Never leave the user wondering about the status. Be explicit.
+- IMPORTANT: Free trial users can only have 1 workflow. If they already have one, use modify_workflow to update it instead of creating a new one. If you try to create and it fails with workflow_limit, explain the limit and offer to modify the existing workflow.
 
 APPROVAL STEPS:
 - Some workflow steps may have requiresApproval=true (e.g., sending emails, creating payments).
@@ -1136,6 +1244,8 @@ async def agentic_chat_stream(
                 # Add context to label
                 if fn_name == "create_workflow" and fn_args.get("name"):
                     label = f'Creating "{fn_args["name"]}"'
+                elif fn_name == "modify_workflow" and fn_args.get("workflow_name"):
+                    label = f'Updating "{fn_args["workflow_name"]}"'
                 elif fn_name == "activate_workflow" and fn_args.get("workflow_name"):
                     label = f'Activating "{fn_args["workflow_name"]}"'
 
@@ -1222,7 +1332,7 @@ async def agentic_chat_stream(
                     else:
                         detail = ""
                         extra = {}
-                        if fn_name == "create_workflow" and result_data.get("node_count"):
+                        if fn_name in ("create_workflow", "modify_workflow") and result_data.get("node_count"):
                             detail = f'{result_data["node_count"]} steps generated'
                             extra = {
                                 "workflow_name": result_data.get("workflow_name", ""),
