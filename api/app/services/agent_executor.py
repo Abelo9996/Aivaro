@@ -883,6 +883,7 @@ class AgentExecutor:
         self.node_executor: Optional[NodeExecutor] = None
         self.connections_map: dict[str, bool] = {}
         self._step_count = 0
+        self.performed_write_action = False
 
     def _load_connections(self) -> dict:
         """Load user's connection credentials."""
@@ -1105,6 +1106,18 @@ class AgentExecutor:
 
     async def _execute_tool(self, tool_name: str, args: dict) -> dict:
         """Route an agent tool call to the NodeExecutor."""
+        # Read-only tools don't count as "write actions" for billing
+        READ_ONLY_TOOLS = {
+            "list_calendar_events", "list_emails", "get_email", "check_payment",
+            "read_spreadsheet", "list_slack_channels", "airtable_list_records",
+            "airtable_find_record", "calendly_list_events", "calendly_get_event",
+            "notion_search", "notion_query_database", "stripe_get_customer",
+            "wait", "complete_task", "escalate_to_human",
+        }
+        
+        if tool_name not in READ_ONLY_TOOLS:
+            self.performed_write_action = True
+
         node_type = TOOL_TO_NODE_TYPE.get(tool_name)
         if not node_type:
             return {
@@ -1286,10 +1299,15 @@ async def run_agent_task(
     db.refresh(execution)
 
     # Increment run count for plan tracking
-    from app.services.plan_limits import increment_run_count
-    increment_run_count(user, db)
+    # Note: we track this at the end based on whether write actions were taken
+    # Read-only queries (list channels, check calendar) don't count as runs
 
     agent = AgentExecutor(db=db, user=user, execution=execution)
 
     async for event in agent.run(goal=goal, context=context):
         yield event
+    
+    # Only increment if the agent performed write actions
+    if agent.performed_write_action:
+        from app.services.plan_limits import increment_run_count
+        increment_run_count(user, db)
