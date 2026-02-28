@@ -26,6 +26,7 @@ import {
 import { api } from '@/lib/api';
 import type { Template } from '@/types';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import TemplateSetupWizard from '@/components/ui/TemplateSetupWizard';
 
 // Map categories and template names to appropriate icons
 const getTemplateIcon = (template: Template): LucideIcon => {
@@ -93,6 +94,12 @@ export default function TemplatesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [creatingId, setCreatingId] = useState<string | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [setupWizard, setSetupWizard] = useState<{
+    open: boolean;
+    template: Template | null;
+    fields: Array<{ key: string; label: string; type: string; placeholder: string; required: boolean }>;
+    loading: boolean;
+  }>({ open: false, template: null, fields: [], loading: false });
   const router = useRouter();
 
   useEffect(() => {
@@ -121,13 +128,37 @@ export default function TemplatesPage() {
   const handleUseTemplate = async (template: Template) => {
     try {
       setCreatingId(template.id);
-      const workflow = await api.createWorkflowFromTemplate(template.id);
-      router.push(`/app/workflows/${workflow.id}`);
+      // Fetch setup fields for this template
+      const { fields } = await api.getTemplateSetupFields(template.id);
+      if (fields && fields.length > 0) {
+        // Show setup wizard
+        setSetupWizard({ open: true, template, fields, loading: false });
+        setCreatingId(null);
+      } else {
+        // No configurable fields — create directly
+        const workflow = await api.createWorkflowFromTemplate(template.id);
+        router.push(`/app/workflows/${workflow.id}`);
+      }
     } catch (err: any) {
       console.error('Failed to create workflow from template:', err);
       const message = err?.detail?.message || err?.message || 'Failed to create workflow. Please try again.';
       setLimitError(message);
       setCreatingId(null);
+    }
+  };
+
+  const handleWizardSubmit = async (values: Record<string, string>) => {
+    if (!setupWizard.template) return;
+    try {
+      setSetupWizard(prev => ({ ...prev, loading: true }));
+      const workflow = await api.createWorkflowFromTemplate(setupWizard.template.id, values);
+      setSetupWizard({ open: false, template: null, fields: [], loading: false });
+      router.push(`/app/workflows/${workflow.id}`);
+    } catch (err: any) {
+      console.error('Failed to create workflow from template:', err);
+      const message = err?.detail?.message || err?.message || 'Failed to create workflow. Please try again.';
+      setSetupWizard({ open: false, template: null, fields: [], loading: false });
+      setLimitError(message);
     }
   };
 
@@ -260,6 +291,15 @@ export default function TemplatesPage() {
           Create Custom Workflow
         </Link>
       </div>
+
+      <TemplateSetupWizard
+        open={setupWizard.open}
+        templateName={setupWizard.template?.name || ''}
+        fields={setupWizard.fields}
+        loading={setupWizard.loading}
+        onSubmit={handleWizardSubmit}
+        onCancel={() => setSetupWizard({ open: false, template: null, fields: [], loading: false })}
+      />
 
       <ConfirmDialog
         open={!!limitError}

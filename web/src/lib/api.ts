@@ -245,8 +245,8 @@ class ApiClient {
     };
   }
 
-  async createWorkflowFromTemplate(templateId: string) {
-    return this.useTemplate(templateId);
+  async createWorkflowFromTemplate(templateId: string, values?: Record<string, string>) {
+    return this.useTemplate(templateId, values);
   }
 
   // Templates aliases for cleaner API
@@ -299,10 +299,15 @@ class ApiClient {
     return this.request<any>(`/api/templates/${id}`);
   }
 
-  async useTemplate(id: string) {
+  async useTemplate(id: string, values?: Record<string, string>) {
     return this.request<any>(`/api/templates/${id}/use`, {
       method: 'POST',
+      body: JSON.stringify({ values: values || null }),
     });
+  }
+
+  async getTemplateSetupFields(id: string) {
+    return this.request<{ template_id: string; template_name: string; fields: Array<{ key: string; label: string; type: string; placeholder: string; required: boolean }> }>(`/api/templates/${id}/setup-fields`);
   }
 
   // AI
