@@ -53,10 +53,10 @@ def _should_run_now(node_params: dict, now: datetime) -> bool:
     except (ValueError, IndexError):
         return False
     
-    # Check if we're within 2 minutes of the target time
+    # Check if we're within 90 seconds of the target time
     target_today = now_local.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
     diff = abs((now_local - target_today).total_seconds())
-    if diff > 120:  # 2-minute window
+    if diff > 90:  # 90-second window (poll interval is 60s)
         return False
     
     # Check frequency-specific conditions
@@ -124,12 +124,14 @@ async def poll_schedule_triggers():
             
             logger.info(f"[Schedule Trigger] Time match for workflow '{workflow.name}'!")
             
-            # Dedup: don't trigger same workflow twice in same minute window
+            # Dedup: don't trigger same workflow twice for same scheduled time
             freq = params.get("frequency", "daily").lower()
+            time_str = params.get("time", "")
             if freq == "once":
-                dedup_key = f"{workflow.id}:once:{params.get('date', '')}:{params.get('time', '')}"
+                dedup_key = f"{workflow.id}:once:{params.get('date', '')}:{time_str}"
             else:
-                dedup_key = f"{workflow.id}:{now.strftime('%Y-%m-%d-%H-%M')}"
+                # Key by workflow + date + scheduled time (not current time)
+                dedup_key = f"{workflow.id}:{now.strftime('%Y-%m-%d')}:{time_str}"
             
             if dedup_key in _last_triggered:
                 continue
@@ -141,13 +143,15 @@ async def poll_schedule_triggers():
                 for k in keys[:500]:
                     del _last_triggered[k]
             
-            # Run the workflow
+            # Run the workflow in a thread to avoid blocking the event loop
             try:
                 user = db.query(User).filter(User.id == workflow.user_id).first()
                 if not user:
                     continue
                 
                 from app.services.workflow_runner import WorkflowRunner
+                from concurrent.futures import ThreadPoolExecutor
+                from app.database import SessionLocal as _SessionLocal
                 
                 execution = Execution(
                     workflow_id=workflow.id,
@@ -159,19 +163,45 @@ async def poll_schedule_triggers():
                 db.commit()
                 db.refresh(execution)
                 
-                runner = WorkflowRunner(
-                    workflow=workflow,
-                    execution=execution,
-                    db=db,
-                )
-                result = runner.run(trigger_data={"trigger": "schedule", "time": now.isoformat()})
+                # Run in a separate thread with its own DB session to avoid blocking
+                def _run_workflow(wf_id, exec_id, trigger_data):
+                    run_db = _SessionLocal()
+                    try:
+                        wf = run_db.query(Workflow).filter(Workflow.id == wf_id).first()
+                        ex = run_db.query(Execution).filter(Execution.id == exec_id).first()
+                        if not wf or not ex:
+                            return None
+                        runner = WorkflowRunner(workflow=wf, execution=ex, db=run_db)
+                        result = runner.run(trigger_data=trigger_data)
+                        return result.status
+                    except Exception as e:
+                        logger.error(f"[Schedule Trigger] Thread error for workflow {wf_id}: {e}")
+                        # Mark execution as failed
+                        try:
+                            ex = run_db.query(Execution).filter(Execution.id == exec_id).first()
+                            if ex and ex.status == "running":
+                                ex.status = "failed"
+                                ex.error = str(e)
+                                run_db.commit()
+                        except Exception:
+                            pass
+                        return "failed"
+                    finally:
+                        run_db.close()
                 
-                logger.info(f"[Schedule Trigger] Ran workflow '{workflow.name}' (id={workflow.id}) -> status={result.status}")
+                trigger_data = {"trigger": "schedule", "time": now.isoformat()}
+                loop = asyncio.get_event_loop()
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    status = await loop.run_in_executor(
+                        pool, _run_workflow, workflow.id, execution.id, trigger_data
+                    )
+                
+                logger.info(f"[Schedule Trigger] Ran workflow '{workflow.name}' (id={workflow.id}) -> status={status}")
                 triggered.append({
                     "workflow_id": workflow.id,
                     "workflow_name": workflow.name,
                     "execution_id": execution.id,
-                    "status": result.status,
+                    "status": status,
                 })
                 
                 # If frequency is "once", deactivate the workflow after running
