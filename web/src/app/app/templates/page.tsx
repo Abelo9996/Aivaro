@@ -97,7 +97,7 @@ export default function TemplatesPage() {
   const [setupWizard, setSetupWizard] = useState<{
     open: boolean;
     template: Template | null;
-    fields: Array<{ key: string; node_id: string | null; node_type: string | null; node_label: string | null; param_key: string; label: string; type: string; placeholder: string; required: boolean; options?: string[] | null; current_value?: string }>;
+    fields: any[];
     loading: boolean;
   }>({ open: false, template: null, fields: [], loading: false });
   const router = useRouter();
