@@ -425,6 +425,21 @@ AGENT_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "calendly_create_link",
+            "description": "Create a single-use Calendly scheduling link. Use when the user wants to send someone a booking link.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "event_type_uuid": {"type": "string", "description": "Calendly event type UUID"},
+                    "max_event_count": {"type": "integer", "description": "Max uses for the link (default 1)"},
+                },
+                "required": ["event_type_uuid"],
+            },
+        },
+    },
     # --- Notion tools ---
     {
         "type": "function",
@@ -473,6 +488,21 @@ AGENT_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "notion_update_page",
+            "description": "Update an existing Notion page's properties.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page_id": {"type": "string", "description": "Notion page ID to update"},
+                    "properties": {"type": "object", "description": "Property name -> value pairs to update", "additionalProperties": True},
+                },
+                "required": ["page_id"],
+            },
+        },
+    },
     # --- Mailchimp tools ---
     {
         "type": "function",
@@ -489,6 +519,87 @@ AGENT_TOOLS = [
                     "status": {"type": "string", "enum": ["subscribed", "pending", "unsubscribed"], "description": "Subscription status (default: subscribed)"},
                 },
                 "required": ["list_id", "email"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_update_subscriber",
+            "description": "Update a subscriber's info or status in a Mailchimp audience.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "list_id": {"type": "string", "description": "Mailchimp audience/list ID"},
+                    "email": {"type": "string", "description": "Subscriber email to update"},
+                    "status": {"type": "string", "enum": ["subscribed", "pending", "unsubscribed", "cleaned"], "description": "New status"},
+                    "first_name": {"type": "string", "description": "Updated first name"},
+                    "last_name": {"type": "string", "description": "Updated last name"},
+                },
+                "required": ["list_id", "email"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_add_tags",
+            "description": "Add tags to a subscriber in Mailchimp.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "list_id": {"type": "string", "description": "Mailchimp audience/list ID"},
+                    "email": {"type": "string", "description": "Subscriber email"},
+                    "tags": {"type": "string", "description": "Comma-separated tags to add"},
+                },
+                "required": ["list_id", "email", "tags"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_send_campaign",
+            "description": "Create and send a Mailchimp email campaign to an audience.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "list_id": {"type": "string", "description": "Mailchimp audience/list ID"},
+                    "subject": {"type": "string", "description": "Email subject line"},
+                    "from_name": {"type": "string", "description": "Sender name"},
+                    "reply_to": {"type": "string", "description": "Reply-to email address"},
+                    "html_content": {"type": "string", "description": "HTML email content"},
+                },
+                "required": ["list_id", "subject", "from_name", "reply_to", "html_content"],
+            },
+        },
+    },
+    # --- Stripe additional tools ---
+    {
+        "type": "function",
+        "function": {
+            "name": "stripe_get_customer",
+            "description": "Look up a Stripe customer by email. Returns customer details and recent payment history.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_email": {"type": "string", "description": "Customer email to look up"},
+                },
+                "required": ["customer_email"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stripe_send_invoice",
+            "description": "Send an existing Stripe invoice to the customer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "invoice_id": {"type": "string", "description": "Stripe invoice ID (inv_...)"},
+                },
+                "required": ["invoice_id"],
             },
         },
     },
@@ -523,12 +634,20 @@ TOOL_TO_NODE_TYPE = {
     "calendly_list_events": "calendly_list_events",
     "calendly_get_event": "calendly_get_event",
     "calendly_cancel_event": "calendly_cancel_event",
+    "calendly_create_link": "calendly_create_link",
     # Notion
     "notion_search": "notion_search",
     "notion_query_database": "notion_query_database",
     "notion_create_page": "notion_create_page",
+    "notion_update_page": "notion_update_page",
     # Mailchimp
     "mailchimp_add_subscriber": "mailchimp_add_subscriber",
+    "mailchimp_update_subscriber": "mailchimp_update_subscriber",
+    "mailchimp_add_tags": "mailchimp_add_tags",
+    "mailchimp_send_campaign": "mailchimp_send_campaign",
+    # Stripe additional
+    "stripe_get_customer": "stripe_get_customer",
+    "stripe_send_invoice": "stripe_send_invoice",
 }
 
 
@@ -672,10 +791,17 @@ def _build_agent_system_prompt(
         "calendly_list_events": "calendly",
         "calendly_get_event": "calendly",
         "calendly_cancel_event": "calendly",
+        "calendly_create_link": "calendly",
         "notion_search": "notion",
         "notion_query_database": "notion",
         "notion_create_page": "notion",
+        "notion_update_page": "notion",
         "mailchimp_add_subscriber": "mailchimp",
+        "mailchimp_update_subscriber": "mailchimp",
+        "mailchimp_add_tags": "mailchimp",
+        "mailchimp_send_campaign": "mailchimp",
+        "stripe_get_customer": "stripe",
+        "stripe_send_invoice": "stripe",
     }
 
     for tool_name, service in tool_connection_map.items():
