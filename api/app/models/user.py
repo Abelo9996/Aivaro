@@ -40,6 +40,8 @@ class User(Base):
     total_runs_used = Column(Integer, default=0)
     email_verified = Column(Boolean, default=False)
     verification_token = Column(String, nullable=True)
+    password_reset_token = Column(String, nullable=True)
+    password_reset_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

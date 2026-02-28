@@ -66,6 +66,12 @@ def _run_migrations():
             conn.execute(text("UPDATE users SET email_verified = TRUE WHERE email_verified IS NULL OR email_verified = FALSE"))
             conn.commit()
 
+        if "password_reset_token" not in user_columns2:
+            logger.info("[migration] Adding password reset columns to users")
+            conn.execute(text("ALTER TABLE users ADD COLUMN password_reset_token VARCHAR"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP"))
+            conn.commit()
+
 try:
     _run_migrations()
 except Exception as e:

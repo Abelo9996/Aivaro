@@ -339,7 +339,7 @@ export default function LoginPage() {
                 </span>
               </label>
               <Link 
-                href="#"
+                href="/forgot-password"
                 style={{
                   fontSize: '14px',
                   color: colors.primary,

@@ -213,3 +213,89 @@ async def get_usage(
     """Get current plan usage and limits."""
     from app.services.plan_limits import get_usage_summary
     return get_usage_summary(current_user, db)
+
+
+# --- Forgot Password ---
+
+class ForgotPasswordRequest(PydanticBaseModel):
+    email: str
+
+class ResetPasswordRequest(PydanticBaseModel):
+    token: str
+    password: str
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Send a password reset email."""
+    import secrets
+    from datetime import datetime, timedelta
+    from app.services.email_verification import FRONTEND_URL
+    from app.services.integrations.email_service import EmailService
+
+    user = get_user_by_email(db, req.email)
+    # Always return success to avoid email enumeration
+    if not user:
+        return {"message": "If that email is registered, a password reset link has been sent."}
+
+    token = secrets.token_urlsafe(32)
+    user.password_reset_token = token
+    user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+
+    link = f"{FRONTEND_URL}/reset-password?token={token}"
+    name = user.full_name or user.email.split("@")[0]
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #6366f1; font-size: 28px; margin: 0;">Aivaro</h1>
+    <p style="color: #666; margin-top: 4px;">AI Workflow Automation</p>
+  </div>
+  <div style="background: #f9fafb; border-radius: 12px; padding: 32px; margin-bottom: 24px;">
+    <h2 style="margin-top: 0; font-size: 20px;">Reset your password</h2>
+    <p style="line-height: 1.6;">Hi {name}, we received a request to reset your password. Click the button below to choose a new one.</p>
+    <div style="text-align: center; margin: 28px 0;">
+      <a href="{link}" style="background: #6366f1; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
+        Reset Password
+      </a>
+    </div>
+    <p style="font-size: 13px; color: #888; line-height: 1.5;">
+      This link expires in 1 hour. If you didn't request this, you can safely ignore this email.<br>
+      <a href="{link}" style="color: #6366f1; word-break: break-all;">{link}</a>
+    </p>
+  </div>
+</body>
+</html>"""
+
+    text_body = f"Hi {name},\n\nReset your password: {link}\n\nThis link expires in 1 hour. If you didn't request this, ignore this email."
+
+    email_service = EmailService()
+    if email_service.is_configured:
+        try:
+            email_service.send_email(to=user.email, subject="Reset your Aivaro password", body=text_body, html_body=html_body)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"[Password Reset] Failed to send email: {e}")
+
+    return {"message": "If that email is registered, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset password using a valid token."""
+    from datetime import datetime
+    from app.services.auth_service import get_password_hash
+
+    user = db.query(User).filter(User.password_reset_token == req.token).first()
+    if not user or not user.password_reset_expires or user.password_reset_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link. Please request a new one.")
+
+    user.hashed_password = get_password_hash(req.password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.commit()
+
+    return {"message": "Password reset successfully. You can now log in."}
