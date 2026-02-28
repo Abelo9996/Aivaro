@@ -13,7 +13,7 @@ from app.routers.auth import get_current_user
 
 router = APIRouter()
 
-# Variables that are filled at runtime, not by the user during setup
+# Variables that are filled at runtime from trigger data, not by the user during setup
 RUNTIME_VARIABLES = {
     "today", "now", "timestamp", "date_now", "current_date", "current_time",
     "payment_link", "invoice_url", "invoice_link", "booking_link", "onboarding_link",
@@ -22,64 +22,149 @@ RUNTIME_VARIABLES = {
     "from", "subject", "order_id",
 }
 
-# Map variable names to human-friendly labels and field types
-FIELD_CONFIG = {
-    "email": {"label": "Email Address", "type": "email", "placeholder": "customer@example.com"},
-    "customer_email": {"label": "Customer Email", "type": "email", "placeholder": "customer@example.com"},
-    "client_email": {"label": "Client Email", "type": "email", "placeholder": "client@example.com"},
-    "name": {"label": "Customer Name", "type": "text", "placeholder": "John Smith"},
-    "customer_name": {"label": "Customer Name", "type": "text", "placeholder": "John Smith"},
-    "client_name": {"label": "Client Name", "type": "text", "placeholder": "John Smith"},
-    "owner_name": {"label": "Your Name", "type": "text", "placeholder": "Your name"},
-    "business_name": {"label": "Business Name", "type": "text", "placeholder": "Your business name"},
-    "phone": {"label": "Phone Number", "type": "tel", "placeholder": "+1 (555) 000-0000"},
-    "service": {"label": "Service Type", "type": "text", "placeholder": "e.g. Haircut, Consultation"},
-    "location": {"label": "Location", "type": "text", "placeholder": "123 Main St"},
-    "date": {"label": "Date", "type": "date", "placeholder": ""},
-    "appointment_date": {"label": "Appointment Date", "type": "date", "placeholder": ""},
-    "due_date": {"label": "Due Date", "type": "date", "placeholder": ""},
-    "time": {"label": "Time", "type": "time", "placeholder": ""},
-    "appointment_time": {"label": "Appointment Time", "type": "time", "placeholder": ""},
-    "amount": {"label": "Amount ($)", "type": "number", "placeholder": "50.00"},
-    "total": {"label": "Total ($)", "type": "number", "placeholder": "100.00"},
-    "description": {"label": "Description", "type": "textarea", "placeholder": "Brief description..."},
-    "package": {"label": "Package/Plan", "type": "text", "placeholder": "e.g. Basic, Premium"},
-    "source": {"label": "Lead Source", "type": "text", "placeholder": "e.g. Website, Referral"},
-    "shipping_address": {"label": "Shipping Address", "type": "textarea", "placeholder": "Full address"},
-    "item": {"label": "Item", "type": "text", "placeholder": "Product or service name"},
-    "customer": {"label": "Customer", "type": "text", "placeholder": "Customer name"},
-    "payment_method": {"label": "Payment Method", "type": "text", "placeholder": "e.g. Card, Cash"},
+# Node parameters that users should configure during setup, keyed by node_type
+# Each entry: param_key -> {label, type, placeholder, required, group}
+NODE_SETUP_PARAMS = {
+    "append_row": {
+        "spreadsheet": {"label": "Spreadsheet Name or URL", "type": "text", "placeholder": "e.g. My Bookings Sheet", "required": True},
+        "sheet_name": {"label": "Sheet/Tab Name", "type": "text", "placeholder": "Sheet1", "required": False},
+    },
+    "stripe_create_payment_link": {
+        "amount": {"label": "Payment Amount ($)", "type": "number", "placeholder": "50.00", "required": True},
+        "product_name": {"label": "Product/Service Name", "type": "text", "placeholder": "Booking Deposit", "required": False},
+    },
+    "stripe_create_invoice": {
+        "amount": {"label": "Invoice Amount ($)", "type": "number", "placeholder": "100.00", "required": True},
+        "due_days": {"label": "Days Until Due", "type": "number", "placeholder": "30", "required": False},
+        "auto_send": {"label": "Auto-send to Customer?", "type": "select", "options": ["true", "false"], "placeholder": "", "required": False},
+    },
+    "google_calendar_create": {
+        "duration": {"label": "Event Duration (hours)", "type": "number", "placeholder": "1", "required": False},
+        "location": {"label": "Default Location", "type": "text", "placeholder": "123 Main St", "required": False},
+    },
+    "ai_reply": {
+        "tone": {"label": "Reply Tone", "type": "select", "options": ["professional", "friendly", "casual", "formal"], "placeholder": "", "required": False},
+        "context": {"label": "Business Context for AI", "type": "textarea", "placeholder": "Describe your business so the AI can write better replies...", "required": False},
+    },
+    "delay": {
+        "duration": {"label": "Wait Duration", "type": "number", "placeholder": "1", "required": False},
+        "unit": {"label": "Time Unit", "type": "select", "options": ["minutes", "hours", "days"], "placeholder": "", "required": False},
+    },
 }
 
 
 def extract_setup_fields(nodes: list) -> list:
-    """Extract user-configurable {{variables}} from template nodes."""
+    """Extract user-configurable fields from template nodes.
+    
+    Two types of fields:
+    1. Node config params (spreadsheet name, payment amount, etc.)
+    2. Business info {{variables}} used across nodes (business_name, etc.)
+    """
+    fields = []
+    seen_params = set()  # Avoid duplicate fields for same param across nodes
+    
+    # 1. Extract node-level config params
+    for node in nodes:
+        node_type = node.get("type", "")
+        if node_type.startswith("start"):
+            continue
+        
+        param_config = NODE_SETUP_PARAMS.get(node_type, {})
+        if not param_config:
+            continue
+            
+        node_label = node.get("label", node_type)
+        node_params = node.get("parameters", {})
+        
+        for param_key, config in param_config.items():
+            if param_key in seen_params:
+                # For duplicate params (e.g. multiple append_row nodes), make unique
+                field_key = f"{node.get('id', node_type)}__{param_key}"
+            else:
+                field_key = f"{node_type}__{param_key}"
+                seen_params.add(param_key)
+            
+            current_value = str(node_params.get(param_key, ""))
+            # Skip if the current value contains {{variables}} — it's runtime-filled
+            if "{{" in current_value and "}}" in current_value:
+                continue
+                
+            fields.append({
+                "key": field_key,
+                "node_id": node.get("id", ""),
+                "node_type": node_type,
+                "node_label": node_label,
+                "param_key": param_key,
+                "label": config["label"],
+                "type": config["type"],
+                "placeholder": config.get("placeholder", ""),
+                "required": config.get("required", False),
+                "options": config.get("options"),
+                "current_value": current_value if current_value and "{{" not in current_value else "",
+            })
+    
+    # 2. Extract business-level {{variables}} that appear in non-runtime contexts
     all_text = json.dumps(nodes, default=str)
     variables = sorted(set(re.findall(r'\{\{(\w+)\}\}', all_text)))
     
-    fields = []
+    BUSINESS_VAR_CONFIG = {
+        "business_name": {"label": "Business Name", "type": "text", "placeholder": "Your business name"},
+        "owner_name": {"label": "Your Name", "type": "text", "placeholder": "Your name"},
+    }
+    
+    business_vars = {"business_name", "owner_name"}
     for var in variables:
-        if var.lower() in RUNTIME_VARIABLES:
+        if var.lower() in RUNTIME_VARIABLES or var not in business_vars:
             continue
-        config = FIELD_CONFIG.get(var, {})
-        fields.append({
-            "key": var,
+        config = BUSINESS_VAR_CONFIG.get(var, {})
+        fields.insert(0, {  # Business info at the top
+            "key": f"var__{var}",
+            "node_id": None,
+            "node_type": None,
+            "node_label": None,
+            "param_key": var,
             "label": config.get("label", var.replace("_", " ").title()),
             "type": config.get("type", "text"),
             "placeholder": config.get("placeholder", ""),
-            "required": var in ("business_name", "email", "customer_email", "client_email", "name", "customer_name", "client_name"),
+            "required": var == "business_name",
+            "options": None,
+            "current_value": "",
         })
     
     return fields
 
 
-def interpolate_nodes(nodes: list, values: dict) -> list:
-    """Replace {{variables}} in template nodes with user-provided values."""
+def interpolate_nodes(nodes: list, field_values: dict, fields_meta: list) -> list:
+    """Apply setup wizard values to template nodes."""
     nodes_copy = copy.deepcopy(nodes)
-    nodes_json = json.dumps(nodes_copy, default=str)
-    for key, value in values.items():
-        nodes_json = nodes_json.replace("{{" + key + "}}", str(value))
-    return json.loads(nodes_json)
+    
+    # Build lookup: field_key -> (node_id, param_key, value)
+    field_lookup = {f["key"]: f for f in fields_meta}
+    
+    # Apply node-specific param values
+    for field_key, value in field_values.items():
+        if not value:
+            continue
+        meta = field_lookup.get(field_key)
+        if not meta:
+            continue
+        
+        if meta.get("node_id"):
+            # Node-level param — set directly on the matching node
+            for node in nodes_copy:
+                if node.get("id") == meta["node_id"]:
+                    if "parameters" not in node:
+                        node["parameters"] = {}
+                    node["parameters"][meta["param_key"]] = value
+                    break
+        else:
+            # Business-level variable — replace {{var}} across all nodes
+            var_name = meta["param_key"]
+            nodes_json = json.dumps(nodes_copy, default=str)
+            nodes_json = nodes_json.replace("{{" + var_name + "}}", value)
+            nodes_copy = json.loads(nodes_json)
+    
+    return nodes_copy
 
 
 class UseTemplateRequest(BaseModel):
@@ -165,10 +250,12 @@ async def use_template(
     nodes = template.nodes
     name = template.name
     if request.values:
-        nodes = interpolate_nodes(nodes, request.values)
+        fields_meta = extract_setup_fields(template.nodes or [])
+        nodes = interpolate_nodes(nodes, request.values, fields_meta)
         # Customize workflow name if business_name provided
-        if request.values.get("business_name"):
-            name = f"{template.name} - {request.values['business_name']}"
+        biz_name = request.values.get("var__business_name", "")
+        if biz_name:
+            name = f"{template.name} - {biz_name}"
     
     workflow = Workflow(
         user_id=current_user.id,

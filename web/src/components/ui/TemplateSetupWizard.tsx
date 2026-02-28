@@ -1,14 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, Sparkles } from 'lucide-react';
+import { X, Loader2, Sparkles, ChevronDown } from 'lucide-react';
 
 interface SetupField {
   key: string;
+  node_id: string | null;
+  node_type: string | null;
+  node_label: string | null;
+  param_key: string;
   label: string;
   type: string;
   placeholder: string;
   required: boolean;
+  options?: string[] | null;
+  current_value?: string;
 }
 
 interface TemplateSetupWizardProps {
@@ -32,9 +38,14 @@ export default function TemplateSetupWizard({
 
   useEffect(() => {
     if (open) {
-      setValues({});
+      // Pre-fill with current values from template
+      const initial: Record<string, string> = {};
+      fields.forEach(f => {
+        if (f.current_value) initial[f.key] = f.current_value;
+      });
+      setValues(initial);
     }
-  }, [open]);
+  }, [open, fields]);
 
   if (!open) return null;
 
@@ -47,8 +58,19 @@ export default function TemplateSetupWizard({
     if (e.key === 'Escape') onCancel();
   };
 
+  // Group fields: business-level first, then by node
+  const businessFields = fields.filter(f => !f.node_id);
+  const nodeFields = fields.filter(f => !!f.node_id);
+  
+  // Group node fields by node_label
+  const nodeGroups: Record<string, SetupField[]> = {};
+  nodeFields.forEach(f => {
+    const group = f.node_label || f.node_type || 'Other';
+    if (!nodeGroups[group]) nodeGroups[group] = [];
+    nodeGroups[group].push(f);
+  });
+
   const requiredFields = fields.filter(f => f.required);
-  const optionalFields = fields.filter(f => !f.required);
   const allRequiredFilled = requiredFields.every(f => values[f.key]?.trim());
 
   return (
@@ -83,14 +105,15 @@ export default function TemplateSetupWizard({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Fill in the details below to customize this workflow for your business. You can always edit these later.
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            <p className="text-sm text-gray-600">
+              Configure the key settings for this workflow. You can always fine-tune everything later.
             </p>
 
-            {requiredFields.length > 0 && (
+            {/* Business-level fields */}
+            {businessFields.length > 0 && (
               <div className="space-y-3">
-                {requiredFields.map(field => (
+                {businessFields.map(field => (
                   <FieldInput
                     key={field.key}
                     field={field}
@@ -101,24 +124,31 @@ export default function TemplateSetupWizard({
               </div>
             )}
 
-            {optionalFields.length > 0 && (
-              <>
-                {requiredFields.length > 0 && (
-                  <div className="border-t border-gray-100 pt-3 mt-4">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-3">Optional</p>
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {optionalFields.map(field => (
-                    <FieldInput
-                      key={field.key}
-                      field={field}
-                      value={values[field.key] || ''}
-                      onChange={(val) => setValues(prev => ({ ...prev, [field.key]: val }))}
-                    />
-                  ))}
+            {/* Node-grouped fields */}
+            {Object.entries(nodeGroups).map(([groupLabel, groupFields]) => (
+              <div key={groupLabel} className="space-y-3">
+                <div className="flex items-center gap-2 pt-2">
+                  <div className="h-px flex-1 bg-gray-100" />
+                  <span className="text-xs text-gray-400 uppercase tracking-wide font-medium px-2">
+                    {groupLabel}
+                  </span>
+                  <div className="h-px flex-1 bg-gray-100" />
                 </div>
-              </>
+                {groupFields.map(field => (
+                  <FieldInput
+                    key={field.key}
+                    field={field}
+                    value={values[field.key] || ''}
+                    onChange={(val) => setValues(prev => ({ ...prev, [field.key]: val }))}
+                  />
+                ))}
+              </div>
+            ))}
+
+            {fields.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">
+                This template is ready to use as-is. Click create to get started.
+              </p>
             )}
           </div>
 
@@ -169,7 +199,23 @@ function FieldInput({
         {field.label}
         {field.required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
-      {field.type === 'textarea' ? (
+      {field.type === 'select' && field.options ? (
+        <div className="relative">
+          <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={baseClass + " appearance-none pr-10"}
+          >
+            <option value="">Select...</option>
+            {field.options.map(opt => (
+              <option key={opt} value={opt}>
+                {opt.charAt(0).toUpperCase() + opt.slice(1)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+      ) : field.type === 'textarea' ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -188,6 +234,9 @@ function FieldInput({
           required={field.required}
           className={baseClass}
         />
+      )}
+      {field.current_value && value !== field.current_value && (
+        <p className="text-xs text-gray-400 mt-1">Template default: {field.current_value}</p>
       )}
     </div>
   );
