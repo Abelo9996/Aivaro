@@ -56,6 +56,7 @@ export interface Execution {
   id: string;
   workflow_id: string;
   status: 'running' | 'paused' | 'completed' | 'failed' | 'pending_approval';
+  error?: string;
   is_test: boolean;
   started_at: string;
   completed_at?: string;
