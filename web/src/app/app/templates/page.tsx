@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Template } from '@/types';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 // Map categories and template names to appropriate icons
 const getTemplateIcon = (template: Template): LucideIcon => {
@@ -91,6 +92,7 @@ export default function TemplatesPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -124,7 +126,7 @@ export default function TemplatesPage() {
     } catch (err: any) {
       console.error('Failed to create workflow from template:', err);
       const message = err?.detail?.message || err?.message || 'Failed to create workflow. Please try again.';
-      setError(message);
+      setLimitError(message);
       setCreatingId(null);
     }
   };
@@ -258,6 +260,20 @@ export default function TemplatesPage() {
           Create Custom Workflow
         </Link>
       </div>
+
+      <ConfirmDialog
+        open={!!limitError}
+        title="Workflow Limit Reached"
+        message={limitError || ''}
+        confirmLabel="Upgrade Plan"
+        cancelLabel="OK"
+        variant="warning"
+        onConfirm={() => {
+          setLimitError(null);
+          router.push('/app/settings');
+        }}
+        onCancel={() => setLimitError(null)}
+      />
     </div>
   );
 }
