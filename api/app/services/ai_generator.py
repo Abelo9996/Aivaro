@@ -351,7 +351,7 @@ Available ACTION node types:
 - ai_reply: Generate an AI response to an email. IMPORTANT: This only GENERATES a reply — it does NOT send it. You MUST add a send_email step after ai_reply to actually deliver the response. Parameters: {context: "...", tone: "professional/friendly/casual"}. Output: {{ai_response}}
 - ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
 - append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", sheet_name: "Sheet1", columns: [{name: "...", value: "{{...}}"}]}
-- read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "...", range: "A1:D10"}
+- read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "spreadsheet ID or file name (e.g. 'Contacts.xlsx')", spreadsheet_name: "optional display name", range: "Sheet1!A1:Z1000"}
 - delay: Wait for a duration. Parameters: {duration: 2, unit: "hours/minutes/days"}
 - send_notification: Send a notification. Parameters: {message: "..."}
 - send_slack: Send a Slack message. Parameters: {channel: "#general", message: "..."}

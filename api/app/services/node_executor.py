@@ -705,8 +705,12 @@ Extract: {fields_to_extract}"""
             logs += "  ❌ Google Sheets not connected - please connect Google in Settings\n"
             return {"success": False, "output": input_data, "logs": logs, "error": "Google Sheets not connected"}
         
-        # If spreadsheet_id looks like a name (not a long alphanumeric string), try to find it
-        if spreadsheet_id and len(spreadsheet_id) < 30 and ' ' in spreadsheet_id:
+        # Detect if spreadsheet_id is actually a name (not a real Google Sheets ID).
+        # Real IDs are ~44 chars of alphanumeric, hyphens, underscores. Names have spaces, dots, or are short.
+        import re
+        _looks_like_id = spreadsheet_id and len(spreadsheet_id) >= 25 and bool(re.match(r'^[a-zA-Z0-9_-]+$', spreadsheet_id))
+        
+        if spreadsheet_id and not _looks_like_id:
             # This is likely a name, not an ID - try to find it
             logs += f"  Looking up spreadsheet by name: '{spreadsheet_id}'\n"
             try:
@@ -717,6 +721,19 @@ Extract: {fields_to_extract}"""
                 else:
                     logs += f"  ❌ Could not find spreadsheet named '{spreadsheet_id}'. Please provide the actual Google Sheets ID from the URL.\n"
                     return {"success": False, "output": input_data, "logs": logs, "error": f"Spreadsheet '{spreadsheet_id}' not found. Use the spreadsheet ID from the URL instead."}
+            except Exception as e:
+                logs += f"  ❌ Error looking up spreadsheet: {str(e)}\n"
+        
+        # If no spreadsheet_id but we have a name, try to find by name
+        if not spreadsheet_id and spreadsheet_name:
+            logs += f"  Looking up spreadsheet by name: '{spreadsheet_name}'\n"
+            try:
+                found_id = await google.find_spreadsheet_by_name(spreadsheet_name)
+                if found_id:
+                    logs += f"  Found spreadsheet ID: {found_id}\n"
+                    spreadsheet_id = found_id
+                else:
+                    logs += f"  ❌ Could not find spreadsheet named '{spreadsheet_name}'.\n"
             except Exception as e:
                 logs += f"  ❌ Error looking up spreadsheet: {str(e)}\n"
         

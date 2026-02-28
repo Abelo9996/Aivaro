@@ -173,11 +173,11 @@ AGENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "read_spreadsheet",
-            "description": "Read data from a Google Spreadsheet. Use to look up bookings, check records.",
+            "description": "Read data from a Google Spreadsheet. Use to look up bookings, check records. You can provide either the spreadsheet ID (from the URL) OR the file name — the system will search Google Drive by name if needed.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "spreadsheet_id": {"type": "string", "description": "Spreadsheet ID from the URL"},
+                    "spreadsheet_id": {"type": "string", "description": "Spreadsheet ID from the URL, OR the file name (e.g. 'Contacts.xlsx'). If a name is given, the system will search for it."},
                     "range": {"type": "string", "description": "Range to read (e.g. Sheet1!A1:Z100)"},
                 },
                 "required": ["spreadsheet_id"],
