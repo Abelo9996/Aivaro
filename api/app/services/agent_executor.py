@@ -392,7 +392,127 @@ AGENT_TOOLS = [
             },
         },
     },
-    # --- Calendly tools ---
+    # --- NEW: Additional tools for deep integration ---
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_calendar_event",
+            "description": "Delete/cancel a Google Calendar event by its ID.",
+            "parameters": {"type": "object", "properties": {"event_id": {"type": "string", "description": "Google Calendar event ID"}, "calendar_id": {"type": "string", "description": "Calendar ID (default: primary)"}}, "required": ["event_id"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_spreadsheets",
+            "description": "List all Google Sheets spreadsheets in the user's Drive.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_slack_history",
+            "description": "Read recent messages from a Slack channel.",
+            "parameters": {"type": "object", "properties": {"channel": {"type": "string", "description": "Channel name (e.g. #general)"}, "limit": {"type": "integer", "description": "Number of messages to fetch (default 10)"}}, "required": ["channel"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_slack_dm",
+            "description": "Send a direct message to a Slack user by user ID or email.",
+            "parameters": {"type": "object", "properties": {"user_id": {"type": "string", "description": "Slack user ID"}, "email": {"type": "string", "description": "User's email (alternative to user_id)"}, "message": {"type": "string", "description": "Message text"}}, "required": ["message"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_slack_users",
+            "description": "List all users in the Slack workspace.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stripe_list_invoices",
+            "description": "List Stripe invoices, optionally filtered by customer email or status.",
+            "parameters": {"type": "object", "properties": {"customer_email": {"type": "string", "description": "Filter by customer email"}, "status": {"type": "string", "enum": ["draft", "open", "paid", "void", "uncollectible"], "description": "Filter by invoice status"}, "limit": {"type": "integer", "description": "Max results (default 10)"}}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "airtable_list_bases",
+            "description": "List all Airtable bases the user has access to.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "calendly_list_event_types",
+            "description": "List Calendly event types (meeting templates). Needed to create scheduling links.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "notion_get_page",
+            "description": "Get a Notion page by its ID.",
+            "parameters": {"type": "object", "properties": {"page_id": {"type": "string", "description": "Notion page ID"}}, "required": ["page_id"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "notion_list_databases",
+            "description": "List all Notion databases the user has access to.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_list_audiences",
+            "description": "List all Mailchimp audiences/lists.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_list_subscribers",
+            "description": "List subscribers in a Mailchimp audience.",
+            "parameters": {"type": "object", "properties": {"list_id": {"type": "string", "description": "Mailchimp audience/list ID"}, "count": {"type": "integer", "description": "Max results (default 20)"}}, "required": ["list_id"]},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mailchimp_list_campaigns",
+            "description": "List Mailchimp email campaigns.",
+            "parameters": {"type": "object", "properties": {"count": {"type": "integer", "description": "Max results (default 10)"}}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "twilio_list_messages",
+            "description": "List recent SMS/WhatsApp messages from Twilio.",
+            "parameters": {"type": "object", "properties": {"to": {"type": "string", "description": "Filter by recipient phone number"}, "from": {"type": "string", "description": "Filter by sender phone number"}, "limit": {"type": "integer", "description": "Max results (default 20)"}}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "twilio_list_calls",
+            "description": "List recent phone calls from Twilio.",
+            "parameters": {"type": "object", "properties": {"to": {"type": "string", "description": "Filter by recipient"}, "from": {"type": "string", "description": "Filter by caller"}, "limit": {"type": "integer", "description": "Max results (default 20)"}}, "required": []},
+        },
+    },
     {
         "type": "function",
         "function": {
@@ -629,6 +749,7 @@ TOOL_TO_NODE_TYPE = {
     "make_call": "twilio_make_call",
     "create_calendar_event": "google_calendar_create",
     "list_calendar_events": "google_calendar_list",
+    "delete_calendar_event": "google_calendar_delete",
     "list_emails": "gmail_list_messages",
     "get_email": "gmail_get_message",
     "create_payment_link": "stripe_create_payment_link",
@@ -636,31 +757,46 @@ TOOL_TO_NODE_TYPE = {
     "check_payment": "stripe_check_payment",
     "add_spreadsheet_row": "append_row",
     "read_spreadsheet": "read_sheet",
+    "list_spreadsheets": "google_drive_list",
     "send_slack_message": "send_slack",
     "list_slack_channels": "slack_list_channels",
+    "read_slack_history": "slack_read_history",
+    "send_slack_dm": "slack_send_dm",
+    "list_slack_users": "slack_list_users",
     "airtable_create_record": "airtable_create_record",
     "airtable_find_record": "airtable_find_record",
     "airtable_update_record": "airtable_update_record",
     "airtable_list_records": "airtable_list_records",
+    "airtable_list_bases": "airtable_list_bases",
     "wait": "delay",
     # Calendly
     "calendly_list_events": "calendly_list_events",
     "calendly_get_event": "calendly_get_event",
     "calendly_cancel_event": "calendly_cancel_event",
     "calendly_create_link": "calendly_create_link",
+    "calendly_list_event_types": "calendly_list_event_types",
     # Notion
     "notion_search": "notion_search",
     "notion_query_database": "notion_query_database",
     "notion_create_page": "notion_create_page",
     "notion_update_page": "notion_update_page",
+    "notion_get_page": "notion_get_page",
+    "notion_list_databases": "notion_list_databases",
     # Mailchimp
     "mailchimp_add_subscriber": "mailchimp_add_subscriber",
     "mailchimp_update_subscriber": "mailchimp_update_subscriber",
     "mailchimp_add_tags": "mailchimp_add_tags",
     "mailchimp_send_campaign": "mailchimp_send_campaign",
+    "mailchimp_list_audiences": "mailchimp_list_audiences",
+    "mailchimp_list_subscribers": "mailchimp_list_subscribers",
+    "mailchimp_list_campaigns": "mailchimp_list_campaigns",
     # Stripe additional
     "stripe_get_customer": "stripe_get_customer",
     "stripe_send_invoice": "stripe_send_invoice",
+    "stripe_list_invoices": "stripe_list_invoices",
+    # Twilio additional
+    "twilio_list_messages": "twilio_list_messages",
+    "twilio_list_calls": "twilio_list_calls",
 }
 
 
@@ -789,6 +925,7 @@ def _build_agent_system_prompt(
         "make_call": "twilio",
         "create_calendar_event": "google",
         "list_calendar_events": "google",
+        "delete_calendar_event": "google",
         "list_emails": "google",
         "get_email": "google",
         "create_payment_link": "stripe",
@@ -796,26 +933,40 @@ def _build_agent_system_prompt(
         "check_payment": "stripe",
         "add_spreadsheet_row": "google",
         "read_spreadsheet": "google",
+        "list_spreadsheets": "google",
         "send_slack_message": "slack",
         "list_slack_channels": "slack",
+        "read_slack_history": "slack",
+        "send_slack_dm": "slack",
+        "list_slack_users": "slack",
         "airtable_create_record": "airtable",
         "airtable_find_record": "airtable",
         "airtable_update_record": "airtable",
         "airtable_list_records": "airtable",
+        "airtable_list_bases": "airtable",
         "calendly_list_events": "calendly",
         "calendly_get_event": "calendly",
         "calendly_cancel_event": "calendly",
         "calendly_create_link": "calendly",
+        "calendly_list_event_types": "calendly",
         "notion_search": "notion",
         "notion_query_database": "notion",
         "notion_create_page": "notion",
         "notion_update_page": "notion",
+        "notion_get_page": "notion",
+        "notion_list_databases": "notion",
         "mailchimp_add_subscriber": "mailchimp",
         "mailchimp_update_subscriber": "mailchimp",
         "mailchimp_add_tags": "mailchimp",
         "mailchimp_send_campaign": "mailchimp",
+        "mailchimp_list_audiences": "mailchimp",
+        "mailchimp_list_subscribers": "mailchimp",
+        "mailchimp_list_campaigns": "mailchimp",
         "stripe_get_customer": "stripe",
         "stripe_send_invoice": "stripe",
+        "stripe_list_invoices": "stripe",
+        "twilio_list_messages": "twilio",
+        "twilio_list_calls": "twilio",
     }
 
     for tool_name, service in tool_connection_map.items():
@@ -1109,9 +1260,14 @@ class AgentExecutor:
         # Read-only tools don't count as "write actions" for billing
         READ_ONLY_TOOLS = {
             "list_calendar_events", "list_emails", "get_email", "check_payment",
-            "read_spreadsheet", "list_slack_channels", "airtable_list_records",
-            "airtable_find_record", "calendly_list_events", "calendly_get_event",
-            "notion_search", "notion_query_database", "stripe_get_customer",
+            "read_spreadsheet", "list_spreadsheets", "list_slack_channels",
+            "read_slack_history", "list_slack_users",
+            "airtable_list_records", "airtable_find_record", "airtable_list_bases",
+            "calendly_list_events", "calendly_get_event", "calendly_list_event_types",
+            "notion_search", "notion_query_database", "notion_get_page", "notion_list_databases",
+            "stripe_get_customer", "stripe_list_invoices",
+            "mailchimp_list_audiences", "mailchimp_list_subscribers", "mailchimp_list_campaigns",
+            "twilio_list_messages", "twilio_list_calls",
             "wait", "complete_task", "escalate_to_human",
         }
         

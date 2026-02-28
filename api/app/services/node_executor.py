@@ -172,12 +172,17 @@ class NodeExecutor:
             "send_notification": self._execute_notification,
             "send_slack": self._execute_send_slack,
             "slack_list_channels": self._execute_slack_list_channels,
+            "slack_read_history": self._execute_slack_read_history,
+            "slack_send_dm": self._execute_slack_send_dm,
+            "slack_list_users": self._execute_slack_list_users,
             "http_request": self._execute_http_request,
             "condition": self._execute_condition,
             "transform": self._execute_transform,
             # Google Calendar
             "google_calendar_create": self._execute_google_calendar_create,
             "google_calendar_list": self._execute_google_calendar_list,
+            "google_calendar_delete": self._execute_google_calendar_delete,
+            "google_drive_list": self._execute_google_drive_list,
             # Google Gmail read
             "gmail_list_messages": self._execute_gmail_list_messages,
             "gmail_get_message": self._execute_gmail_get_message,
@@ -187,30 +192,40 @@ class NodeExecutor:
             "stripe_create_payment_link": self._execute_stripe_create_payment_link,
             "stripe_get_customer": self._execute_stripe_get_customer,
             "stripe_check_payment": self._execute_stripe_check_payment,
+            "stripe_list_invoices": self._execute_stripe_list_invoices,
             # Notion integrations
             "notion_create_page": self._execute_notion_create_page,
             "notion_update_page": self._execute_notion_update_page,
             "notion_query_database": self._execute_notion_query_database,
             "notion_search": self._execute_notion_search,
+            "notion_get_page": self._execute_notion_get_page,
+            "notion_list_databases": self._execute_notion_list_databases,
             # Airtable integrations
             "airtable_create_record": self._execute_airtable_create_record,
             "airtable_update_record": self._execute_airtable_update_record,
             "airtable_list_records": self._execute_airtable_list_records,
             "airtable_find_record": self._execute_airtable_find_record,
+            "airtable_list_bases": self._execute_airtable_list_bases,
             # Calendly integrations
             "calendly_list_events": self._execute_calendly_list_events,
             "calendly_get_event": self._execute_calendly_get_event,
             "calendly_cancel_event": self._execute_calendly_cancel_event,
             "calendly_create_link": self._execute_calendly_create_link,
+            "calendly_list_event_types": self._execute_calendly_list_event_types,
             # Mailchimp integrations
             "mailchimp_add_subscriber": self._execute_mailchimp_add_subscriber,
             "mailchimp_update_subscriber": self._execute_mailchimp_update_subscriber,
             "mailchimp_add_tags": self._execute_mailchimp_add_tags,
             "mailchimp_send_campaign": self._execute_mailchimp_send_campaign,
+            "mailchimp_list_audiences": self._execute_mailchimp_list_audiences,
+            "mailchimp_list_subscribers": self._execute_mailchimp_list_subscribers,
+            "mailchimp_list_campaigns": self._execute_mailchimp_list_campaigns,
             # Twilio integrations
             "twilio_send_sms": self._execute_twilio_send_sms,
             "twilio_send_whatsapp": self._execute_twilio_send_whatsapp,
             "twilio_make_call": self._execute_twilio_make_call,
+            "twilio_list_messages": self._execute_twilio_list_messages,
+            "twilio_list_calls": self._execute_twilio_list_calls,
             # Standalone approval gate
             "approval": self._execute_approval_gate,
         }
@@ -2432,6 +2447,302 @@ Extract: {fields_to_extract}"""
                 "output": {**input_data, "twilio_call_sid": call_sid, "twilio_call_made": True},
                 "logs": logs
             }
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    # ==================== NEW: Additional integration tools ====================
+
+    async def _execute_slack_read_history(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Read recent messages from a Slack channel."""
+        channel = params.get("channel", "#general")
+        limit = params.get("limit", 10)
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Reading Slack channel history\n"
+        logs += f"  Channel: {channel}, Limit: {limit}\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "slack_messages": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        slack = await self.get_slack_service()
+        if not slack:
+            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+        try:
+            channel_info = await slack.find_channel_by_name(channel)
+            channel_id = channel_info["id"] if channel_info else channel
+            messages = await slack.get_channel_history(channel_id, limit=limit)
+            formatted = [{"text": m.get("text", ""), "user": m.get("user", ""), "ts": m.get("ts", "")} for m in messages]
+            logs += f"  ✅ Retrieved {len(formatted)} messages\n"
+            return {"success": True, "output": {**input_data, "slack_messages": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_slack_send_dm(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Send a direct message to a Slack user."""
+        user_id = params.get("user_id", "")
+        email = params.get("email", "")
+        message = _interpolate(params.get("message", ""), input_data)
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Sending Slack DM\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "slack_dm_sent": False}, "logs": logs + "  Not sent (test mode)\n"}
+        slack = await self.get_slack_service()
+        if not slack:
+            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+        try:
+            if email and not user_id:
+                user = await slack.find_user_by_email(email)
+                if user:
+                    user_id = user["id"]
+                else:
+                    return {"success": False, "error": f"No Slack user found with email {email}", "output": input_data, "logs": logs}
+            result = await slack.send_dm(user_id, message)
+            logs += f"  ✅ DM sent\n"
+            return {"success": True, "output": {**input_data, "slack_dm_sent": True}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_slack_list_users(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List users in the Slack workspace."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Slack users\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "slack_users": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        slack = await self.get_slack_service()
+        if not slack:
+            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+        try:
+            users = await slack.list_users()
+            formatted = [{"id": u["id"], "name": u.get("real_name", u.get("name", "")), "email": u.get("profile", {}).get("email", "")} for u in users if not u.get("is_bot") and not u.get("deleted")]
+            logs += f"  ✅ Found {len(formatted)} users\n"
+            return {"success": True, "output": {**input_data, "slack_users": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_google_calendar_delete(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Delete a Google Calendar event."""
+        event_id = params.get("event_id", "")
+        calendar_id = params.get("calendar_id", "primary")
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Deleting calendar event\n"
+        logs += f"  Event ID: {event_id}\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "calendar_event_deleted": False}, "logs": logs + "  Not deleted (test mode)\n"}
+        google = await self.get_google_service()
+        if not google:
+            return {"success": False, "error": "Google not connected", "output": input_data, "logs": logs}
+        try:
+            client = await google._get_client()
+            resp = await client.delete(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                headers={"Authorization": f"Bearer {google.access_token}"}
+            )
+            if resp.status_code in (200, 204):
+                logs += "  ✅ Event deleted\n"
+                return {"success": True, "output": {**input_data, "calendar_event_deleted": True}, "logs": logs}
+            else:
+                logs += f"  ❌ Failed: {resp.text}\n"
+                return {"success": False, "error": resp.text, "output": input_data, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_google_drive_list(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Google Drive spreadsheets."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing spreadsheets\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "spreadsheets": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        google = await self.get_google_service()
+        if not google:
+            return {"success": False, "error": "Google not connected", "output": input_data, "logs": logs}
+        try:
+            sheets = await google.list_spreadsheets()
+            formatted = [{"id": s.get("id"), "name": s.get("name")} for s in sheets]
+            logs += f"  ✅ Found {len(formatted)} spreadsheets\n"
+            return {"success": True, "output": {**input_data, "spreadsheets": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_stripe_list_invoices(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Stripe invoices."""
+        customer_email = params.get("customer_email", "")
+        limit = params.get("limit", 10)
+        status = params.get("status", "")
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Stripe invoices\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "invoices": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        stripe_svc = await self.get_stripe_service()
+        if not stripe_svc:
+            return {"success": False, "error": "Stripe not connected", "output": input_data, "logs": logs}
+        try:
+            result = await stripe_svc.list_invoices(customer_email=customer_email or None, limit=limit, status=status or None)
+            invoices = result.get("invoices", [])
+            logs += f"  ✅ Found {len(invoices)} invoices\n"
+            return {"success": True, "output": {**input_data, "invoices": invoices, "invoice_count": len(invoices)}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_notion_get_page(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Get a Notion page by ID."""
+        page_id = params.get("page_id", "")
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Getting Notion page\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "notion_page": None}, "logs": logs + "  Not fetched (test mode)\n"}
+        notion = await self.get_notion_service()
+        if not notion:
+            return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
+        try:
+            page = await notion.get_page(page_id)
+            logs += f"  ✅ Retrieved page\n"
+            return {"success": True, "output": {**input_data, "notion_page": page}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_notion_list_databases(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Notion databases."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Notion databases\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "notion_databases": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        notion = await self.get_notion_service()
+        if not notion:
+            return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
+        try:
+            dbs = await notion.list_databases()
+            formatted = [{"id": d.get("id"), "title": d.get("title", [{}])[0].get("plain_text", "Untitled") if d.get("title") else "Untitled"} for d in dbs]
+            logs += f"  ✅ Found {len(formatted)} databases\n"
+            return {"success": True, "output": {**input_data, "notion_databases": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_airtable_list_bases(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Airtable bases."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Airtable bases\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "airtable_bases": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        airtable = await self.get_airtable_service()
+        if not airtable:
+            return {"success": False, "error": "Airtable not connected", "output": input_data, "logs": logs}
+        try:
+            bases = await airtable.list_bases()
+            formatted = [{"id": b.get("id"), "name": b.get("name")} for b in bases]
+            logs += f"  ✅ Found {len(formatted)} bases\n"
+            return {"success": True, "output": {**input_data, "airtable_bases": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_calendly_list_event_types(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Calendly event types."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Calendly event types\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "calendly_event_types": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        calendly = await self.get_calendly_service()
+        if not calendly:
+            return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
+        try:
+            result = await calendly.list_event_types()
+            types = result.get("collection", [])
+            formatted = [{"uuid": t.get("uri", "").split("/")[-1], "name": t.get("name"), "duration": t.get("duration"), "active": t.get("active")} for t in types]
+            logs += f"  ✅ Found {len(formatted)} event types\n"
+            return {"success": True, "output": {**input_data, "calendly_event_types": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_mailchimp_list_audiences(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Mailchimp audiences/lists."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Mailchimp audiences\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "mailchimp_audiences": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        mc = await self.get_mailchimp_service()
+        if not mc:
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        try:
+            result = await mc.list_audiences()
+            audiences = result.get("lists", [])
+            formatted = [{"id": a.get("id"), "name": a.get("name"), "member_count": a.get("stats", {}).get("member_count", 0)} for a in audiences]
+            logs += f"  ✅ Found {len(formatted)} audiences\n"
+            return {"success": True, "output": {**input_data, "mailchimp_audiences": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_mailchimp_list_subscribers(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List subscribers in a Mailchimp audience."""
+        list_id = params.get("list_id", "")
+        count = params.get("count", 20)
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Mailchimp subscribers\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "mailchimp_subscribers": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        mc = await self.get_mailchimp_service()
+        if not mc:
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        try:
+            result = await mc.list_members(list_id, count=count)
+            members = result.get("members", [])
+            formatted = [{"email": m.get("email_address"), "status": m.get("status"), "name": f'{m.get("merge_fields", {}).get("FNAME", "")} {m.get("merge_fields", {}).get("LNAME", "")}'.strip()} for m in members]
+            logs += f"  ✅ Found {len(formatted)} subscribers\n"
+            return {"success": True, "output": {**input_data, "mailchimp_subscribers": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_mailchimp_list_campaigns(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Mailchimp campaigns."""
+        count = params.get("count", 10)
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Mailchimp campaigns\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "mailchimp_campaigns": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        mc = await self.get_mailchimp_service()
+        if not mc:
+            return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
+        try:
+            result = await mc.list_campaigns(count=count)
+            campaigns = result.get("campaigns", [])
+            formatted = [{"id": c.get("id"), "title": c.get("settings", {}).get("title", ""), "status": c.get("status"), "send_time": c.get("send_time")} for c in campaigns]
+            logs += f"  ✅ Found {len(formatted)} campaigns\n"
+            return {"success": True, "output": {**input_data, "mailchimp_campaigns": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_twilio_list_messages(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List recent Twilio SMS messages."""
+        to = params.get("to", "")
+        from_ = params.get("from", "")
+        limit = params.get("limit", 20)
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Twilio messages\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "twilio_messages": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        twilio = await self.get_twilio_service()
+        if not twilio:
+            return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
+        try:
+            messages = await twilio.list_messages(to=to or None, from_=from_ or None, limit=limit)
+            formatted = [{"sid": m.get("sid"), "from": m.get("from"), "to": m.get("to"), "body": m.get("body", "")[:100], "status": m.get("status"), "date_sent": m.get("date_sent")} for m in messages]
+            logs += f"  ✅ Found {len(formatted)} messages\n"
+            return {"success": True, "output": {**input_data, "twilio_messages": formatted}, "logs": logs}
+        except Exception as e:
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_twilio_list_calls(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List recent Twilio calls."""
+        to = params.get("to", "")
+        from_ = params.get("from", "")
+        limit = params.get("limit", 20)
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Twilio calls\n"
+        if is_test:
+            return {"success": True, "output": {**input_data, "twilio_calls": []}, "logs": logs + "  Not fetched (test mode)\n"}
+        twilio = await self.get_twilio_service()
+        if not twilio:
+            return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
+        try:
+            calls = await twilio.list_calls(to=to or None, from_=from_ or None, limit=limit)
+            formatted = [{"sid": c.get("sid"), "from": c.get("from"), "to": c.get("to"), "status": c.get("status"), "duration": c.get("duration"), "start_time": c.get("start_time")} for c in calls]
+            logs += f"  ✅ Found {len(formatted)} calls\n"
+            return {"success": True, "output": {**input_data, "twilio_calls": formatted}, "logs": logs}
         except Exception as e:
             logs += f"  ❌ Failed: {str(e)}\n"
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
