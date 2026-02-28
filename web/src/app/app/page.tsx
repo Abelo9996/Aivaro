@@ -254,6 +254,9 @@ export default function DashboardPage() {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [sidebarLoading, setSidebarLoading] = useState(true);
   const [deleteConvoTarget, setDeleteConvoTarget] = useState<string | null>(null);
+  const [connections, setConnections] = useState<any[]>([]);
+  const [knowledgeCount, setKnowledgeCount] = useState(0);
+  const [gettingStartedDismissed, setGettingStartedDismissed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -330,6 +333,20 @@ export default function DashboardPage() {
       const [wf, ap] = await Promise.all([api.getWorkflows(), api.getApprovals('pending')]);
       setWorkflows(wf);
       setApprovals(ap);
+      // Load connections and knowledge for getting started
+      try {
+        const conns = await api.getConnections();
+        setConnections(conns.filter((c: any) => c.is_connected));
+      } catch { setConnections([]); }
+      try {
+        const kb = await api.request<any[]>('/api/knowledge/', { method: 'GET' });
+        setKnowledgeCount(Array.isArray(kb) ? kb.length : 0);
+      } catch { setKnowledgeCount(0); }
+      // Check if dismissed
+      try {
+        const dismissed = localStorage.getItem('aivaro_getting_started_dismissed');
+        if (dismissed) setGettingStartedDismissed(true);
+      } catch {}
     } catch (err) {
       console.error('Failed to load sidebar:', err);
     } finally {
@@ -681,6 +698,70 @@ export default function DashboardPage() {
               </Link>
             </div>
           )}
+
+          {/* Getting Started Checklist */}
+          {!gettingStartedDismissed && !sidebarLoading && (() => {
+            const steps = [
+              { label: 'Connect an integration', done: connections.length > 0, href: '/app/connections', icon: <Zap className="w-3.5 h-3.5" /> },
+              { label: 'Create your first workflow', done: workflows.length > 0, href: '/app/workflows', icon: <Plus className="w-3.5 h-3.5" /> },
+              { label: 'Add business knowledge', done: knowledgeCount > 0, href: '/app/knowledge', icon: <Sparkles className="w-3.5 h-3.5" /> },
+              { label: 'Run a workflow', done: workflows.some(w => w.is_active), href: '/app/workflows', icon: <Play className="w-3.5 h-3.5" /> },
+              { label: 'Review an approval', done: false, href: '/app/approvals', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+            ];
+            const doneCount = steps.filter(s => s.done).length;
+            const allDone = doneCount === steps.length;
+            
+            return (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Getting Started</h3>
+                  <button
+                    onClick={() => {
+                      setGettingStartedDismissed(true);
+                      localStorage.setItem('aivaro_getting_started_dismissed', 'true');
+                    }}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                {/* Progress bar */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-500">{doneCount}/{steps.length} complete</span>
+                    {allDone && <span className="text-xs text-green-600 font-medium">All done! 🎉</span>}
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary-500 to-green-500 rounded-full transition-all duration-500"
+                      style={{ width: `${(doneCount / steps.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {steps.map((step, i) => (
+                    <Link
+                      key={i}
+                      href={step.href}
+                      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition text-sm ${
+                        step.done
+                          ? 'text-gray-400'
+                          : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
+                      }`}
+                    >
+                      {step.done ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                      )}
+                      <span className={step.done ? 'line-through' : ''}>{step.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-900">Your Workflows</h3>
@@ -720,7 +801,9 @@ export default function DashboardPage() {
               {[
                 { href: '/app/templates', label: 'Browse Templates', icon: <Sparkles className="w-4 h-4" /> },
                 { href: '/app/connections', label: 'Manage Connections', icon: <Zap className="w-4 h-4" /> },
+                { href: '/app/knowledge', label: 'Knowledge Base', icon: <Bot className="w-4 h-4" /> },
                 { href: '/app/executions', label: 'Run History', icon: <Clock className="w-4 h-4" /> },
+                { href: '/app/approvals', label: 'Approvals', icon: <CheckCircle2 className="w-4 h-4" /> },
               ].map((link) => (
                 <Link key={link.href} href={link.href} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition">
                   {link.icon}
