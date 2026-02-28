@@ -605,6 +605,8 @@ function WhatItAutomates() {
               { name: 'Slack', icon: '/icons/slack.svg' },
               { name: 'Twilio SMS', icon: '/icons/twilio.svg' },
               { name: 'Airtable', icon: '/icons/airtable.svg' },
+              { name: 'Notion', icon: '/icons/notion.svg' },
+              { name: 'Calendly', icon: '/icons/calendly.svg' },
               { name: 'Mailchimp', icon: '/icons/mailchimp.svg' },
             ].map((tool, i) => (
               <div key={i} style={{
@@ -618,7 +620,7 @@ function WhatItAutomates() {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 13, color: styles.textMuted, marginTop: 12 }}>Plus Notion, Calendly, WhatsApp, and more being added regularly.</p>
+          <p style={{ fontSize: 13, color: styles.textMuted, marginTop: 12 }}>More integrations being added regularly.</p>
         </motion.div>
       </div>
     </div>

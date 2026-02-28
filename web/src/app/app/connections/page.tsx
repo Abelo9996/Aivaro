@@ -14,66 +14,68 @@ const categories = [
   { id: 'all', label: 'All', icon: '🔗' },
   { id: 'connected', label: 'Connected', icon: '✅' },
   { id: 'core', label: 'Core', icon: '⚡' },
-  { id: 'crm', label: 'CRM & Sales', icon: '💼' },
-  { id: 'marketing', label: 'Marketing', icon: '📧' },
-  { id: 'analytics', label: 'Analytics', icon: '📊' },
-  { id: 'website', label: 'Website', icon: '🌐' },
-  { id: 'social', label: 'Social Media', icon: '📱' },
+  { id: 'communication', label: 'Communication', icon: '💬' },
   { id: 'productivity', label: 'Productivity', icon: '📋' },
-  { id: 'support', label: 'Support', icon: '🎧' },
-  { id: 'developer', label: 'Developer', icon: '💻' },
 ];
 
 const availableConnections = [
   // Core integrations
-  { type: 'google', name: 'Google', description: 'Gmail, Google Sheets, Calendar', authType: 'oauth', category: 'core' },
-  { type: 'stripe', name: 'Stripe', description: 'Payments and invoicing', authType: 'api_key', category: 'core' },
-  { type: 'slack', name: 'Slack', description: 'Team messaging', authType: 'oauth', category: 'core' },
-  { type: 'notion', name: 'Notion', description: 'Notes and databases', authType: 'oauth', category: 'productivity' },
-  // Scheduling & Marketing
-  { type: 'calendly', name: 'Calendly', description: 'Scheduling and bookings', authType: 'oauth', category: 'productivity' },
-  { type: 'airtable', name: 'Airtable', description: 'Spreadsheets and databases', authType: 'api_key', category: 'productivity' },
-  { type: 'mailchimp', name: 'Mailchimp', description: 'Email marketing', authType: 'api_key', category: 'marketing' },
-  { type: 'twilio', name: 'Twilio', description: 'SMS and voice', authType: 'api_key', category: 'marketing' },
-  // SMS Marketing
-  { type: 'textedly', name: 'Textedly', description: 'SMS marketing platform', authType: 'api_key', category: 'marketing' },
-  // CRM & Sales
-  { type: 'hubspot', name: 'HubSpot', description: 'CRM and marketing automation', authType: 'oauth', category: 'crm' },
-  { type: 'salesforce', name: 'Salesforce', description: 'Enterprise CRM', authType: 'oauth', category: 'crm' },
-  // E-commerce & Finance
-  { type: 'shopify', name: 'Shopify', description: 'E-commerce platform', authType: 'oauth', category: 'core' },
-  { type: 'quickbooks', name: 'QuickBooks', description: 'Accounting and invoicing', authType: 'oauth', category: 'core' },
-  // Website & Domain Providers
-  { type: 'godaddy', name: 'GoDaddy', description: 'Domains and hosting', authType: 'api_key', category: 'website' },
-  { type: 'wix', name: 'Wix', description: 'Website builder', authType: 'oauth', category: 'website' },
-  { type: 'squarespace', name: 'Squarespace', description: 'Website and commerce', authType: 'oauth', category: 'website' },
-  { type: 'webflow', name: 'Webflow', description: 'Visual web development', authType: 'api_key', category: 'website' },
-  // No-Code Platforms
-  { type: 'base44', name: 'Base44', description: 'No-code app builder', authType: 'api_key', category: 'developer' },
-  { type: 'bubble', name: 'Bubble', description: 'No-code platform', authType: 'api_key', category: 'developer' },
-  { type: 'zapier', name: 'Zapier', description: 'Workflow automation', authType: 'api_key', category: 'developer' },
-  // Analytics & Traffic
-  { type: 'google_analytics', name: 'Google Analytics', description: 'Website analytics', authType: 'oauth', category: 'analytics' },
-  { type: 'cloudflare', name: 'Cloudflare', description: 'CDN and security', authType: 'api_key', category: 'analytics' },
-  { type: 'plausible', name: 'Plausible', description: 'Privacy-friendly analytics', authType: 'api_key', category: 'analytics' },
-  { type: 'hotjar', name: 'Hotjar', description: 'Heatmaps and recordings', authType: 'api_key', category: 'analytics' },
-  // Social Media
-  { type: 'facebook', name: 'Facebook', description: 'Social media and ads', authType: 'oauth', category: 'social' },
-  { type: 'instagram', name: 'Instagram', description: 'Photo and video sharing', authType: 'oauth', category: 'social' },
-  { type: 'twitter', name: 'Twitter', description: 'Social media platform', authType: 'oauth', category: 'social' },
-  { type: 'linkedin', name: 'LinkedIn', description: 'Professional networking', authType: 'oauth', category: 'social' },
-  { type: 'tiktok', name: 'TikTok', description: 'Short-form video', authType: 'oauth', category: 'social' },
-  // Developer & Project Management
-  { type: 'github', name: 'GitHub', description: 'Code repositories and issues', authType: 'oauth', category: 'developer' },
-  { type: 'discord', name: 'Discord', description: 'Community chat', authType: 'oauth', category: 'developer' },
-  { type: 'asana', name: 'Asana', description: 'Project management', authType: 'oauth', category: 'productivity' },
-  { type: 'trello', name: 'Trello', description: 'Kanban boards', authType: 'api_key', category: 'productivity' },
-  // Support & Customer Success
-  { type: 'zendesk', name: 'Zendesk', description: 'Customer support tickets', authType: 'oauth', category: 'support' },
-  { type: 'intercom', name: 'Intercom', description: 'Customer messaging', authType: 'oauth', category: 'support' },
-  // Issue Tracking
-  { type: 'linear', name: 'Linear', description: 'Issue tracking', authType: 'oauth', category: 'developer' },
-  { type: 'jira', name: 'Jira', description: 'Project and issue tracking', authType: 'oauth', category: 'developer' },
+  {
+    type: 'google',
+    name: 'Google',
+    description: 'Send emails via Gmail, read inbox, create calendar events, append rows to Sheets, look up spreadsheets by name',
+    authType: 'oauth',
+    category: 'core',
+  },
+  {
+    type: 'stripe',
+    name: 'Stripe',
+    description: 'Create payment links, send invoices, look up customers, check payment status',
+    authType: 'api_key',
+    category: 'core',
+  },
+  {
+    type: 'twilio',
+    name: 'Twilio',
+    description: 'Send SMS messages, send WhatsApp messages, make voice calls with text-to-speech',
+    authType: 'api_key',
+    category: 'communication',
+  },
+  {
+    type: 'slack',
+    name: 'Slack',
+    description: 'Send messages to channels, post notifications to your team',
+    authType: 'oauth',
+    category: 'communication',
+  },
+  {
+    type: 'airtable',
+    name: 'Airtable',
+    description: 'Create, update, list, and search records in Airtable bases',
+    authType: 'api_key',
+    category: 'productivity',
+  },
+  {
+    type: 'notion',
+    name: 'Notion',
+    description: 'Create and update pages, query databases, search across your workspace',
+    authType: 'oauth',
+    category: 'productivity',
+  },
+  {
+    type: 'calendly',
+    name: 'Calendly',
+    description: 'List scheduled events, get event details, cancel events, create scheduling links',
+    authType: 'oauth',
+    category: 'productivity',
+  },
+  {
+    type: 'mailchimp',
+    name: 'Mailchimp',
+    description: 'Add and update subscribers, tag contacts, send email campaigns',
+    authType: 'api_key',
+    category: 'communication',
+  },
 ];
 
 export default function ConnectionsPage() {
@@ -238,29 +240,9 @@ export default function ConnectionsPage() {
       case 'airtable':
         return 'pat... or key...';
       case 'mailchimp':
-        return 'Your Mailchimp API key';
+        return 'Your Mailchimp API key (e.g. abc123-us21)';
       case 'twilio':
-        return 'Your Twilio Auth Token';
-      case 'textedly':
-        return 'Your Textedly API key';
-      case 'godaddy':
-        return 'Your GoDaddy API key';
-      case 'webflow':
-        return 'Your Webflow API token';
-      case 'base44':
-        return 'Your Base44 API key';
-      case 'bubble':
-        return 'Your Bubble API token';
-      case 'zapier':
-        return 'Your Zapier webhook key';
-      case 'cloudflare':
-        return 'Your Cloudflare API token';
-      case 'plausible':
-        return 'Your Plausible API key';
-      case 'hotjar':
-        return 'Your Hotjar API key';
-      case 'trello':
-        return 'Your Trello API key';
+        return 'Account SID and Auth Token (comma-separated)';
       default:
         return 'Enter your API key';
     }
@@ -274,70 +256,34 @@ export default function ConnectionsPage() {
             Find your API key in{' '}
             <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Stripe Dashboard → Developers → API keys
-            </a>
+            </a>. Use your Secret key (starts with sk_).
           </p>
         );
       case 'airtable':
         return (
           <p className="text-sm text-gray-500 mt-2">
-            Generate a token at{' '}
+            Generate a personal access token at{' '}
             <a href="https://airtable.com/create/tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Airtable → Account → Developer hub
-            </a>
+            </a>. Grant access to the bases you want to use.
           </p>
         );
-      case 'textedly':
+      case 'mailchimp':
         return (
           <p className="text-sm text-gray-500 mt-2">
-            Find your API key in{' '}
-            <a href="https://www.textedly.com/api" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-              Textedly Dashboard → API Settings
-            </a>
+            Find your API key at{' '}
+            <a href="https://us1.admin.mailchimp.com/account/api/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Mailchimp → Account → Extras → API keys
+            </a>. The key includes your data center (e.g. -us21).
           </p>
         );
-      case 'godaddy':
+      case 'twilio':
         return (
           <p className="text-sm text-gray-500 mt-2">
-            Generate API key at{' '}
-            <a href="https://developer.godaddy.com/keys" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-              GoDaddy Developer Portal → API Keys
-            </a>
-          </p>
-        );
-      case 'webflow':
-        return (
-          <p className="text-sm text-gray-500 mt-2">
-            Generate a token at{' '}
-            <a href="https://webflow.com/dashboard/account/integrations" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-              Webflow → Account → Integrations
-            </a>
-          </p>
-        );
-      case 'cloudflare':
-        return (
-          <p className="text-sm text-gray-500 mt-2">
-            Create an API token at{' '}
-            <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-              Cloudflare Dashboard → API Tokens
-            </a>
-          </p>
-        );
-      case 'plausible':
-        return (
-          <p className="text-sm text-gray-500 mt-2">
-            Generate API key at{' '}
-            <a href="https://plausible.io/settings" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-              Plausible → Settings → API Keys
-            </a>
-          </p>
-        );
-      case 'hotjar':
-        return (
-          <p className="text-sm text-gray-500 mt-2">
-            Find your Site ID in{' '}
-            <a href="https://insights.hotjar.com/site/list" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-              Hotjar → Sites & Organizations
-            </a>
+            Find your Account SID and Auth Token at{' '}
+            <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Twilio Console → Account Info
+            </a>. Enter as: ACCOUNT_SID,AUTH_TOKEN
           </p>
         );
       default:
