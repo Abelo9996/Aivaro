@@ -33,7 +33,7 @@ OAUTH_CONFIGS = {
         "client_secret": settings.slack_client_secret or "",
         "auth_url": "https://slack.com/oauth/v2/authorize",
         "token_url": "https://slack.com/api/oauth.v2.access",
-        "scopes": ["channels:read", "chat:write", "chat:write.public", "users:read"],
+        "scopes": ["channels:read", "groups:read", "chat:write", "chat:write.public", "users:read"],
     },
     "notion": {
         "client_id": settings.notion_client_id or "",
