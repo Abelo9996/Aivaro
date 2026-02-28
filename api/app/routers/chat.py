@@ -319,11 +319,16 @@ async def chat_execution(
     
     # Collect the full response from the agentic stream
     full_response = ""
-    async for event in agentic_chat_stream(
-        user=current_user, db=db, user_message=enriched_message, conversation_id=convo.id
-    ):
-        if event.get("type") == "content":
-            full_response += event.get("text", "")
+    try:
+        async for event in agentic_chat_stream(
+            user=current_user, db=db, user_message=enriched_message, conversation_id=convo.id
+        ):
+            if event.get("type") == "message":
+                full_response += event.get("content", "")
+    except Exception as e:
+        import traceback
+        print(f"[Execution Chat] Error: {e}\n{traceback.format_exc()}")
+        full_response = f"Sorry, I encountered an error: {str(e)}"
     
     # Clean up the temporary conversation
     db.delete(convo)
