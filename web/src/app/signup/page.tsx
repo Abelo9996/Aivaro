@@ -695,6 +695,20 @@ export default function SignupPage() {
           </button>
         </div>
 
+        {/* Terms notice */}
+        <p style={{
+          textAlign: 'center',
+          marginTop: '16px',
+          fontSize: '12px',
+          color: colors.textMuted,
+          lineHeight: 1.5,
+        }}>
+          By signing up, you agree to our{' '}
+          <Link href="/terms" style={{ color: colors.primaryLight, textDecoration: 'none' }}>Terms of Service</Link>
+          {' '}and{' '}
+          <Link href="/privacy" style={{ color: colors.primaryLight, textDecoration: 'none' }}>Privacy Policy</Link>.
+        </p>
+
         {/* Sign In Link */}
         <p style={{
           textAlign: 'center',

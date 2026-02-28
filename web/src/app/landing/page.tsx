@@ -823,8 +823,13 @@ function Footer() {
             <p style={{ fontSize: 13, color: styles.textMuted, marginTop: 8 }}>Automate your business. Keep your sanity.</p>
           </div>
           <div style={{ display: 'flex', gap: 24 }}>
-            {['Privacy', 'Terms'].map((item) => (
-              <span key={item} style={{ fontSize: 14, color: styles.textMuted, cursor: 'pointer' }}>{item}</span>
+            {[
+              { label: 'Privacy', href: '/privacy' },
+              { label: 'Terms', href: '/terms' },
+            ].map((item) => (
+              <Link key={item.label} href={item.href} style={{ fontSize: 14, color: styles.textMuted, textDecoration: 'none' }}>
+                {item.label}
+              </Link>
             ))}
           </div>
           <p style={{ fontSize: 13, color: styles.textMuted }}>© 2026 Aivaro</p>
