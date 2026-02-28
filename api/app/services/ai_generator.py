@@ -317,10 +317,57 @@ def generate_workflow_from_prompt(prompt: str) -> dict:
     
     # If OpenAI key is available, use it
     if settings.openai_api_key:
-        return _generate_with_openai(prompt)
+        result = _generate_with_openai(prompt)
+    else:
+        # Otherwise, use deterministic generator
+        result = _generate_deterministic(prompt)
     
-    # Otherwise, use deterministic generator
-    return _generate_deterministic(prompt)
+    # Always apply approval defaults
+    if result and result.get("nodes"):
+        result["nodes"] = apply_approval_defaults(result["nodes"])
+    
+    return result
+
+
+# Node types that should require approval by default
+APPROVAL_DEFAULT_NODES = {
+    "send_email",
+    "stripe_create_payment_link",
+    "stripe_create_invoice",
+    "stripe_send_invoice",
+    "twilio_send_sms",
+    "twilio_send_whatsapp",
+    "twilio_make_call",
+    "mailchimp_send_campaign",
+    "approval",
+}
+
+# Node types that should never require approval
+NO_APPROVAL_NODES = {
+    "start_manual", "start_form", "start_webhook", "start_schedule", "start_email",
+    "delay", "condition", "transform", "append_row", "read_sheet",
+    "send_notification", "google_calendar_create", "google_calendar_list",
+    "gmail_list_messages", "gmail_get_message",
+    "airtable_create_record", "airtable_update_record", "airtable_list_records", "airtable_find_record",
+    "notion_create_page", "notion_update_page", "notion_query_database", "notion_search",
+    "calendly_list_events", "calendly_get_event", "calendly_cancel_event", "calendly_create_link",
+    "mailchimp_add_subscriber", "mailchimp_update_subscriber", "mailchimp_add_tags",
+    "ai_reply", "ai_summarize", "ai_extract",
+    "send_slack", "http_request",
+}
+
+
+def apply_approval_defaults(nodes: list) -> list:
+    """Apply requiresApproval defaults to nodes that don't have it explicitly set."""
+    for node in nodes:
+        node_type = node.get("type", "")
+        if "requiresApproval" not in node:
+            if node_type in APPROVAL_DEFAULT_NODES:
+                node["requiresApproval"] = True
+            elif node_type in NO_APPROVAL_NODES:
+                node["requiresApproval"] = False
+            # else: leave unset (unknown types default to False in runner)
+    return nodes
 
 
 def _generate_with_openai(prompt: str) -> dict:

@@ -210,6 +210,8 @@ class NodeExecutor:
             "twilio_send_sms": self._execute_twilio_send_sms,
             "twilio_send_whatsapp": self._execute_twilio_send_whatsapp,
             "twilio_make_call": self._execute_twilio_make_call,
+            # Standalone approval gate
+            "approval": self._execute_approval_gate,
         }
         
         executor = executors.get(node_type, self._execute_default)
@@ -2406,6 +2408,26 @@ Extract: {fields_to_extract}"""
         except Exception as e:
             logs += f"  ❌ Failed: {str(e)}\n"
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_approval_gate(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """Standalone approval node — signals the runner to pause for approval.
+        
+        The actual pause happens in workflow_runner._execute_from_node which checks
+        requiresApproval. This node always has requiresApproval=True forced on it.
+        If somehow reached without the flag, we still return a marker.
+        """
+        message = params.get("message", "This action requires your approval before proceeding.")
+        logs = f"[{datetime.utcnow().isoformat()}] Approval gate reached\n"
+        logs += f"  Message: {message}\n"
+        
+        if is_test:
+            logs += "  [TEST] Auto-approved in test mode\n"
+            return {"success": True, "output": {**input_data, "approval_status": "auto_approved"}, "logs": logs}
+        
+        # Normal execution: this node always has requiresApproval=True,
+        # so the runner will create an approval before we even get here.
+        # But just in case, return success to pass through.
+        return {"success": True, "output": {**input_data, "approval_status": "approved"}, "logs": logs}
 
     async def _execute_default(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Default executor for unknown node types."""

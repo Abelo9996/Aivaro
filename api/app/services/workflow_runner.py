@@ -162,7 +162,8 @@ class WorkflowRunner:
         self.db.commit()
         
         # Check if approval is required
-        if node.get("requiresApproval", False):
+        # The 'approval' node type ALWAYS requires approval
+        if node.get("requiresApproval", False) or node["type"] == "approval":
             self._create_approval(node, exec_node, input_data)
             exec_node.status = "waiting_approval"
             self.execution.status = "paused"
