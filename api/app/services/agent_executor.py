@@ -202,6 +202,18 @@ AGENT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "list_slack_channels",
+            "description": "List all Slack channels in the workspace. Use to find available channels before sending messages.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "airtable_create_record",
             "description": "Create a record in an Airtable table.",
             "parameters": {
@@ -625,6 +637,7 @@ TOOL_TO_NODE_TYPE = {
     "add_spreadsheet_row": "append_row",
     "read_spreadsheet": "read_sheet",
     "send_slack_message": "send_slack",
+    "list_slack_channels": "slack_list_channels",
     "airtable_create_record": "airtable_create_record",
     "airtable_find_record": "airtable_find_record",
     "airtable_update_record": "airtable_update_record",
@@ -784,6 +797,7 @@ def _build_agent_system_prompt(
         "add_spreadsheet_row": "google",
         "read_spreadsheet": "google",
         "send_slack_message": "slack",
+        "list_slack_channels": "slack",
         "airtable_create_record": "airtable",
         "airtable_find_record": "airtable",
         "airtable_update_record": "airtable",

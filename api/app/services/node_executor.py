@@ -171,6 +171,7 @@ class NodeExecutor:
             "delay": self._execute_delay,
             "send_notification": self._execute_notification,
             "send_slack": self._execute_send_slack,
+            "slack_list_channels": self._execute_slack_list_channels,
             "http_request": self._execute_http_request,
             "condition": self._execute_condition,
             "transform": self._execute_transform,
@@ -828,6 +829,30 @@ Extract: {fields_to_extract}"""
             "logs": logs
         }
     
+    async def _execute_slack_list_channels(self, params: dict, input_data: dict, is_test: bool) -> dict:
+        """List Slack channels."""
+        logs = f"[{datetime.utcnow().isoformat()}] {'[TEST] ' if is_test else ''}Listing Slack channels\n"
+        
+        if is_test:
+            logs += "  Channels NOT fetched (test mode)\n"
+            return {"success": True, "output": {**input_data, "slack_channels": []}, "logs": logs}
+        
+        slack = await self.get_slack_service()
+        if not slack:
+            logs += "  ⚠️ Slack not connected\n"
+            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+        
+        try:
+            channels = await slack.list_channels()
+            formatted = [{"name": f"#{c['name']}", "id": c["id"], "is_private": c.get("is_private", False), "num_members": c.get("num_members", 0)} for c in channels]
+            logs += f"  ✅ Found {len(formatted)} channels\n"
+            return {"success": True, "output": {**input_data, "slack_channels": formatted}, "logs": logs}
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"[Slack] Failed to list channels: {e}")
+            logs += f"  ❌ Failed: {str(e)}\n"
+            return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
     async def _execute_delay(self, params: dict, input_data: dict, is_test: bool) -> dict:
         """Wait for a specified duration."""
         duration = params.get("duration", 60)
