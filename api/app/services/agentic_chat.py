@@ -868,7 +868,9 @@ def _tool_save_knowledge(args: dict, user: User, db: Session) -> str:
     )
     db.add(entry)
     db.commit()
-    return json.dumps({"success": True, "action": "created", "title": title, "category": category,
+    db.refresh(entry)
+    logger.info(f"[knowledge-save] Created entry id={entry.id} title='{title}' category='{category}' user={user.id}")
+    return json.dumps({"success": True, "action": "created", "id": entry.id, "title": title, "category": category,
                        "message": f"Saved '{title}' to your knowledge base under {category}."})
 
 
@@ -1145,21 +1147,23 @@ async def agentic_chat_stream(
     db.commit()
 
     # Auto-extract knowledge from user message (background, non-blocking, own DB session)
-    try:
-        from app.services.knowledge_extractor import extract_knowledge_from_message
-        from app.database import SessionLocal
-        _kb_executor = ThreadPoolExecutor(max_workers=1)
-        
-        def _extract_bg(uid, msg):
-            bg_db = SessionLocal()
-            try:
-                extract_knowledge_from_message(uid, msg, bg_db)
-            finally:
-                bg_db.close()
-        
-        asyncio.get_event_loop().run_in_executor(_kb_executor, _extract_bg, user.id, user_message)
-    except Exception:
-        pass  # Never block chat on knowledge extraction failure
+    # Skip for trial users — their limited entries should be intentional, not auto-consumed
+    if not user.is_trial:
+        try:
+            from app.services.knowledge_extractor import extract_knowledge_from_message
+            from app.database import SessionLocal
+            _kb_executor = ThreadPoolExecutor(max_workers=1)
+            
+            def _extract_bg(uid, msg):
+                bg_db = SessionLocal()
+                try:
+                    extract_knowledge_from_message(uid, msg, bg_db)
+                finally:
+                    bg_db.close()
+            
+            asyncio.get_event_loop().run_in_executor(_kb_executor, _extract_bg, user.id, user_message)
+        except Exception:
+            pass  # Never block chat on knowledge extraction failure
 
     # Auto-title: if conversation has <=1 messages, generate title from first user message
     if conversation_id:
