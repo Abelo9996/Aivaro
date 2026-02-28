@@ -816,6 +816,8 @@ Extract: {fields_to_extract}"""
                     "logs": logs
                 }
             except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"[Slack] Failed to send message to {channel}: {e}")
                 logs += f"  ❌ Failed: {str(e)}\n"
                 return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
         
