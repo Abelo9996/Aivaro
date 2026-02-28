@@ -122,6 +122,14 @@ export default function ExecutionDetailPage() {
             ⚠️ <strong>Test Mode:</strong> No real actions were performed. Emails were not sent, sheets were not accessed, and AI responses were simulated.
           </div>
         )}
+        {execution.error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <strong>Error:</strong> {execution.error}
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <div className="text-gray-500">Started</div>

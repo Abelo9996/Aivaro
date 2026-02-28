@@ -51,6 +51,12 @@ def _run_migrations():
         kb_columns = [c["name"] for c in inspector.get_columns("knowledge_entries")] if "knowledge_entries" in inspector.get_table_names() else []
         # knowledge_entries table is created by create_all above, no extra migration needed
 
+        exec_columns = [c["name"] for c in inspector.get_columns("executions")] if "executions" in inspector.get_table_names() else []
+        if "error" not in exec_columns and exec_columns:
+            logger.info("[migration] Adding error column to executions")
+            conn.execute(text("ALTER TABLE executions ADD COLUMN error TEXT"))
+            conn.commit()
+
 try:
     _run_migrations()
 except Exception as e:

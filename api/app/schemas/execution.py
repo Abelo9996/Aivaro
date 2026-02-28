@@ -30,6 +30,7 @@ class ExecutionResponse(BaseModel):
     id: str
     workflow_id: str
     status: str
+    error: Optional[str] = None
     is_test: bool
     started_at: datetime
     completed_at: Optional[datetime]

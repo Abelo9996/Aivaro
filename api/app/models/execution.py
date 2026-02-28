@@ -12,6 +12,7 @@ class Execution(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     workflow_id = Column(String(36), ForeignKey("workflows.id"), nullable=False)
     status = Column(String, default="running")
+    error = Column(Text, nullable=True)
     is_test = Column(Boolean, default=False)
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)

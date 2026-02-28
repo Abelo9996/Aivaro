@@ -84,6 +84,7 @@ class WorkflowRunner:
             error_msg = f"Workflow execution failed: {str(e)}\n{traceback.format_exc()}"
             print(f"[WorkflowRunner] {error_msg}")
             self.execution.status = "failed"
+            self.execution.error = error_msg
             self.db.commit()
             return self.execution
         
@@ -186,6 +187,7 @@ class WorkflowRunner:
             exec_node.completed_at = datetime.utcnow()
             exec_node.duration_ms = int((exec_node.completed_at - exec_node.started_at).total_seconds() * 1000)
             self.execution.status = "failed"
+            self.execution.error = f"Node '{node.get('label', node_id)}' failed: {str(e)}"
             self.db.commit()
             return
         
@@ -199,6 +201,7 @@ class WorkflowRunner:
         if not result.get("success"):
             exec_node.logs = exec_node.logs or f"Node returned failure: {result}"
             self.execution.status = "failed"
+            self.execution.error = f"Node '{node.get('label', node_id)}' failed: {result.get('logs', 'Unknown error')}"
             self.db.commit()
             return
         
