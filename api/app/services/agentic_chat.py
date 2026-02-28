@@ -838,16 +838,33 @@ def _tool_save_knowledge(args: dict, user: User, db: Session) -> str:
     if category not in valid_cats:
         category = "custom"
     
-    # Check for existing entry with same title in same category
-    existing = db.query(KnowledgeEntry).filter(
+    # Check for existing entry to update (same category, similar title)
+    from sqlalchemy import func
+    existing_entries = db.query(KnowledgeEntry).filter(
         KnowledgeEntry.user_id == user.id,
         KnowledgeEntry.category == category,
-        KnowledgeEntry.title == title,
-    ).first()
+    ).all()
+    
+    # Find best match: exact title, case-insensitive title, or title contained in existing
+    existing = None
+    title_lower = title.lower().strip()
+    for e in existing_entries:
+        e_title = (e.title or "").lower().strip()
+        if e_title == title_lower:
+            existing = e
+            break
+    if not existing:
+        for e in existing_entries:
+            e_title = (e.title or "").lower().strip()
+            if title_lower in e_title or e_title in title_lower:
+                existing = e
+                break
     
     if existing:
         existing.content = content
+        existing.title = title  # Update title to latest version too
         db.commit()
+        logger.info(f"[knowledge-save] Updated entry id={existing.id} title='{title}' category='{category}' user={user.id}")
         return json.dumps({"success": True, "action": "updated", "title": title, "category": category,
                            "message": f"Updated existing entry '{title}' in {category}."})
     

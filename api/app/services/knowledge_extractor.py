@@ -93,12 +93,18 @@ def extract_knowledge_from_message(
             if not cat or cat not in valid_cats or not title or not content:
                 continue
             
-            # Check for duplicates (same title in same category)
-            existing = db.query(KnowledgeEntry).filter(
+            # Find existing entry with similar title in same category
+            existing = None
+            cat_entries = db.query(KnowledgeEntry).filter(
                 KnowledgeEntry.user_id == user_id,
                 KnowledgeEntry.category == cat,
-                KnowledgeEntry.title == title,
-            ).first()
+            ).all()
+            title_lower = title.lower().strip()
+            for e in cat_entries:
+                e_title = (e.title or "").lower().strip()
+                if e_title == title_lower or title_lower in e_title or e_title in title_lower:
+                    existing = e
+                    break
             
             if existing:
                 # Update if content is different/longer
