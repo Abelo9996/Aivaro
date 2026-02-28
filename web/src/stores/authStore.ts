@@ -28,6 +28,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signup: async (email: string, password: string, fullName?: string) => {
     const response = await api.signup(email, password, fullName);
+    if (response.requires_verification) {
+      // Don't log in — throw so the UI can show verification message
+      throw { requiresVerification: true, email: response.email, message: response.message };
+    }
     api.setToken(response.access_token);
     set({ user: response.user, isAuthenticated: true });
   },

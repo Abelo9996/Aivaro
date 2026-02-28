@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from pydantic import BaseModel as PydanticBaseModel
 
 from app.database import get_db
 from app.schemas import UserCreate, UserLogin, UserResponse, Token
@@ -51,7 +52,7 @@ def get_current_user(
     return user
 
 
-@router.post("/signup", response_model=Token)
+@router.post("/signup")
 async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
@@ -76,6 +77,14 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         user.email_verified = True
         user.verification_token = None
         db.commit()
+    
+    if not user.email_verified:
+        # Don't log them in — require verification first
+        return {
+            "message": "Please check your email to verify your account.",
+            "email": user.email,
+            "requires_verification": True,
+        }
     
     access_token = create_access_token(
         data={"sub": str(user.id)},
@@ -107,7 +116,7 @@ async def resend_verification(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Resend verification email."""
+    """Resend verification email (for logged-in users)."""
     if current_user.email_verified:
         return {"message": "Email already verified"}
     
@@ -123,6 +132,29 @@ async def resend_verification(
     return {"message": "Verification email sent"}
 
 
+class ResendRequest(PydanticBaseModel):
+    email: str
+
+@router.post("/resend-verification-public")
+async def resend_verification_public(
+    request: ResendRequest,
+    db: Session = Depends(get_db)
+):
+    """Resend verification email by email address (no auth required)."""
+    user = get_user_by_email(db, request.email)
+    if not user or getattr(user, 'email_verified', True):
+        # Don't reveal whether the email exists
+        return {"message": "If that email is registered, a verification link has been sent."}
+    
+    from app.services.email_verification import generate_verification_token, send_verification_email
+    token = generate_verification_token()
+    user.verification_token = token
+    db.commit()
+    
+    send_verification_email(user.email, user.full_name, token)
+    return {"message": "If that email is registered, a verification link has been sent."}
+
+
 @router.post("/login", response_model=Token)
 async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     user = authenticate_user(db, user_data.email, user_data.password)
@@ -130,6 +162,16 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
+        )
+    
+    if not getattr(user, 'email_verified', True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "email_not_verified",
+                "message": "Please verify your email before logging in. Check your inbox for a verification link.",
+                "email": user.email,
+            }
         )
     
     access_token = create_access_token(

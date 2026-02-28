@@ -30,6 +30,8 @@ export default function SignupPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +53,12 @@ export default function SignupPage() {
       await signup(email, password, fullName);
       router.push('/onboarding');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      if (err.requiresVerification) {
+        setVerificationSent(true);
+        setVerificationEmail(err.email || email);
+      } else {
+        setError(err.message || 'Failed to create account');
+      }
     } finally {
       setLoading(false);
     }
@@ -149,6 +156,87 @@ export default function SignupPage() {
         position: 'relative',
         zIndex: 10,
       }}>
+        {verificationSent ? (
+          /* Verification Email Sent Screen */
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              background: 'rgba(139, 92, 246, 0.15)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="M22 7l-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
+              </svg>
+            </div>
+            <h2 style={{ fontSize: '22px', fontWeight: 700, color: colors.textPrimary, marginBottom: '12px' }}>
+              Check your email
+            </h2>
+            <p style={{ fontSize: '15px', color: colors.textSecondary, lineHeight: 1.6, marginBottom: '8px' }}>
+              We sent a verification link to
+            </p>
+            <p style={{ fontSize: '15px', color: colors.primaryLight, fontWeight: 600, marginBottom: '24px' }}>
+              {verificationEmail}
+            </p>
+            <p style={{ fontSize: '13px', color: colors.textMuted, lineHeight: 1.6, marginBottom: '32px' }}>
+              Click the link in the email to verify your account, then come back to log in.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <Link
+                href="/login"
+                style={{
+                  display: 'block',
+                  padding: '14px 24px',
+                  background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+                  borderRadius: '12px',
+                  color: 'white',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  boxShadow: `0 4px 20px ${colors.primary}40`,
+                }}
+              >
+                Go to Login
+              </Link>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                    await fetch(`${apiBase}/api/auth/resend-verification-public`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email: verificationEmail }),
+                    });
+                    setError('');
+                    alert('Verification email resent! Check your inbox.');
+                  } catch {
+                    setError('Failed to resend email.');
+                  }
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: 'transparent',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  borderRadius: '12px',
+                  color: colors.textSecondary,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s',
+                }}
+              >
+                Resend verification email
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Logo */}
         <div style={{
           display: 'flex',
@@ -626,6 +714,8 @@ export default function SignupPage() {
             Sign in
           </Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   );

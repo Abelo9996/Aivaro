@@ -39,6 +39,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [needsVerification, setNeedsVerification] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +51,9 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/app');
     } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      const msg = err.message || 'Failed to login';
+      setError(msg);
+      setNeedsVerification(msg.toLowerCase().includes('verify'));
     } finally {
       setLoading(false);
     }
@@ -164,6 +167,38 @@ export default function LoginPage() {
                 color: '#ef4444',
               }} />
               <p style={{ fontSize: '14px', color: '#ef4444', margin: 0 }}>{error}</p>
+              {needsVerification && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                      await fetch(`${apiBase}/api/auth/resend-verification-public`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email }),
+                      });
+                      setError('Verification email resent! Check your inbox.');
+                      setNeedsVerification(false);
+                    } catch {
+                      setError('Failed to resend verification email.');
+                    }
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 12px',
+                    background: 'rgba(139, 92, 246, 0.15)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    borderRadius: '6px',
+                    color: '#a78bfa',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  Resend verification email
+                </button>
+              )}
             </div>
           )}
 
