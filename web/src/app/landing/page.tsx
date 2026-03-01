@@ -176,12 +176,13 @@ function HeroSection() {
         <motion.div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
 
           <motion.div
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, border: '1px solid rgba(139, 92, 246, 0.3)', background: 'rgba(139, 92, 246, 0.08)', marginBottom: isMobile ? 24 : 32 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, border: '1px solid rgba(16, 185, 129, 0.35)', background: 'rgba(16, 185, 129, 0.08)', marginBottom: isMobile ? 24 : 32 }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <span style={{ fontSize: 13, color: styles.primaryLight, fontWeight: 500 }}>Trusted by 15+ businesses in beta</span>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }} />
+            <span style={{ fontSize: 13, color: '#6ee7b7', fontWeight: 500 }}>Trusted by 15+ businesses in beta</span>
           </motion.div>
 
           <motion.h1
@@ -190,7 +191,15 @@ function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            Automate your business in plain English
+            Automate your business{' '}
+            <span style={{
+              background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 40%, #10b981 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
+              in plain English
+            </span>
           </motion.h1>
 
           <motion.p
@@ -319,7 +328,7 @@ function HowItWorksSection() {
           style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 56 }}
         >
           <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: styles.textPrimary, marginBottom: 8, lineHeight: 1.1 }}>
-            Running in minutes, not days
+            Running in minutes, <span style={{ background: 'linear-gradient(135deg, #a78bfa, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>not days</span>
           </h2>
           <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted }}>
             No developers. No drag-and-drop. No setup guide.
@@ -379,7 +388,7 @@ function ResultsSection() {
           style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 56 }}
         >
           <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: styles.textPrimary, marginBottom: 8, lineHeight: 1.1 }}>
-            Real results from real businesses
+            Real results from <span style={{ background: 'linear-gradient(135deg, #10b981, #6ee7b7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>real businesses</span>
           </h2>
           <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted, maxWidth: 500, margin: '0 auto' }}>
             Our first pilot — a liquidation business — went from manual chaos to automated operations.
@@ -729,10 +738,41 @@ export default function LandingPage() {
       position: 'relative',
       overflowX: 'hidden',
     }}>
+      {/* Keyframe animations */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes float-slow {
+          0%, 100% { transform: translateY(0px) translateX(0px); }
+          50% { transform: translateY(-30px) translateX(10px); }
+        }
+      `}</style>
       {/* Background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #0a0a1a 0%, #050510 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.08), transparent 60%)' }} />
+        {/* Dot grid pattern */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'radial-gradient(rgba(139, 92, 246, 0.15) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          maskImage: 'radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%)',
+        }} />
+        {/* Primary glow */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% -10%, rgba(139, 92, 246, 0.15), transparent 55%)' }} />
+        {/* Secondary accent glow */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.06), transparent 50%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 80% 50%, rgba(16, 185, 129, 0.04), transparent 50%)' }} />
+        {/* Floating orbs */}
+        <div style={{ position: 'absolute', top: '15%', left: '10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139, 92, 246, 0.06), transparent 70%)', animation: 'float 8s ease-in-out infinite', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '60%', right: '8%', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05), transparent 70%)', animation: 'float-slow 12s ease-in-out infinite', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '40%', left: '60%', width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05), transparent 70%)', animation: 'float 10s ease-in-out infinite 2s', pointerEvents: 'none' }} />
       </div>
 
       {/* Content */}
