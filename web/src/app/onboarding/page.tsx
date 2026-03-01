@@ -136,10 +136,25 @@ export default function OnboardingPage() {
       const result = await api.authorizeConnection(toolId);
       if (result.authorization_url) {
         const popup = window.open(result.authorization_url, 'oauth', 'width=500,height=600');
+        
+        // Listen for postMessage from the OAuth callback page
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type === 'oauth_callback') {
+            window.removeEventListener('message', handleMessage);
+            clearInterval(interval);
+            await loadConnections();
+            setConnectingTool(null);
+          }
+        };
+        window.addEventListener('message', handleMessage);
+        
+        // Fallback: poll for popup close (in case postMessage fails)
         const interval = setInterval(async () => {
           try {
             if (popup?.closed) {
               clearInterval(interval);
+              window.removeEventListener('message', handleMessage);
               await loadConnections();
               setConnectingTool(null);
             }
@@ -147,7 +162,7 @@ export default function OnboardingPage() {
             // Cross-origin, keep waiting
           }
         }, 1000);
-        setTimeout(() => { clearInterval(interval); setConnectingTool(null); }, 120000);
+        setTimeout(() => { clearInterval(interval); window.removeEventListener('message', handleMessage); setConnectingTool(null); }, 120000);
       } else if (result.demo_mode) {
         // Demo mode — simulate connection
         setConnectedTools(prev => [...prev, toolId]);

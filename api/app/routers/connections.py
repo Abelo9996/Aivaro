@@ -115,7 +115,7 @@ async def oauth_callback(
     state_data = oauth_states.pop(state, None)
     if not state_data or state_data["provider"] != provider:
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/app/connections?error=invalid_state"
+            url=f"{FRONTEND_URL}/oauth-callback?error=invalid_state"
         )
     
     user_id = state_data["user_id"]
@@ -125,7 +125,7 @@ async def oauth_callback(
     tokens = await exchange_code_for_tokens(provider, code, redirect_uri)
     if not tokens:
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/app/connections?error=token_exchange_failed"
+            url=f"{FRONTEND_URL}/oauth-callback?error=token_exchange_failed"
         )
     
     # Get user info from provider
@@ -170,7 +170,7 @@ async def oauth_callback(
     db.commit()
     
     return RedirectResponse(
-        url=f"{FRONTEND_URL}/app/connections?success={provider}"
+        url=f"{FRONTEND_URL}/oauth-callback?success={provider}"
     )
 
 
