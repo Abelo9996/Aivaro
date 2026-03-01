@@ -73,7 +73,7 @@ function Header() {
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '8px 16px' : isTablet ? '8px 32px' : '8px 48px' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '8px 16px' : isTablet ? '8px 32px' : '8px 64px' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -172,7 +172,7 @@ function HeroSection() {
 
   return (
     <div style={{ background: 'transparent', position: 'relative' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '64px 16px 48px' : isTablet ? '80px 32px 64px' : '120px 48px 80px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '64px 16px 48px' : isTablet ? '80px 32px 64px' : '120px 64px 80px' }}>
         <motion.div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
 
           <motion.div
@@ -185,7 +185,7 @@ function HeroSection() {
           </motion.div>
 
           <motion.h1
-            style={{ fontSize: isMobile ? 36 : isTablet ? 52 : 64, lineHeight: 1.05, letterSpacing: '-1.5px', fontWeight: 700, color: styles.textPrimary, margin: '0 0 20px', maxWidth: 700 }}
+            style={{ fontSize: isMobile ? 36 : isTablet ? 52 : 64, lineHeight: 1.05, letterSpacing: '-1.5px', fontWeight: 700, color: styles.textPrimary, margin: '0 0 20px', maxWidth: 800 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -194,7 +194,7 @@ function HeroSection() {
           </motion.h1>
 
           <motion.p
-            style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.6, color: styles.textMuted, margin: '0 0 36px', maxWidth: 520 }}
+            style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.6, color: styles.textMuted, margin: '0 0 36px', maxWidth: 580 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -239,7 +239,7 @@ function HeroSection() {
 
           {/* Chat example card */}
           <motion.div
-            style={{ width: '100%', maxWidth: 640, marginTop: isMobile ? 40 : 56 }}
+            style={{ width: '100%', maxWidth: 720, marginTop: isMobile ? 40 : 56 }}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.5 }}
@@ -312,7 +312,7 @@ function HowItWorksSection() {
 
   return (
     <div id="how-it-works" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 48px' }}>
+      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -372,7 +372,7 @@ function ResultsSection() {
 
   return (
     <div id="results" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 48px' }}>
+      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -485,7 +485,7 @@ function FeaturesSection() {
 
   return (
     <div style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 48px' }}>
+      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -570,7 +570,7 @@ function PricingSection() {
 
   return (
     <div id="pricing" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 48px' }}>
+      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -652,7 +652,7 @@ function CTASection() {
 
   return (
     <div style={{ padding: isMobile ? '48px 0' : '80px 0' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 48px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
         <motion.div
           ref={ref}
           style={{
@@ -669,7 +669,7 @@ function CTASection() {
           <h2 style={{ fontSize: isMobile ? 24 : 36, fontWeight: 700, color: styles.textPrimary, marginBottom: 12 }}>
             Your next missed follow-up costs more than trying Aivaro
           </h2>
-          <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted, marginBottom: 28, maxWidth: 480, margin: '0 auto 28px' }}>
+          <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted, marginBottom: 28, maxWidth: 520, margin: '0 auto 28px' }}>
             7-day free trial. First workflow running in minutes.
           </p>
           <Link href="/signup" style={{ textDecoration: 'none' }}>
@@ -697,7 +697,7 @@ function Footer() {
   const { isMobile, isTablet } = useResponsive();
   return (
     <div style={{ padding: isMobile ? '32px 0' : '48px 0', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 48px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <Logo small />
