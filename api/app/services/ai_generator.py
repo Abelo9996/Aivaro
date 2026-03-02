@@ -126,7 +126,7 @@ IMPORTANT RULES:
 Return ONLY valid JSON."""
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5",
             messages=[
                 {"role": "system", "content": analysis_prompt},
                 {"role": "user", "content": f"Analyze this workflow request: {prompt}"}
@@ -507,7 +507,7 @@ Example for condition branching (appointment with conflict check):
 Return ONLY valid JSON, no markdown code blocks or explanation."""
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Create a workflow for: {prompt}"}
