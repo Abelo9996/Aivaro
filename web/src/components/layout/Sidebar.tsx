@@ -36,7 +36,7 @@ function TrialBanner() {
   useEffect(() => {
     const fetchUsage = () => api.getUsage().then(setUsage).catch(() => {});
     fetchUsage();
-    const interval = setInterval(fetchUsage, 30000);
+    const interval = setInterval(fetchUsage, 60000);
     const onFocus = () => fetchUsage();
     window.addEventListener('focus', onFocus);
     return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };

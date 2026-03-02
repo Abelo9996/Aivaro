@@ -223,7 +223,7 @@ Guidelines:
             response = client.chat.completions.create(
                 model="gpt-5",
                 messages=messages,
-                max_completion_tokens=2000
+                max_completion_tokens=8192
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -291,7 +291,7 @@ TONE:
             response = client.chat.completions.create(
                 model="gpt-5",
                 messages=messages,
-                max_completion_tokens=4096
+                max_completion_tokens=16384
             )
             return response.choices[0].message.content
         except Exception as e:

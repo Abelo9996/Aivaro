@@ -131,7 +131,7 @@ Return ONLY valid JSON."""
                 {"role": "system", "content": analysis_prompt},
                 {"role": "user", "content": f"Analyze this workflow request: {prompt}"}
             ],
-            max_completion_tokens=2000
+            max_completion_tokens=8192
         )
         
         content = response.choices[0].message.content
@@ -511,7 +511,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation."""
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Create a workflow for: {prompt}"}
             ],
-            max_completion_tokens=4096
+            max_completion_tokens=16384
         )
         
         content = response.choices[0].message.content

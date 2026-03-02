@@ -1246,7 +1246,7 @@ async def agentic_chat_stream(
             messages=msgs,
             tools=TOOLS,
             tool_choice="auto",
-            max_completion_tokens=4096,
+            max_completion_tokens=16384,
         )
 
     for iteration in range(5):
@@ -1399,12 +1399,12 @@ async def agentic_chat_stream(
         # Final text response
         text = choice.message.content or ""
         
-        # GPT-5 sometimes returns empty content with stop — retry once
-        if not text.strip() and iteration < 4:
-            logger.warning(f"[agentic] Empty response on iteration {iteration}, retrying")
-            messages.append({"role": "assistant", "content": ""})
-            messages.append({"role": "user", "content": "Please respond to my message above."})
-            continue
+        # GPT-5 sometimes returns empty content with finish_reason=length
+        # (reasoning tokens consumed all of max_completion_tokens)
+        # Don't retry — just tell the user something went wrong
+        if not text.strip():
+            logger.warning(f"[agentic] Empty response on iteration {iteration}, finish_reason={choice.finish_reason}")
+            text = "Sorry, I had trouble generating a response. Could you try rephrasing or simplifying your request?"
         
         metadata = {"steps": collected_steps} if collected_steps else None
         db.add(ChatMessage(
