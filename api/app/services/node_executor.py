@@ -1902,16 +1902,30 @@ Extract: {fields_to_extract}"""
         event_type_uuid = _interpolate(event_type_uuid, input_data)
         
         logs = f"[{datetime.utcnow().isoformat()}] Creating Calendly scheduling link\n"
-        logs += f"  Event Type UUID: {event_type_uuid}\n"
         
         calendly = await self.get_calendly_service()
         if not calendly:
-            logs += "  ⚠️ Calendly not connected\n"
-            return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
+            logs += "  ❌ Calendly not connected\n"
+            return {"success": False, "error": "Calendly not connected. Connect Calendly at /app/connections.", "output": input_data, "logs": logs}
         
         try:
-            # Build full event type URI
-            event_type_uri = f"https://api.calendly.com/event_types/{event_type_uuid}"
+            # Auto-resolve event type if placeholder or empty
+            is_placeholder = not event_type_uuid or "PLACEHOLDER" in event_type_uuid.upper() or "DEFAULT" in event_type_uuid.upper()
+            if is_placeholder:
+                logs += "  ⚠️ No event type UUID configured — auto-detecting from Calendly account\n"
+                event_types_result = await calendly.list_event_types(active=True, count=5)
+                event_types = event_types_result.get("collection", [])
+                if not event_types:
+                    return {"success": False, "error": "No active event types found in your Calendly account. Create one at calendly.com first.", "output": input_data, "logs": logs + "  ❌ No active event types\n"}
+                # Use the first active event type
+                event_type_uri = event_types[0].get("uri", "")
+                event_type_name = event_types[0].get("name", "Unknown")
+                logs += f"  📅 Using event type: {event_type_name}\n"
+            else:
+                event_type_uri = f"https://api.calendly.com/event_types/{event_type_uuid}"
+            
+            logs += f"  Event Type: {event_type_uri}\n"
+            
             result = await calendly.create_scheduling_link(event_type_uri, max_event_count)
             booking_url = result.get("resource", {}).get("booking_url", "")
             logs += f"  ✅ Scheduling link created: {booking_url}\n"
