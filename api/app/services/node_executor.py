@@ -308,12 +308,13 @@ class NodeExecutor:
             except Exception as e:
                 logs += f"  ⚠️ SMTP failed: {str(e)}\n"
         
-        # Mock mode - no real email provider
-        logs += "  ⚠️ No email provider configured - email simulated\n"
+        # No email provider available - FAIL instead of simulating
+        logs += "  ❌ No email provider configured (Gmail not connected, SMTP not set up)\n"
         return {
-            "success": True,
-            "output": {**input_data, "email_sent": True, "email_to": to, "email_subject": subject, "simulated": True},
-            "logs": logs
+            "success": False,
+            "output": {**input_data, "email_sent": False, "email_to": to, "email_subject": subject},
+            "logs": logs,
+            "error": "No email provider available. Connect Gmail at /app/connections or configure SMTP."
         }
     
     async def _execute_ai_reply(self, params: dict, input_data: dict, is_test: bool) -> dict:
@@ -691,12 +692,13 @@ Extract: {fields_to_extract}"""
                     "error": str(e)
                 }
         
-        # No Google connection - simulate
-        logs += "  ⚠️ Google Sheets not connected - row simulated\n"
+        # No Google connection
+        logs += "  ❌ Google Sheets not connected\n"
         return {
-            "success": True,
-            "output": {**input_data, "row_added": True, "spreadsheet": spreadsheet, "row_data": row_data_dict if use_schema else row_data_list, "simulated": True},
-            "logs": logs
+            "success": False,
+            "output": input_data,
+            "logs": logs,
+            "error": "Google not connected. Connect Google at /app/connections."
         }
 
     async def _execute_read_sheet(self, params: dict, input_data: dict, is_test: bool) -> dict:
@@ -862,10 +864,13 @@ Extract: {fields_to_extract}"""
                 logs += f"  ❌ Failed: {str(e)}\n"
                 return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
         
-        logs += "  ⚠️ Slack not connected - message simulated\n"
+        logs += "  ❌ Slack not connected\n"
         return {
-            "success": True,
-            "output": {**input_data, "slack_sent": True, "channel": channel, "simulated": True},
+            "success": False,
+            "output": {**input_data, "slack_sent": False, "channel": channel},
+            "logs": logs,
+            "error": "Slack not connected. Connect Slack at /app/connections."
+        }
             "logs": logs
         }
     
@@ -1501,18 +1506,12 @@ Extract: {fields_to_extract}"""
         
         google = await self.get_google_service()
         if not google:
-            logs += "  ⚠️ Google Calendar not connected - event simulated\n"
+            logs += "  ❌ Google Calendar not connected\n"
             return {
-                "success": True,
-                "output": {
-                    **input_data,
-                    "calendar_event_id": "simulated_event",
-                    "event_title": title,
-                    "event_start": start_iso,
-                    "event_end": end_iso,
-                    "simulated": True
-                },
-                "logs": logs
+                "success": False,
+                "output": input_data,
+                "logs": logs,
+                "error": "Google not connected. Connect Google at /app/connections."
             }
         
         try:
