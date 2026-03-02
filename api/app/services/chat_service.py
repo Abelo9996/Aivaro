@@ -221,7 +221,7 @@ Guidelines:
     if client:
         try:
             response = client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-5-mini",
                 messages=messages,
                 max_completion_tokens=8192
             )
@@ -289,7 +289,7 @@ TONE:
     if client:
         try:
             response = client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-5-mini",
                 messages=messages,
                 max_completion_tokens=16384
             )

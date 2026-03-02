@@ -989,10 +989,14 @@ For EVERY workflow type, there are critical details you MUST know before buildin
 - When should it fire?
 
 STEP 3 — Ask 2-4 targeted questions in ONE message:
-- Group related questions together
-- Offer options where possible: "Should the confirmation be (a) professional, (b) friendly/casual, or (c) you want to write custom copy?"
-- If the knowledge base has info, confirm it: "I see your deposit is $50 — should I use that?"
-- Do NOT ask about technical implementation — ask about BUSINESS requirements
+- Start with a brief intro sentence (1 line max)
+- Then output ONLY questions, each on its own line, numbered like: "1. Question text here"
+- For multiple-choice questions, put options in parentheses: "1. What tone? (a) Professional (b) Friendly/casual (c) Custom"
+- Keep each question SHORT and specific (one line)
+- Do NOT add explanations, bullet sub-points, or paragraphs between questions
+- Do NOT repeat back what the user said before asking
+- Maximum 6 questions total
+- If the knowledge base has info, confirm it: "1. Your deposit is $50 — should I use that? (Yes/No)"
 
 STEP 4 — Build with full details:
 Only AFTER the user answers, call create_workflow with a description that includes every specific detail they gave you. The description should read like a complete spec, not a vague summary.
@@ -1242,7 +1246,7 @@ async def agentic_chat_stream(
 
     def _call_openai(msgs):
         return client.chat.completions.create(
-            model="gpt-5",
+            model="gpt-5-mini",
             messages=msgs,
             tools=TOOLS,
             tool_choice="auto",

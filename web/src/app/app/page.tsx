@@ -105,6 +105,117 @@ function renderInline(text: string) {
   });
 }
 
+// --- Question Form ---
+// Detects numbered questions in assistant messages and renders as form inputs
+
+interface ParsedQuestion {
+  num: number;
+  text: string;
+  options?: { key: string; label: string }[];
+}
+
+function parseQuestions(content: string): { intro: string; questions: ParsedQuestion[] } | null {
+  const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+  const questions: ParsedQuestion[] = [];
+  const introLines: string[] = [];
+  
+  for (const line of lines) {
+    const match = line.match(/^(\d+)\.\s+(.+)/);
+    if (match) {
+      const num = parseInt(match[1]);
+      let text = match[2];
+      // Parse options like (a) Professional (b) Casual (c) Custom
+      const optMatch = text.match(/^(.+?)\s*(\([a-z]\)\s+.+)$/);
+      let options: { key: string; label: string }[] | undefined;
+      if (optMatch) {
+        text = optMatch[1];
+        const optStr = optMatch[2];
+        const opts = optStr.match(/\(([a-z])\)\s+([^(]+)/g);
+        if (opts) {
+          options = opts.map(o => {
+            const m = o.match(/\(([a-z])\)\s+(.+)/);
+            return { key: m![1], label: m![2].trim() };
+          });
+        }
+      }
+      questions.push({ num, text, options });
+    } else if (questions.length === 0) {
+      introLines.push(line);
+    }
+  }
+  
+  if (questions.length < 2) return null;
+  return { intro: introLines.join(' '), questions };
+}
+
+function QuestionForm({ content, onSubmit, disabled }: { content: string; onSubmit: (answers: string) => void; disabled: boolean }) {
+  const parsed = parseQuestions(content);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  
+  if (!parsed) return null;
+  
+  const allAnswered = parsed.questions.every(q => (answers[q.num] || '').trim());
+  
+  const handleSubmit = () => {
+    const formatted = parsed.questions
+      .map(q => `${q.num}. ${answers[q.num]?.trim() || ''}`)
+      .join('\n');
+    onSubmit(formatted);
+  };
+  
+  return (
+    <div className="mt-3 space-y-3">
+      {parsed.questions.map(q => (
+        <div key={q.num} className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700 flex items-start gap-2">
+            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-100 text-primary-700 text-xs font-semibold flex items-center justify-center mt-0.5">
+              {q.num}
+            </span>
+            <span>{renderInline(q.text)}</span>
+          </label>
+          {q.options ? (
+            <div className="flex flex-wrap gap-2 ml-7">
+              {q.options.map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setAnswers(prev => ({ ...prev, [q.num]: opt.label }))}
+                  className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                    answers[q.num] === opt.label
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={answers[q.num] || ''}
+              onChange={e => setAnswers(prev => ({ ...prev, [q.num]: e.target.value }))}
+              disabled={disabled}
+              placeholder="Type your answer..."
+              className="ml-7 w-[calc(100%-1.75rem)] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent disabled:bg-gray-50"
+              onKeyDown={e => { if (e.key === 'Enter' && allAnswered) handleSubmit(); }}
+            />
+          )}
+        </div>
+      ))}
+      <button
+        onClick={handleSubmit}
+        disabled={!allAnswered || disabled}
+        className="ml-7 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+      >
+        <Send className="w-3.5 h-3.5" />
+        Submit Answers
+      </button>
+    </div>
+  );
+}
+
 // --- Step Progress ---
 
 function StepProgress({ steps }: { steps: StepEvent[] }) {
@@ -614,6 +725,13 @@ export default function DashboardPage() {
                     {msg.content && (
                       <div className={msg.steps ? 'mt-3 pt-3 border-t border-gray-200' : ''}>
                         {renderMessageContent(msg.content)}
+                        {msg.role === 'assistant' && i === messages.length - 1 && parseQuestions(msg.content) && (
+                          <QuestionForm
+                            content={msg.content}
+                            onSubmit={(answers) => handleSend(answers)}
+                            disabled={isLoading}
+                          />
+                        )}
                       </div>
                     )}
                     <p className={`text-xs mt-1.5 ${msg.role === 'user' ? 'text-primary-200' : 'text-gray-400'}`}>
