@@ -112,8 +112,8 @@ export default function SignupPage() {
           fontSize: '14px',
           transition: 'color 0.2s',
         }}
-        onMouseEnter={(e) => e.currentTarget.style.color = colors.textPrimary}
-        onMouseLeave={(e) => e.currentTarget.style.color = colors.textMuted}
+        onMouseEnter={(e) => { e.currentTarget.style.color = colors.textPrimary; e.currentTarget.style.transform = 'translateX(-3px)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = colors.textMuted; e.currentTarget.style.transform = 'none'; }}
       >
         <ArrowLeft size={18} />
         Back to landing

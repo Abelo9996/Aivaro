@@ -1242,7 +1242,7 @@ async def agentic_chat_stream(
 
     def _call_openai(msgs):
         return client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=msgs,
             tools=TOOLS,
             tool_choice="auto",

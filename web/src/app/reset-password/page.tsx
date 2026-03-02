@@ -109,11 +109,7 @@ function ResetPasswordContent() {
       overflow: 'hidden',
     }}>
       <VantaBackground />
-      <Link
-        href="/login"
-        style={{
-          position: 'absolute', top: '24px', left: '24px', zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: '8px',
+      <Link href="/login" className="back-link" style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10,
           color: colors.textMuted, textDecoration: 'none', fontSize: '14px',
         }}
       >

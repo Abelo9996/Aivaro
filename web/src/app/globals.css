@@ -21,6 +21,17 @@ body {
   background: #0a0a1a;
 }
 
+.back-link {
+  transition: color 0.2s, transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.back-link:hover {
+  color: #e2e8f0 !important;
+  transform: translateX(-3px);
+}
+
 /* React Flow customizations */
 .react-flow__node {
   border-radius: 12px;

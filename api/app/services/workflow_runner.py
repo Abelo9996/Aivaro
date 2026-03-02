@@ -37,8 +37,24 @@ class WorkflowRunner:
         """Find nodes with type 'start'"""
         return [n for n in self.workflow.nodes if n["type"].startswith("start")]
     
-    def get_next_nodes(self, node_id: str) -> list[str]:
-        """Get node IDs connected from this node"""
+    def get_next_nodes(self, node_id: str, branch: str = None) -> list[str]:
+        """Get node IDs connected from this node, optionally filtered by branch.
+        
+        For condition nodes, edges should have sourceHandle='true' or sourceHandle='false'.
+        If branch is specified, only return edges matching that branch.
+        If no edges match the branch filter, fall back to all edges (backward compat).
+        """
+        if branch:
+            # Try to find edges with matching sourceHandle
+            branched = [e["target"] for e in self.edges 
+                       if e["source"] == node_id and e.get("sourceHandle") == branch]
+            if branched:
+                return branched
+            # Also try label-based matching
+            branched = [e["target"] for e in self.edges 
+                       if e["source"] == node_id and e.get("label", "").lower() == branch]
+            if branched:
+                return branched
         return [e["target"] for e in self.edges if e["source"] == node_id]
     
     def run(self, trigger_data: Optional[dict] = None) -> Execution:
@@ -208,8 +224,9 @@ class WorkflowRunner:
             self.db.commit()
             return
         
-        # Continue to next nodes
-        next_node_ids = self.get_next_nodes(node_id)
+        # Continue to next nodes (with branch support for conditions)
+        branch = result.get("branch")
+        next_node_ids = self.get_next_nodes(node_id, branch=branch)
         if not next_node_ids:
             self.execution.status = "completed"
             self.execution.completed_at = datetime.utcnow()
@@ -434,7 +451,8 @@ class WorkflowRunner:
         self.db.commit()
         
         # Continue to next nodes
-        next_node_ids = self.get_next_nodes(approval.node_id)
+        branch = result.get("branch")
+        next_node_ids = self.get_next_nodes(approval.node_id, branch=branch)
         if not next_node_ids:
             self.execution.status = "completed"
             self.execution.completed_at = datetime.utcnow()

@@ -422,8 +422,8 @@ export default function LoginPage() {
                 textDecoration: 'none',
                 transition: 'color 0.2s',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = colors.primary}
-              onMouseLeave={(e) => e.currentTarget.style.color = colors.textSecondary}
+              onMouseEnter={(e) => { e.currentTarget.style.color = colors.primary; e.currentTarget.style.transform = 'translateX(-3px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = colors.textSecondary; e.currentTarget.style.transform = 'none'; }}
             >
               <ArrowLeft style={{ width: '16px', height: '16px' }} />
               <span>Back to Home</span>

@@ -26,7 +26,7 @@ export default function PrivacyPage() {
       <VantaBackground />
       <div style={{ position: 'relative', zIndex: 10 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link href="/landing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: colors.textMuted, textDecoration: 'none', fontSize: 14, marginBottom: 24 }}>
+        <Link href="/landing" className="back-link" style={{  color: colors.textMuted, textDecoration: 'none', fontSize: 14, marginBottom: 24 }}>
           <ArrowLeft size={18} /> Back to Home
         </Link>
 
