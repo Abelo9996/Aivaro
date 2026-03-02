@@ -781,7 +781,7 @@ Extract: {fields_to_extract}"""
         slack = await self.get_slack_service()
         if not slack:
             logs += "  ⚠️ Slack not connected\n"
-            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+            return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
         
         try:
             channels = await slack.list_channels()
@@ -2210,7 +2210,7 @@ Extract: {fields_to_extract}"""
         logs += f"  Channel: {channel}, Limit: {limit}\n"
         slack = await self.get_slack_service()
         if not slack:
-            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+            return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
         try:
             channel_info = await slack.find_channel_by_name(channel)
             channel_id = channel_info["id"] if channel_info else channel
@@ -2230,7 +2230,7 @@ Extract: {fields_to_extract}"""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Sending Slack DM\n"
         slack = await self.get_slack_service()
         if not slack:
-            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+            return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
         try:
             if email and not user_id:
                 user = await slack.find_user_by_email(email)
@@ -2250,7 +2250,7 @@ Extract: {fields_to_extract}"""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Slack users\n"
         slack = await self.get_slack_service()
         if not slack:
-            return {"success": False, "error": "Slack not connected", "output": input_data, "logs": logs}
+            return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
         try:
             users = await slack.list_users()
             formatted = [{"id": u["id"], "name": u.get("real_name", u.get("name", "")), "email": u.get("profile", {}).get("email", "")} for u in users if not u.get("is_bot") and not u.get("deleted")]

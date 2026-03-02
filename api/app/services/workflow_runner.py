@@ -133,19 +133,17 @@ class WorkflowRunner:
         # If we have real trigger data, merge it (trigger data takes precedence)
         if trigger_data and len(trigger_data) > 0:
             print(f"[WorkflowRunner] Using REAL trigger data with keys: {list(trigger_data.keys())}")
-            print(f"[WorkflowRunner] Trigger data snippet: {trigger_data.get('snippet', 'N/A')[:100] if trigger_data.get('snippet') else 'No snippet'}")
-            # Real trigger data - use it, with base data as fallback
             return {**base_data, **trigger_data}
         
-        # No trigger data - manual run without real trigger data
-        # Use base data only, no mock/demo data
-        is_manual = self.execution.trigger_data is None or len(self.execution.trigger_data or {}) == 0
+        # Fallback: check execution's stored trigger_data (set when execution was created)
+        stored = self.execution.trigger_data if self.execution else None
+        if stored and len(stored) > 0:
+            print(f"[WorkflowRunner] Using STORED trigger data with keys: {list(stored.keys())}")
+            return {**base_data, **stored}
         
-        if is_manual:
-            print(f"[WorkflowRunner] MANUAL RUN - no trigger data available, using base user data only")
-            return base_data
-        else:
-            return base_data
+        # No trigger data at all - manual run
+        print(f"[WorkflowRunner] MANUAL RUN - no trigger data available, using base user data only")
+        return base_data
     
     def _execute_from_node(self, node_id: str, input_data: dict):
         """Execute starting from a specific node"""
@@ -212,7 +210,7 @@ class WorkflowRunner:
         if not result.get("success"):
             exec_node.logs = exec_node.logs or f"Node returned failure: {result}"
             self.execution.status = "failed"
-            self.execution.error = f"Node '{node.get('label', node_id)}' failed: {result.get('logs', 'Unknown error')}"
+            self.execution.error = f"Node '{node.get('label', node_id)}' failed: {result.get('error', 'Unknown error')}"
             self.db.commit()
             return
         
