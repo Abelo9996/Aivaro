@@ -2265,15 +2265,19 @@ Extract: {fields_to_extract}"""
     async def _execute_slack_send_dm(self, params: dict, input_data: dict) -> dict:
         """Send a direct message to a Slack user."""
         user_id = params.get("user_id", "")
-        email = _interpolate(params.get("email", ""), input_data)
-        message = _interpolate(params.get("message", ""), input_data)
+        email = params.get("email", "")
+        message = params.get("message", "")
         
-        # Catch placeholder strings and fall back to workflow owner's email
-        if not email or not user_id:
-            if not email or "PLACEHOLDER" in email.upper() or "DEFAULT" in email.upper():
-                email = input_data.get("user_email", input_data.get("email", ""))
+        # Note: params are already interpolated by _interpolate_params at dispatch level
         
-        logs = f"[{datetime.utcnow().isoformat()}] Sending Slack DM to {email or user_id or 'unknown'}\n"
+        # Reject placeholder strings — the chatbot should have asked for a real email
+        if email and ("PLACEHOLDER" in email.upper() or "DEFAULT" in email.upper()):
+            return {"success": False, "error": f"Slack DM email is a placeholder '{email}'. The workflow needs a real email address. Edit the workflow or recreate it.", "output": input_data, "logs": ""}
+        
+        if not email and not user_id:
+            return {"success": False, "error": "No email or user_id configured for Slack DM. The workflow needs the recipient's Slack-registered email address.", "output": input_data, "logs": ""}
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Sending Slack DM to {email or user_id}\n"
         slack = await self.get_slack_service()
         if not slack:
             return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
@@ -2283,7 +2287,7 @@ Extract: {fields_to_extract}"""
                 if user:
                     user_id = user["id"]
                 else:
-                    return {"success": False, "error": f"No Slack user found with email {email}", "output": input_data, "logs": logs}
+                    return {"success": False, "error": f"No Slack user found with email '{email}'. Make sure this is the email they registered with on Slack.", "output": input_data, "logs": logs}
             result = await slack.send_dm(user_id, message)
             logs += f"  ✅ DM sent\n"
             return {"success": True, "output": {**input_data, "slack_dm_sent": True}, "logs": logs}

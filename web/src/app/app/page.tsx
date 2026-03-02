@@ -160,8 +160,8 @@ function parseQuestions(content: string): { intro: string; questions: ParsedQues
     // Skip lines after questions start that aren't numbered (sub-bullets, details)
   }
   
-  // Need at least 2 actual questions to show form
-  if (questions.length < 2) return null;
+  // Need at least 1 actual question to show form
+  if (questions.length < 1) return null;
   return { intro: introLines.join(' '), questions };
 }
 
