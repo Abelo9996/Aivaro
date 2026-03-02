@@ -1,4 +1,4 @@
-﻿"""
+"""
 Streaming Agentic Chat for Aivaro
 Uses SSE (Server-Sent Events) to stream progress steps to the frontend
 as the AI thinks and executes tools in real-time.

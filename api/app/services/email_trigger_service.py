@@ -1,4 +1,4 @@
-﻿"""
+"""
 Email Trigger Service - Polls Gmail for new emails and triggers matching workflows.
 """
 import asyncio

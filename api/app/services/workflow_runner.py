@@ -1,4 +1,4 @@
-﻿from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime
 from typing import Optional

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Schedule Trigger Service - Polls for workflows with start_schedule triggers and runs them at the right time.
 """
 import asyncio

@@ -10,17 +10,10 @@ from app.utils.timezone import now_local, parse_datetime, format_iso, get_defaul
 
 
 class NodeExecutor:
-   "Executes workflow nodes with real or mock integrations."""
+    """Executes workflow nodes with real integrations."""
     
     def __init__(self, connections: Optional[dict] = None, user_id: Optional[str] = None, db=None):
-       "
-        Initialize with user's connections.
-        connections should be a dict like:
-        {
-            "google": {"access_token": "...", "refresh_token": "..."},
-            "slack": {"access_token": "..."},
-        }
-       "
+        """Initialize with user's connections."""
         self.connections = connections or {}
         self.user_id = user_id
         self.db = db
@@ -28,7 +21,7 @@ class NodeExecutor:
         self._slack_service = None
     
     async def get_google_service(self):
-       "Get or create Google service instance."""
+        """Get or create Google service instance."""
         if self._google_service is None and "google" in self.connections:
             from app.services.integrations.google_service import GoogleService
             creds = self.connections["google"]
@@ -39,7 +32,7 @@ class NodeExecutor:
         return self._google_service
     
     async def get_slack_service(self):
-       "Get or create Slack service instance."""
+        """Get or create Slack service instance."""
         if self._slack_service is None and "slack" in self.connections:
             from app.services.integrations.slack_service import SlackService
             creds = self.connections["slack"]
@@ -49,7 +42,7 @@ class NodeExecutor:
         return self._slack_service
     
     async def get_stripe_service(self):
-       "Get or create Stripe service instance."""
+        """Get or create Stripe service instance."""
         if not hasattr(self, '_stripe_service'):
             self._stripe_service = None
         if self._stripe_service is None and "stripe" in self.connections:
@@ -62,7 +55,7 @@ class NodeExecutor:
         return self._stripe_service
     
     async def get_notion_service(self):
-       "Get or create Notion service instance."""
+        """Get or create Notion service instance."""
         if not hasattr(self, '_notion_service'):
             self._notion_service = None
         if self._notion_service is None and "notion" in self.connections:
@@ -74,7 +67,7 @@ class NodeExecutor:
         return self._notion_service
     
     async def get_airtable_service(self):
-       "Get or create Airtable service instance."""
+        """Get or create Airtable service instance."""
         if not hasattr(self, '_airtable_service'):
             self._airtable_service = None
         if self._airtable_service is None and "airtable" in self.connections:
@@ -86,7 +79,7 @@ class NodeExecutor:
         return self._airtable_service
     
     async def get_calendly_service(self):
-       "Get or create Calendly service instance."""
+        """Get or create Calendly service instance."""
         if not hasattr(self, '_calendly_service'):
             self._calendly_service = None
         if self._calendly_service is None and "calendly" in self.connections:
@@ -98,7 +91,7 @@ class NodeExecutor:
         return self._calendly_service
     
     async def get_mailchimp_service(self):
-       "Get or create Mailchimp service instance."""
+        """Get or create Mailchimp service instance."""
         if not hasattr(self, '_mailchimp_service'):
             self._mailchimp_service = None
         if self._mailchimp_service is None and "mailchimp" in self.connections:
@@ -114,7 +107,7 @@ class NodeExecutor:
         return self._mailchimp_service
     
     async def get_twilio_service(self):
-       "Get or create Twilio service instance."""
+        """Get or create Twilio service instance."""
         if not hasattr(self, '_twilio_service'):
             self._twilio_service = None
         if self._twilio_service is None and "twilio" in self.connections:
@@ -132,7 +125,7 @@ class NodeExecutor:
         return self._twilio_service
     
     async def close(self):
-       "Close all service connections."""
+        """Close all service connections."""
         if self._google_service:
             await self._google_service.close()
         if self._slack_service:
@@ -156,7 +149,7 @@ class NodeExecutor:
         parameters: dict[str, Any],
         input_data: dict[str, Any]
     ) -> dict[str, Any]:
-       "Execute a single node and return results."""
+        """Execute a single node and return results."""
         executors = {
             "start_manual": self._execute_start,
             "start_form": self._execute_start,
@@ -235,7 +228,7 @@ class NodeExecutor:
         return await executor(parameters, input_data)
     
     async def _execute_start(self, params: dict, input_data: dict) -> dict:
-       "Start node just passes through data."""
+        """Start node just passes through data."""
         return {
             "success": True,
             "output": input_data,
@@ -243,7 +236,7 @@ class NodeExecutor:
         }
     
     async def _execute_send_email(self, params: dict, input_data: dict) -> dict:
-       "Send email via Gmail API or SMTP."""
+        """Send email via Gmail API or SMTP."""
         to = params.get("to", input_data.get("email", ""))
         subject = params.get("subject", "No subject")
         body = params.get("body", "")
@@ -309,7 +302,7 @@ class NodeExecutor:
         }
     
     async def _execute_ai_reply(self, params: dict, input_data: dict) -> dict:
-       "Generate an AI-powered reply to an email."""
+        """Generate an AI-powered reply to an email."""
         from app.config import get_settings
         settings = get_settings()
         
@@ -382,7 +375,7 @@ Generate a {tone} reply:"""
         }
     
     async def _execute_ai_summarize(self, params: dict, input_data: dict) -> dict:
-       "Use AI to summarize or analyze data."""
+        """Use AI to summarize or analyze data."""
         from app.config import get_settings
         settings = get_settings()
         
@@ -430,7 +423,7 @@ Generate a {tone} reply:"""
         }
 
     async def _execute_ai_extract(self, params: dict, input_data: dict) -> dict:
-       "Use AI to extract structured data from text (e.g., email body)."""
+        """Use AI to extract structured data from text (e.g., email body)."""
         from app.config import get_settings
         settings = get_settings()
         
@@ -519,7 +512,7 @@ Extract: {fields_to_extract}"""
         }
 
     async def _execute_append_row(self, params: dict, input_data: dict) -> dict:
-       "Append row to Google Sheets, matching the sheet's column schema."""
+        """Append row to Google Sheets, matching the sheet's column schema."""
         spreadsheet = params.get("spreadsheet", "Untitled Spreadsheet")
         spreadsheet_id = params.get("spreadsheet_id")
         sheet_name = params.get("sheet_name", "Sheet1")
@@ -643,7 +636,7 @@ Extract: {fields_to_extract}"""
         }
 
     async def _execute_read_sheet(self, params: dict, input_data: dict) -> dict:
-       "Read data from Google Sheets."""
+        """Read data from Google Sheets."""
         spreadsheet_id = params.get("spreadsheet_id")
         spreadsheet_name = params.get("spreadsheet") or params.get("spreadsheet_name")
         range_name = params.get("range", "Sheet1!A1:Z1000")  # Increased default range
@@ -732,7 +725,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "output": input_data, "logs": logs, "error": error_msg}
     
     async def _execute_send_slack(self, params: dict, input_data: dict) -> dict:
-       "Send message to Slack."""
+        """Send message to Slack."""
         channel = params.get("channel", "#general")
         message = params.get("message", "")
         personalize = params.get("personalize", False)
@@ -780,11 +773,9 @@ Extract: {fields_to_extract}"""
             "logs": logs,
             "error": "Slack not connected. Connect Slack at /app/connections."
         }
-            "logs": logs
-        }
     
     async def _execute_slack_list_channels(self, params: dict, input_data: dict) -> dict:
-       "List Slack channels."""
+        """List Slack channels."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Slack channels\n"
         
         slack = await self.get_slack_service()
@@ -804,7 +795,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_delay(self, params: dict, input_data: dict) -> dict:
-       "Wait for a specified duration."""
+        """Wait for a specified duration."""
         duration = params.get("duration", 60)
         unit = params.get("unit", "seconds")
         
@@ -825,7 +816,7 @@ Extract: {fields_to_extract}"""
         return {"success": True, "output": input_data, "logs": logs}
     
     async def _execute_notification(self, params: dict, input_data: dict) -> dict:
-       "Send a notification (internal)."""
+        """Send a notification (internal)."""
         message = params.get("message", "Notification")
         message = _interpolate(message, input_data)
         
@@ -840,7 +831,7 @@ Extract: {fields_to_extract}"""
         }
     
     async def _execute_http_request(self, params: dict, input_data: dict) -> dict:
-       "Make an HTTP request."""
+        """Make an HTTP request."""
         import httpx
         
         method = params.get("method", "GET").upper()
@@ -874,7 +865,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
     
     async def _execute_condition(self, params: dict, input_data: dict) -> dict:
-       "Evaluate a condition."""
+        """Evaluate a condition."""
         field = params.get("field", "")
         operator = params.get("operator", "equals")
         value = params.get("value", "")
@@ -910,7 +901,7 @@ Extract: {fields_to_extract}"""
         }
     
     async def _execute_transform(self, params: dict, input_data: dict) -> dict:
-       "Transform data."""
+        """Transform data."""
         transforms = params.get("transforms", [])
         output = dict(input_data)
         
@@ -943,7 +934,7 @@ Extract: {fields_to_extract}"""
     # ==================== STRIPE EXECUTORS ====================
     
     async def _execute_stripe_get_customer(self, params: dict, input_data: dict) -> dict:
-       "Get or create a Stripe customer."""
+        """Get or create a Stripe customer."""
         email = _interpolate(params.get("email", input_data.get("email", "")), input_data)
         name = _interpolate(params.get("name", input_data.get("name", "")), input_data)
         
@@ -984,7 +975,7 @@ Extract: {fields_to_extract}"""
             }
     
     async def _execute_stripe_create_invoice(self, params: dict, input_data: dict) -> dict:
-       "Create and optionally send a Stripe invoice."""
+        """Create and optionally send a Stripe invoice."""
         customer_id = _interpolate(params.get("customer_id", input_data.get("customer_id", "")), input_data)
         customer_email = _interpolate(params.get("customer_email", input_data.get("email", "")), input_data)
         
@@ -1078,7 +1069,7 @@ Extract: {fields_to_extract}"""
             }
     
     async def _execute_stripe_send_invoice(self, params: dict, input_data: dict) -> dict:
-       "Send an existing Stripe invoice."""
+        """Send an existing Stripe invoice."""
         invoice_id = _interpolate(params.get("invoice_id", input_data.get("invoice_id", "")), input_data)
         
         logs = f"[{datetime.utcnow().isoformat()}] Sending Stripe invoice\n"
@@ -1126,7 +1117,7 @@ Extract: {fields_to_extract}"""
             }
     
     async def _execute_stripe_create_payment_link(self, params: dict, input_data: dict) -> dict:
-       "Create a Stripe payment link."""
+        """Create a Stripe payment link."""
         # Get items from params or create from amount
         items = params.get("items", [])
         if not items:
@@ -1192,7 +1183,7 @@ Extract: {fields_to_extract}"""
             }
     
     async def _execute_stripe_check_payment(self, params: dict, input_data: dict) -> dict:
-       "Check if a payment has been made (for deposit verification)."""
+        """Check if a payment has been made (for deposit verification)."""
         payment_link_id = _interpolate(params.get("payment_link_id", input_data.get("payment_link_id", "")), input_data)
         customer_email = _interpolate(params.get("customer_email", input_data.get("email", "")), input_data)
         invoice_id = _interpolate(params.get("invoice_id", input_data.get("invoice_id", "")), input_data)
@@ -1265,7 +1256,7 @@ Extract: {fields_to_extract}"""
     # ==================== GOOGLE CALENDAR EXECUTORS ====================
     
     async def _execute_google_calendar_create(self, params: dict, input_data: dict) -> dict:
-       "Create a Google Calendar event."""
+        """Create a Google Calendar event."""
         title = _interpolate(params.get("title", "New Event"), input_data)
         date = _interpolate(params.get("date", ""), input_data)
         start_time = _interpolate(params.get("start_time", "10:00"), input_data)
@@ -1369,7 +1360,7 @@ Extract: {fields_to_extract}"""
     # ==================== GOOGLE CALENDAR LIST ====================
 
     async def _execute_google_calendar_list(self, params: dict, input_data: dict) -> dict:
-       "List upcoming Google Calendar events."""
+        """List upcoming Google Calendar events."""
         time_min = params.get("time_min", "")
         time_max = params.get("time_max", "")
         max_results = params.get("max_results", 20)
@@ -1418,7 +1409,7 @@ Extract: {fields_to_extract}"""
     # ==================== GMAIL READ ====================
 
     async def _execute_gmail_list_messages(self, params: dict, input_data: dict) -> dict:
-       "List recent Gmail messages."""
+        """List recent Gmail messages."""
         query = params.get("query", "")
         max_results = params.get("max_results", 10)
 
@@ -1444,7 +1435,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "output": input_data, "logs": logs, "error": str(e)}
 
     async def _execute_gmail_get_message(self, params: dict, input_data: dict) -> dict:
-       "Get a specific Gmail message by ID."""
+        """Get a specific Gmail message by ID."""
         message_id = params.get("message_id", "")
 
         logs = f"[{datetime.utcnow().isoformat()}] Getting Gmail message {message_id}\n"
@@ -1466,7 +1457,7 @@ Extract: {fields_to_extract}"""
     # ========== Notion Node Executors ==========
     
     async def _execute_notion_create_page(self, params: dict, input_data: dict) -> dict:
-       "Create a new page in a Notion database."""
+        """Create a new page in a Notion database."""
         database_id = params.get("database_id", "")
         properties = params.get("properties", {})
         content = params.get("content", "")
@@ -1526,7 +1517,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_notion_update_page(self, params: dict, input_data: dict) -> dict:
-       "Update properties of a Notion page."""
+        """Update properties of a Notion page."""
         page_id = params.get("page_id", input_data.get("notion_page_id", ""))
         properties = params.get("properties", {})
         
@@ -1562,7 +1553,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_notion_query_database(self, params: dict, input_data: dict) -> dict:
-       "Query records from a Notion database."""
+        """Query records from a Notion database."""
         database_id = params.get("database_id", "")
         filter_json = params.get("filter", None)
         page_size = params.get("page_size", 100)
@@ -1592,7 +1583,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_notion_search(self, params: dict, input_data: dict) -> dict:
-       "Search across Notion pages and databases."""
+        """Search across Notion pages and databases."""
         query = params.get("query", "")
         filter_type = params.get("filter_type", None)  # "page" or "database"
         
@@ -1622,7 +1613,7 @@ Extract: {fields_to_extract}"""
     # ========== Airtable Node Executors ==========
     
     async def _execute_airtable_create_record(self, params: dict, input_data: dict) -> dict:
-       "Create a new record in an Airtable table."""
+        """Create a new record in an Airtable table."""
         base_id = params.get("base_id", "")
         table_name = params.get("table_name", "")
         fields = params.get("fields", {})
@@ -1656,7 +1647,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_airtable_update_record(self, params: dict, input_data: dict) -> dict:
-       "Update an existing Airtable record."""
+        """Update an existing Airtable record."""
         base_id = params.get("base_id", "")
         table_name = params.get("table_name", "")
         record_id = params.get("record_id", input_data.get("airtable_record_id", ""))
@@ -1690,7 +1681,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_airtable_list_records(self, params: dict, input_data: dict) -> dict:
-       "List records from an Airtable table."""
+        """List records from an Airtable table."""
         base_id = params.get("base_id", "")
         table_name = params.get("table_name", "")
         view = params.get("view", None)
@@ -1730,7 +1721,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_airtable_find_record(self, params: dict, input_data: dict) -> dict:
-       "Find records by field value in Airtable."""
+        """Find records by field value in Airtable."""
         base_id = params.get("base_id", "")
         table_name = params.get("table_name", "")
         field_name = params.get("field_name", "")
@@ -1773,7 +1764,7 @@ Extract: {fields_to_extract}"""
     # ========== Calendly Node Executors ==========
     
     async def _execute_calendly_list_events(self, params: dict, input_data: dict) -> dict:
-       "List scheduled events from Calendly."""
+        """List scheduled events from Calendly."""
         status = params.get("status", "active")  # active or canceled
         min_start_time = params.get("min_start_time", None)
         max_start_time = params.get("max_start_time", None)
@@ -1808,7 +1799,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_calendly_get_event(self, params: dict, input_data: dict) -> dict:
-       "Get details of a specific Calendly event."""
+        """Get details of a specific Calendly event."""
         event_uuid = params.get("event_uuid", input_data.get("calendly_event_uuid", ""))
         event_uuid = _interpolate(event_uuid, input_data)
         
@@ -1840,7 +1831,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_calendly_cancel_event(self, params: dict, input_data: dict) -> dict:
-       "Cancel a scheduled Calendly event."""
+        """Cancel a scheduled Calendly event."""
         event_uuid = params.get("event_uuid", input_data.get("calendly_event_uuid", ""))
         reason = params.get("reason", "")
         
@@ -1868,7 +1859,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_calendly_create_link(self, params: dict, input_data: dict) -> dict:
-       "Create a single-use scheduling link."""
+        """Create a single-use scheduling link."""
         event_type_uuid = params.get("event_type_uuid", "")
         max_event_count = params.get("max_event_count", 1)
         
@@ -1900,7 +1891,7 @@ Extract: {fields_to_extract}"""
     # ========== Mailchimp Node Executors ==========
     
     async def _execute_mailchimp_add_subscriber(self, params: dict, input_data: dict) -> dict:
-       "Add a subscriber to a Mailchimp audience."""
+        """Add a subscriber to a Mailchimp audience."""
         list_id = params.get("list_id", "")
         email = params.get("email", input_data.get("email", ""))
         first_name = params.get("first_name", input_data.get("first_name", ""))
@@ -1951,7 +1942,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_mailchimp_update_subscriber(self, params: dict, input_data: dict) -> dict:
-       "Update an existing Mailchimp subscriber."""
+        """Update an existing Mailchimp subscriber."""
         list_id = params.get("list_id", "")
         email = params.get("email", input_data.get("email", ""))
         status = params.get("status", None)
@@ -1989,7 +1980,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_mailchimp_add_tags(self, params: dict, input_data: dict) -> dict:
-       "Add tags to a Mailchimp subscriber."""
+        """Add tags to a Mailchimp subscriber."""
         list_id = params.get("list_id", "")
         email = params.get("email", input_data.get("email", ""))
         tags = params.get("tags", [])
@@ -2019,7 +2010,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_mailchimp_send_campaign(self, params: dict, input_data: dict) -> dict:
-       "Create and send a Mailchimp campaign."""
+        """Create and send a Mailchimp campaign."""
         list_id = params.get("list_id", "")
         subject = params.get("subject", "")
         from_name = params.get("from_name", "")
@@ -2070,7 +2061,7 @@ Extract: {fields_to_extract}"""
     # ========== Twilio Node Executors ==========
     
     async def _execute_twilio_send_sms(self, params: dict, input_data: dict) -> dict:
-       "Send an SMS message via Twilio."""
+        """Send an SMS message via Twilio."""
         to = params.get("to", input_data.get("phone", ""))
         body = params.get("body", "")
         from_number = params.get("from_number", None)
@@ -2114,7 +2105,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_twilio_send_whatsapp(self, params: dict, input_data: dict) -> dict:
-       "Send a WhatsApp message via Twilio."""
+        """Send a WhatsApp message via Twilio."""
         to = params.get("to", input_data.get("phone", ""))
         body = params.get("body", "")
         media_url = params.get("media_url", None)
@@ -2157,7 +2148,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
     
     async def _execute_twilio_make_call(self, params: dict, input_data: dict) -> dict:
-       "Make a phone call via Twilio."""
+        """Make a phone call via Twilio."""
         to = params.get("to", input_data.get("phone", ""))
         message = params.get("message", "")
         twiml_url = params.get("twiml_url", None)
@@ -2198,7 +2189,7 @@ Extract: {fields_to_extract}"""
     # ==================== NEW: Additional integration tools ====================
 
     async def _execute_slack_read_history(self, params: dict, input_data: dict) -> dict:
-       "Read recent messages from a Slack channel."""
+        """Read recent messages from a Slack channel."""
         channel = params.get("channel", "#general")
         limit = params.get("limit", 10)
         logs = f"[{datetime.utcnow().isoformat()}] {''}Reading Slack channel history\n"
@@ -2218,7 +2209,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_slack_send_dm(self, params: dict, input_data: dict) -> dict:
-       "Send a direct message to a Slack user."""
+        """Send a direct message to a Slack user."""
         user_id = params.get("user_id", "")
         email = params.get("email", "")
         message = _interpolate(params.get("message", ""), input_data)
@@ -2241,7 +2232,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_slack_list_users(self, params: dict, input_data: dict) -> dict:
-       "List users in the Slack workspace."""
+        """List users in the Slack workspace."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Slack users\n"
         slack = await self.get_slack_service()
         if not slack:
@@ -2256,7 +2247,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_google_calendar_delete(self, params: dict, input_data: dict) -> dict:
-       "Delete a Google Calendar event."""
+        """Delete a Google Calendar event."""
         event_id = params.get("event_id", "")
         calendar_id = params.get("calendar_id", "primary")
         logs = f"[{datetime.utcnow().isoformat()}] {''}Deleting calendar event\n"
@@ -2281,7 +2272,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_google_drive_list(self, params: dict, input_data: dict) -> dict:
-       "List Google Drive spreadsheets."""
+        """List Google Drive spreadsheets."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing spreadsheets\n"
         google = await self.get_google_service()
         if not google:
@@ -2296,7 +2287,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_stripe_list_invoices(self, params: dict, input_data: dict) -> dict:
-       "List Stripe invoices."""
+        """List Stripe invoices."""
         customer_email = params.get("customer_email", "")
         limit = params.get("limit", 10)
         status = params.get("status", "")
@@ -2314,7 +2305,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_notion_get_page(self, params: dict, input_data: dict) -> dict:
-       "Get a Notion page by ID."""
+        """Get a Notion page by ID."""
         page_id = params.get("page_id", "")
         logs = f"[{datetime.utcnow().isoformat()}] {''}Getting Notion page\n"
         notion = await self.get_notion_service()
@@ -2329,7 +2320,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_notion_list_databases(self, params: dict, input_data: dict) -> dict:
-       "List Notion databases."""
+        """List Notion databases."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Notion databases\n"
         notion = await self.get_notion_service()
         if not notion:
@@ -2344,7 +2335,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_airtable_list_bases(self, params: dict, input_data: dict) -> dict:
-       "List Airtable bases."""
+        """List Airtable bases."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Airtable bases\n"
         airtable = await self.get_airtable_service()
         if not airtable:
@@ -2359,7 +2350,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_calendly_list_event_types(self, params: dict, input_data: dict) -> dict:
-       "List Calendly event types."""
+        """List Calendly event types."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Calendly event types\n"
         calendly = await self.get_calendly_service()
         if not calendly:
@@ -2375,7 +2366,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_mailchimp_list_audiences(self, params: dict, input_data: dict) -> dict:
-       "List Mailchimp audiences/lists."""
+        """List Mailchimp audiences/lists."""
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Mailchimp audiences\n"
         mc = await self.get_mailchimp_service()
         if not mc:
@@ -2391,7 +2382,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_mailchimp_list_subscribers(self, params: dict, input_data: dict) -> dict:
-       "List subscribers in a Mailchimp audience."""
+        """List subscribers in a Mailchimp audience."""
         list_id = params.get("list_id", "")
         count = params.get("count", 20)
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Mailchimp subscribers\n"
@@ -2409,7 +2400,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_mailchimp_list_campaigns(self, params: dict, input_data: dict) -> dict:
-       "List Mailchimp campaigns."""
+        """List Mailchimp campaigns."""
         count = params.get("count", 10)
         logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Mailchimp campaigns\n"
         mc = await self.get_mailchimp_service()
@@ -2426,7 +2417,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_twilio_list_messages(self, params: dict, input_data: dict) -> dict:
-       "List recent Twilio SMS messages."""
+        """List recent Twilio SMS messages."""
         to = params.get("to", "")
         from_ = params.get("from", "")
         limit = params.get("limit", 20)
@@ -2444,7 +2435,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_twilio_list_calls(self, params: dict, input_data: dict) -> dict:
-       "List recent Twilio calls."""
+        """List recent Twilio calls."""
         to = params.get("to", "")
         from_ = params.get("from", "")
         limit = params.get("limit", 20)
@@ -2462,12 +2453,7 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
 
     async def _execute_approval_gate(self, params: dict, input_data: dict) -> dict:
-       "Standalone approval node — signals the runner to pause for approval.
-        
-        The actual pause happens in workflow_runner._execute_from_node which checks
-        requiresApproval. This node always has requiresApproval=True forced on it.
-        If somehow reached without the flag, we still return a marker.
-       "
+        """Standalone approval node - signals the runner to pause for approval."""
         message = params.get("message", "This action requires your approval before proceeding.")
         logs = f"[{datetime.utcnow().isoformat()}] Approval gate reached\n"
         logs += f"  Message: {message}\n"
@@ -2478,14 +2464,14 @@ Extract: {fields_to_extract}"""
         return {"success": True, "output": {**input_data, "approval_status": "approved"}, "logs": logs}
 
     async def _execute_default(self, params: dict, input_data: dict) -> dict:
-       "Default executor for unknown node types."""
+        """Default executor for unknown node types."""
         logs = f"[{datetime.utcnow().isoformat()}] Unknown node type\n"
         logs += f"  Parameters: {params}\n"
         return {"success": True, "output": input_data, "logs": logs}
 
 
 def _interpolate(template: str, data: dict) -> str:
-   "Replace {{variable}} with values from data."""
+    """Replace {{variable}} with values from data."""
     if not template:
         return template
     result = template
@@ -2503,7 +2489,7 @@ def execute_node(
     user_id: Optional[str] = None,
     db=None,
 ) -> dict[str, Any]:
-   "Execute a single node (sync wrapper for backward compatibility)."""
+    """Execute a single node (sync wrapper for backward compatibility)."""
     executor = NodeExecutor(connections, user_id=user_id, db=db)
     
     # Check if we're already in an async context
@@ -2528,7 +2514,7 @@ def execute_node(
 
 
 def _run_executor_sync(executor, node_type, parameters, input_data):
-   "Run executor in a new event loop (for use in thread pool)."""
+    """Run executor in a new event loop (for use in thread pool)."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:

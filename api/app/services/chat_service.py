@@ -1,4 +1,4 @@
-﻿"""
+"""
 LLM Chat Service for Aivaro
 Provides two chat functionalities:
 1. Execution Results Chat - Context-aware chat about specific workflow execution results
