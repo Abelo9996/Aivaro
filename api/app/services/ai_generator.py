@@ -477,6 +477,7 @@ The condition node checks: input_data[field] <operator> value. Available operato
 - The "contains" operator checks if VALUE is contained in FIELD — e.g., field="subject", operator="contains", value="appointment" checks if the subject contains "appointment".
 22. SLACK DMs vs CHANNELS: When the user wants to message a specific person on Slack, use slack_send_dm (NOT send_slack). send_slack is ONLY for posting to channels like #general. slack_send_dm takes an email parameter to find the user.
 23. When the user asks to "notify" or "message" a specific person on Slack, use slack_send_dm with that person's email (or ask for their email if not provided).
+24. NEVER HARDCODE emails, names, URLs, or IDs in workflow parameters. ALWAYS use {{variable}} references. For the workflow owner's email, use {{user_email}}. For the workflow owner's name, use {{name}}. For sender/customer data, use fields from previous nodes like {{from}}, {{customer_email}}, etc. The system automatically provides user_email and name from the authenticated user's profile.
 
 Example for "booking automation with deposit":
 {
@@ -502,7 +503,7 @@ Example for condition branching (appointment with conflict check):
     {"id": "3", "type": "condition", "label": "Has conflict?", "position": {"x": 250, "y": 350}, "parameters": {"field": "calendly_count", "operator": "greater_than", "value": "0"}},
     {"id": "4", "type": "send_email", "label": "Send denial email", "position": {"x": 50, "y": 500}, "parameters": {"to": "{{from}}", "subject": "Appointment Unavailable", "body": "Sorry, that time is not available."}, "requiresApproval": true},
     {"id": "5", "type": "send_email", "label": "Send confirmation", "position": {"x": 450, "y": 500}, "parameters": {"to": "{{from}}", "subject": "Appointment Confirmed", "body": "Your appointment is confirmed!"}, "requiresApproval": true},
-    {"id": "6", "type": "slack_send_dm", "label": "Notify Abel", "position": {"x": 450, "y": 650}, "parameters": {"email": "abel@company.com", "message": "New appointment from {{name}}"}}
+    {"id": "6", "type": "slack_send_dm", "label": "Notify Abel", "position": {"x": 450, "y": 650}, "parameters": {"email": "{{user_email}}", "message": "New appointment from {{name}}"}}
   ],
   "edges": [
     {"id": "e1", "source": "1", "target": "2"},

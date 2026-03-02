@@ -247,7 +247,7 @@ class NodeExecutor:
         body = _interpolate(body, input_data)
         to = _interpolate(to, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Sending email\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Sending email\n"
         logs += f"  To: {to}\n"
         logs += f"  Subject: {subject}\n"
         
@@ -314,7 +314,7 @@ class NodeExecutor:
         email_subject = input_data.get("subject", "No subject")
         email_snippet = input_data.get("snippet", "")
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Generating AI reply\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Generating AI reply\n"
         logs += f"  Original email from: {email_from}\n"
         logs += f"  Subject: {email_subject}\n"
         logs += f"  Tone: {tone}\n"
@@ -382,7 +382,7 @@ Generate a {tone} reply:"""
         source = params.get("source", "the provided data")
         format_type = params.get("format", "paragraph")
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Generating AI summary\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Generating AI summary\n"
         logs += f"  Source: {source}\n"
         logs += f"  Format: {format_type}\n"
         
@@ -434,7 +434,7 @@ Generate a {tone} reply:"""
         text_content = input_data.get("snippet", "") or input_data.get("body", "") or input_data.get("text", "")
         subject = input_data.get("subject", "")
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Extracting data with AI\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Extracting data with AI\n"
         logs += f"  Fields: {fields_to_extract}\n"
         logs += f"  Text length: {len(text_content)} chars\n"
         
@@ -590,7 +590,7 @@ Extract: {fields_to_extract}"""
                     "Auto-logged"
                 ]
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Adding row to spreadsheet\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Adding row to spreadsheet\n"
         logs += f"  Spreadsheet: {spreadsheet}\n"
         logs += f"  Sheet: {sheet_name}\n"
         logs += f"  Use schema matching: {use_schema}\n"
@@ -733,7 +733,7 @@ Extract: {fields_to_extract}"""
         message = _interpolate(message, input_data)
         channel = _interpolate(channel, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Sending Slack message\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Sending Slack message\n"
         logs += f"  Channel: {channel}\n"
         logs += f"  Message: {message[:100]}{'...' if len(message) > 100 else ''}\n"
         
@@ -776,7 +776,7 @@ Extract: {fields_to_extract}"""
     
     async def _execute_slack_list_channels(self, params: dict, input_data: dict) -> dict:
         """List Slack channels."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Slack channels\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Slack channels\n"
         
         slack = await self.get_slack_service()
         if not slack:
@@ -820,7 +820,7 @@ Extract: {fields_to_extract}"""
         message = params.get("message", "Notification")
         message = _interpolate(message, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Notification\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Notification\n"
         logs += f"  Message: {message}\n"
         logs += "  ✅ Notification logged\n"
         
@@ -841,7 +841,7 @@ Extract: {fields_to_extract}"""
         
         url = _interpolate(url, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}HTTP Request\n"
+        logs = f"[{datetime.utcnow().isoformat()}] HTTP Request\n"
         logs += f"  Method: {method}\n"
         logs += f"  URL: {url}\n"
         
@@ -1483,7 +1483,7 @@ Extract: {fields_to_extract}"""
                 properties[key] = _interpolate(value, input_data)
         content = _interpolate(content, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Creating Notion page\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Creating Notion page\n"
         logs += f"  Database: {database_id}\n"
         logs += f"  Properties: {list(properties.keys())}\n"
         
@@ -1540,7 +1540,7 @@ Extract: {fields_to_extract}"""
             if isinstance(value, str):
                 properties[key] = _interpolate(value, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Updating Notion page\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Updating Notion page\n"
         logs += f"  Page ID: {page_id}\n"
         
         notion = await self.get_notion_service()
@@ -1574,7 +1574,7 @@ Extract: {fields_to_extract}"""
         
         database_id = _interpolate(database_id, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Querying Notion database\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Querying Notion database\n"
         logs += f"  Database: {database_id}\n"
         
         notion = await self.get_notion_service()
@@ -1603,7 +1603,7 @@ Extract: {fields_to_extract}"""
         
         query = _interpolate(query, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Searching Notion\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Searching Notion\n"
         logs += f"  Query: {query}\n"
         
         notion = await self.get_notion_service()
@@ -1638,7 +1638,7 @@ Extract: {fields_to_extract}"""
             if isinstance(value, str):
                 fields[key] = _interpolate(value, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Creating Airtable record\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Creating Airtable record\n"
         logs += f"  Base: {base_id}, Table: {table_name}\n"
         logs += f"  Fields: {list(fields.keys())}\n"
         
@@ -1674,7 +1674,7 @@ Extract: {fields_to_extract}"""
             if isinstance(value, str):
                 fields[key] = _interpolate(value, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Updating Airtable record\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Updating Airtable record\n"
         logs += f"  Record: {record_id}\n"
         
         airtable = await self.get_airtable_service()
@@ -1707,7 +1707,7 @@ Extract: {fields_to_extract}"""
         if filter_formula:
             filter_formula = _interpolate(filter_formula, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Airtable records\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Airtable records\n"
         logs += f"  Base: {base_id}, Table: {table_name}\n"
         
         airtable = await self.get_airtable_service()
@@ -1746,7 +1746,7 @@ Extract: {fields_to_extract}"""
         field_name = _interpolate(field_name, input_data)
         field_value = _interpolate(field_value, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Finding Airtable record\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Finding Airtable record\n"
         logs += f"  Find where {field_name} = {field_value}\n"
         
         airtable = await self.get_airtable_service()
@@ -1784,7 +1784,7 @@ Extract: {fields_to_extract}"""
         max_start_time = params.get("max_start_time", None)
         count = params.get("count", 20)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Calendly events\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Calendly events\n"
         logs += f"  Status: {status}, Count: {count}\n"
         
         calendly = await self.get_calendly_service()
@@ -1817,7 +1817,7 @@ Extract: {fields_to_extract}"""
         event_uuid = params.get("event_uuid", input_data.get("calendly_event_uuid", ""))
         event_uuid = _interpolate(event_uuid, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Getting Calendly event\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Getting Calendly event\n"
         logs += f"  Event UUID: {event_uuid}\n"
         
         calendly = await self.get_calendly_service()
@@ -1852,7 +1852,7 @@ Extract: {fields_to_extract}"""
         event_uuid = _interpolate(event_uuid, input_data)
         reason = _interpolate(reason, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Canceling Calendly event\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Canceling Calendly event\n"
         logs += f"  Event UUID: {event_uuid}\n"
         
         calendly = await self.get_calendly_service()
@@ -1879,7 +1879,7 @@ Extract: {fields_to_extract}"""
         
         event_type_uuid = _interpolate(event_type_uuid, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Creating Calendly scheduling link\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Creating Calendly scheduling link\n"
         logs += f"  Event Type UUID: {event_type_uuid}\n"
         
         calendly = await self.get_calendly_service()
@@ -1918,7 +1918,7 @@ Extract: {fields_to_extract}"""
         first_name = _interpolate(first_name, input_data)
         last_name = _interpolate(last_name, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Adding Mailchimp subscriber\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Adding Mailchimp subscriber\n"
         logs += f"  Email: {email}\n"
         logs += f"  List: {list_id}\n"
         
@@ -1968,7 +1968,7 @@ Extract: {fields_to_extract}"""
             if isinstance(value, str):
                 merge_fields[key] = _interpolate(value, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Updating Mailchimp subscriber\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Updating Mailchimp subscriber\n"
         logs += f"  Email: {email}\n"
         
         mailchimp = await self.get_mailchimp_service()
@@ -2002,7 +2002,7 @@ Extract: {fields_to_extract}"""
         list_id = _interpolate(list_id, input_data)
         email = _interpolate(email, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Adding Mailchimp tags\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Adding Mailchimp tags\n"
         logs += f"  Email: {email}\n"
         logs += f"  Tags: {tags}\n"
         
@@ -2037,7 +2037,7 @@ Extract: {fields_to_extract}"""
         reply_to = _interpolate(reply_to, input_data)
         html_content = _interpolate(html_content, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Sending Mailchimp campaign\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Sending Mailchimp campaign\n"
         logs += f"  Subject: {subject}\n"
         logs += f"  List: {list_id}\n"
         
@@ -2084,7 +2084,7 @@ Extract: {fields_to_extract}"""
         to = _interpolate(to, input_data)
         body = _interpolate(body, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Sending SMS via Twilio\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Sending SMS via Twilio\n"
         logs += f"  To: {to}\n"
         logs += f"  Body: {body[:50]}{'...' if len(body) > 50 else ''}\n"
         
@@ -2128,7 +2128,7 @@ Extract: {fields_to_extract}"""
         to = _interpolate(to, input_data)
         body = _interpolate(body, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Sending WhatsApp via Twilio\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Sending WhatsApp via Twilio\n"
         logs += f"  To: {to}\n"
         logs += f"  Body: {body[:50]}{'...' if len(body) > 50 else ''}\n"
         
@@ -2170,7 +2170,7 @@ Extract: {fields_to_extract}"""
         to = _interpolate(to, input_data)
         message = _interpolate(message, input_data)
         
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Making call via Twilio\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Making call via Twilio\n"
         logs += f"  To: {to}\n"
         
         twilio = await self.get_twilio_service()
@@ -2206,7 +2206,7 @@ Extract: {fields_to_extract}"""
         """Read recent messages from a Slack channel."""
         channel = params.get("channel", "#general")
         limit = params.get("limit", 10)
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Reading Slack channel history\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Reading Slack channel history\n"
         logs += f"  Channel: {channel}, Limit: {limit}\n"
         slack = await self.get_slack_service()
         if not slack:
@@ -2225,9 +2225,14 @@ Extract: {fields_to_extract}"""
     async def _execute_slack_send_dm(self, params: dict, input_data: dict) -> dict:
         """Send a direct message to a Slack user."""
         user_id = params.get("user_id", "")
-        email = params.get("email", "")
+        email = _interpolate(params.get("email", ""), input_data)
         message = _interpolate(params.get("message", ""), input_data)
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Sending Slack DM\n"
+        
+        # Fallback: if no email specified, use the workflow owner's email
+        if not email and not user_id:
+            email = input_data.get("user_email", "")
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Sending Slack DM to {email or user_id or 'unknown'}\n"
         slack = await self.get_slack_service()
         if not slack:
             return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
@@ -2247,7 +2252,7 @@ Extract: {fields_to_extract}"""
 
     async def _execute_slack_list_users(self, params: dict, input_data: dict) -> dict:
         """List users in the Slack workspace."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Slack users\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Slack users\n"
         slack = await self.get_slack_service()
         if not slack:
             return {"success": False, "error": "Slack not connected. Connect Slack at /app/connections.", "output": input_data, "logs": logs}
@@ -2264,7 +2269,7 @@ Extract: {fields_to_extract}"""
         """Delete a Google Calendar event."""
         event_id = params.get("event_id", "")
         calendar_id = params.get("calendar_id", "primary")
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Deleting calendar event\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Deleting calendar event\n"
         logs += f"  Event ID: {event_id}\n"
         google = await self.get_google_service()
         if not google:
@@ -2287,7 +2292,7 @@ Extract: {fields_to_extract}"""
 
     async def _execute_google_drive_list(self, params: dict, input_data: dict) -> dict:
         """List Google Drive spreadsheets."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing spreadsheets\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing spreadsheets\n"
         google = await self.get_google_service()
         if not google:
             return {"success": False, "error": "Google not connected", "output": input_data, "logs": logs}
@@ -2305,7 +2310,7 @@ Extract: {fields_to_extract}"""
         customer_email = params.get("customer_email", "")
         limit = params.get("limit", 10)
         status = params.get("status", "")
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Stripe invoices\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Stripe invoices\n"
         stripe_svc = await self.get_stripe_service()
         if not stripe_svc:
             return {"success": False, "error": "Stripe not connected", "output": input_data, "logs": logs}
@@ -2321,7 +2326,7 @@ Extract: {fields_to_extract}"""
     async def _execute_notion_get_page(self, params: dict, input_data: dict) -> dict:
         """Get a Notion page by ID."""
         page_id = params.get("page_id", "")
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Getting Notion page\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Getting Notion page\n"
         notion = await self.get_notion_service()
         if not notion:
             return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
@@ -2335,7 +2340,7 @@ Extract: {fields_to_extract}"""
 
     async def _execute_notion_list_databases(self, params: dict, input_data: dict) -> dict:
         """List Notion databases."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Notion databases\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Notion databases\n"
         notion = await self.get_notion_service()
         if not notion:
             return {"success": False, "error": "Notion not connected", "output": input_data, "logs": logs}
@@ -2350,7 +2355,7 @@ Extract: {fields_to_extract}"""
 
     async def _execute_airtable_list_bases(self, params: dict, input_data: dict) -> dict:
         """List Airtable bases."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Airtable bases\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Airtable bases\n"
         airtable = await self.get_airtable_service()
         if not airtable:
             return {"success": False, "error": "Airtable not connected", "output": input_data, "logs": logs}
@@ -2365,7 +2370,7 @@ Extract: {fields_to_extract}"""
 
     async def _execute_calendly_list_event_types(self, params: dict, input_data: dict) -> dict:
         """List Calendly event types."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Calendly event types\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Calendly event types\n"
         calendly = await self.get_calendly_service()
         if not calendly:
             return {"success": False, "error": "Calendly not connected", "output": input_data, "logs": logs}
@@ -2381,7 +2386,7 @@ Extract: {fields_to_extract}"""
 
     async def _execute_mailchimp_list_audiences(self, params: dict, input_data: dict) -> dict:
         """List Mailchimp audiences/lists."""
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Mailchimp audiences\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Mailchimp audiences\n"
         mc = await self.get_mailchimp_service()
         if not mc:
             return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
@@ -2399,7 +2404,7 @@ Extract: {fields_to_extract}"""
         """List subscribers in a Mailchimp audience."""
         list_id = params.get("list_id", "")
         count = params.get("count", 20)
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Mailchimp subscribers\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Mailchimp subscribers\n"
         mc = await self.get_mailchimp_service()
         if not mc:
             return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
@@ -2416,7 +2421,7 @@ Extract: {fields_to_extract}"""
     async def _execute_mailchimp_list_campaigns(self, params: dict, input_data: dict) -> dict:
         """List Mailchimp campaigns."""
         count = params.get("count", 10)
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Mailchimp campaigns\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Mailchimp campaigns\n"
         mc = await self.get_mailchimp_service()
         if not mc:
             return {"success": False, "error": "Mailchimp not connected", "output": input_data, "logs": logs}
@@ -2435,7 +2440,7 @@ Extract: {fields_to_extract}"""
         to = params.get("to", "")
         from_ = params.get("from", "")
         limit = params.get("limit", 20)
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Twilio messages\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Twilio messages\n"
         twilio = await self.get_twilio_service()
         if not twilio:
             return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
@@ -2453,7 +2458,7 @@ Extract: {fields_to_extract}"""
         to = params.get("to", "")
         from_ = params.get("from", "")
         limit = params.get("limit", 20)
-        logs = f"[{datetime.utcnow().isoformat()}] {''}Listing Twilio calls\n"
+        logs = f"[{datetime.utcnow().isoformat()}] Listing Twilio calls\n"
         twilio = await self.get_twilio_service()
         if not twilio:
             return {"success": False, "error": "Twilio not connected", "output": input_data, "logs": logs}
