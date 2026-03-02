@@ -225,7 +225,11 @@ class NodeExecutor:
         }
         
         executor = executors.get(node_type, self._execute_default)
-        return await executor(parameters, input_data)
+        
+        # Pre-interpolate ALL parameters so every executor gets resolved values
+        resolved_params = _interpolate_params(parameters, input_data)
+        
+        return await executor(resolved_params, input_data)
     
     async def _execute_start(self, params: dict, input_data: dict) -> dict:
         """Start node just passes through data."""
@@ -2534,6 +2538,25 @@ def _interpolate(template: str, data: dict) -> str:
     for key, value in data.items():
         result = result.replace(f"{{{{{key}}}}}", str(value))
     return result
+
+
+def _interpolate_params(params: dict, data: dict) -> dict:
+    """Recursively interpolate all string values in a parameters dict."""
+    resolved = {}
+    for key, value in params.items():
+        if isinstance(value, str):
+            resolved[key] = _interpolate(value, data)
+        elif isinstance(value, list):
+            resolved[key] = [
+                _interpolate(item, data) if isinstance(item, str)
+                else (_interpolate_params(item, data) if isinstance(item, dict) else item)
+                for item in value
+            ]
+        elif isinstance(value, dict):
+            resolved[key] = _interpolate_params(value, data)
+        else:
+            resolved[key] = value
+    return resolved
 
 
 # Backward compatibility - sync wrapper

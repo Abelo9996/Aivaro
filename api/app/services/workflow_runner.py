@@ -42,20 +42,30 @@ class WorkflowRunner:
         
         For condition nodes, edges should have sourceHandle='yes' or sourceHandle='no'.
         If branch is specified, only return edges matching that branch.
-        If no edges match the branch filter, fall back to all edges (backward compat).
+        If no edges match, return EMPTY (do NOT fall back to all edges).
         """
+        all_edges = [e for e in self.edges if e["source"] == node_id]
+        
         if branch:
-            # Try to find edges with matching sourceHandle
-            branched = [e["target"] for e in self.edges 
-                       if e["source"] == node_id and e.get("sourceHandle") == branch]
+            # Try sourceHandle match
+            branched = [e["target"] for e in all_edges if e.get("sourceHandle") == branch]
             if branched:
+                print(f"[WorkflowRunner] Node {node_id} branch='{branch}' → {len(branched)} targets via sourceHandle")
                 return branched
-            # Also try label-based matching
-            branched = [e["target"] for e in self.edges 
-                       if e["source"] == node_id and e.get("label", "").lower() == branch]
+            
+            # Try label match
+            branched = [e["target"] for e in all_edges if e.get("label", "").lower() == branch]
             if branched:
+                print(f"[WorkflowRunner] Node {node_id} branch='{branch}' → {len(branched)} targets via label")
                 return branched
-        return [e["target"] for e in self.edges if e["source"] == node_id]
+            
+            # No matching branch edges — DO NOT fall back to all edges
+            # This prevents condition nodes from executing both branches
+            edge_handles = [(e.get("sourceHandle"), e.get("label")) for e in all_edges]
+            print(f"[WorkflowRunner] WARNING: Node {node_id} branch='{branch}' matched NO edges. Available: {edge_handles}. Stopping this path.")
+            return []
+        
+        return [e["target"] for e in all_edges]
     
     def run(self, trigger_data: Optional[dict] = None) -> Execution:
         """Execute the workflow"""
