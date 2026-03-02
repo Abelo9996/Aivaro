@@ -118,15 +118,18 @@ function parseQuestions(content: string): { intro: string; questions: ParsedQues
   const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
   const questions: ParsedQuestion[] = [];
   const introLines: string[] = [];
+  let foundFirstQuestion = false;
   
   for (const line of lines) {
     const match = line.match(/^(\d+)\.\s+(.+)/);
     if (match) {
       const num = parseInt(match[1]);
       let text = match[2];
-      // Only count as a question if it ends with ? or has (a)/(b) options or Yes/No
+      foundFirstQuestion = true;
+      
+      // Detect if this is a question (ends with ?) or has options or Yes/No
       const isQuestion = /\?(\s|$)/.test(text) || /\([a-z]\)\s/.test(text) || /\(Yes\/No\)/i.test(text);
-      if (!isQuestion) continue;
+      
       // Parse options like (a) Professional (b) Casual (c) Custom
       const optMatch = text.match(/^(.+?)\s*(\([a-z]\)\s+.+)$/);
       let options: { key: string; label: string }[] | undefined;
@@ -141,15 +144,20 @@ function parseQuestions(content: string): { intro: string; questions: ParsedQues
           });
         }
       }
-      // Also handle Yes/No as options
+      // Handle Yes/No as options
       if (/\(Yes\/No\)/i.test(text)) {
         text = text.replace(/\s*\(Yes\/No\)/i, '');
         options = [{ key: 'y', label: 'Yes' }, { key: 'n', label: 'No' }];
       }
-      questions.push({ num, text, options });
-    } else if (questions.length === 0) {
+      
+      if (isQuestion) {
+        questions.push({ num, text, options });
+      }
+      // Skip non-question numbered items (like pre-filled templates)
+    } else if (!foundFirstQuestion) {
       introLines.push(line);
     }
+    // Skip lines after questions start that aren't numbered (sub-bullets, details)
   }
   
   // Need at least 2 actual questions to show form
