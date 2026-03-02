@@ -252,6 +252,10 @@ class NodeExecutor:
         body = params.get("body", "")
         personalize = params.get("personalize", False)
         
+        # Check for unresolved variables in critical fields
+        if _has_unresolved(to):
+            return {"success": False, "error": f"Email 'to' has unresolved variable: {to}. Check that previous workflow steps produce the expected output fields.", "output": input_data, "logs": ""}
+        
         # Interpolate variables
         subject = _interpolate(subject, input_data)
         body = _interpolate(body, input_data)
@@ -878,7 +882,8 @@ Extract: {fields_to_extract}"""
         headers = params.get("headers", {})
         body = params.get("body")
         
-        url = _interpolate(url, input_data)
+        if _has_unresolved(url):
+            return {"success": False, "error": f"HTTP request URL has unresolved variable: {url}", "output": input_data, "logs": ""}
         
         logs = f"[{datetime.utcnow().isoformat()}] HTTP Request\n"
         logs += f"  Method: {method}\n"
@@ -1926,8 +1931,13 @@ Extract: {fields_to_extract}"""
             return {"success": False, "error": "Calendly not connected. Connect Calendly at /app/connections.", "output": input_data, "logs": logs}
         
         try:
-            # Auto-resolve event type if placeholder or empty
-            is_placeholder = not event_type_uuid or "PLACEHOLDER" in event_type_uuid.upper() or "DEFAULT" in event_type_uuid.upper()
+            # Auto-resolve event type if placeholder, empty, or unresolved variable
+            is_placeholder = (
+                not event_type_uuid 
+                or "PLACEHOLDER" in event_type_uuid.upper() 
+                or "DEFAULT" in event_type_uuid.upper()
+                or "{{" in event_type_uuid
+            )
             if is_placeholder:
                 logs += "  ⚠️ No event type UUID configured — auto-detecting from Calendly account\n"
                 event_types_result = await calendly.list_event_types(active=True, count=5)
@@ -2574,6 +2584,12 @@ def _interpolate_params(params: dict, data: dict) -> dict:
         else:
             resolved[key] = value
     return resolved
+
+
+def _has_unresolved(value: str) -> bool:
+    """Check if a string still contains unresolved {{variable}} references."""
+    import re
+    return bool(re.search(r'\{\{[^}]+\}\}', value)) if value else False
 
 
 # Backward compatibility - sync wrapper
