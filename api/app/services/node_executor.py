@@ -2264,9 +2264,10 @@ Extract: {fields_to_extract}"""
         email = _interpolate(params.get("email", ""), input_data)
         message = _interpolate(params.get("message", ""), input_data)
         
-        # Fallback: if no email specified, use the workflow owner's email
-        if not email and not user_id:
-            email = input_data.get("user_email", "")
+        # Catch placeholder strings and fall back to workflow owner's email
+        if not email or not user_id:
+            if not email or "PLACEHOLDER" in email.upper() or "DEFAULT" in email.upper():
+                email = input_data.get("user_email", input_data.get("email", ""))
         
         logs = f"[{datetime.utcnow().isoformat()}] Sending Slack DM to {email or user_id or 'unknown'}\n"
         slack = await self.get_slack_service()

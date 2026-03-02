@@ -477,7 +477,12 @@ The condition node checks: input_data[field] <operator> value. Available operato
 - The "contains" operator checks if VALUE is contained in FIELD — e.g., field="subject", operator="contains", value="appointment" checks if the subject contains "appointment".
 22. SLACK DMs vs CHANNELS: When the user wants to message a specific person on Slack, use slack_send_dm (NOT send_slack). send_slack is ONLY for posting to channels like #general. slack_send_dm takes an email parameter to find the user.
 23. When the user asks to "notify" or "message" a specific person on Slack, use slack_send_dm with that person's email (or ask for their email if not provided).
-24. NEVER HARDCODE emails, names, URLs, or IDs in workflow parameters. ALWAYS use {{variable}} references. For the workflow owner's email, use {{user_email}}. For the workflow owner's name, use {{name}}. For sender/customer data, use fields from previous nodes like {{from}}, {{customer_email}}, etc. The system automatically provides user_email and name from the authenticated user's profile.
+24. NEVER HARDCODE emails, names, URLs, or IDs in workflow parameters. NEVER use placeholder strings like "ABEL_YAGUBYAN_EMAIL_PLACEHOLDER" or "DEFAULT_EVENT_TYPE_UUID_PLACEHOLDER". ALWAYS use {{variable}} references instead:
+   - Workflow owner's email: {{user_email}}
+   - Workflow owner's name: {{name}}
+   - Customer/sender email: {{sender_email}} or {{from}}
+   - Customer name: {{sender_name}} or {{customer_name}}
+   The system automatically provides user_email and name from the authenticated user's profile at runtime.
 
 Example for "booking automation with deposit":
 {
