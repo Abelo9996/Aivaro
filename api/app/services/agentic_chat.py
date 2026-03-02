@@ -1261,7 +1261,7 @@ async def agentic_chat_stream(
             return
 
         choice = response.choices[0]
-        logger.info(f"[agentic] finish_reason={choice.finish_reason}, has_tool_calls={bool(choice.message.tool_calls)}")
+        logger.info(f"[agentic] finish_reason={choice.finish_reason}, has_tool_calls={bool(choice.message.tool_calls)}, content_len={len(choice.message.content or '')}") 
 
         if choice.message.tool_calls:
             messages.append(choice.message)
@@ -1398,6 +1398,14 @@ async def agentic_chat_stream(
 
         # Final text response
         text = choice.message.content or ""
+        
+        # GPT-5 sometimes returns empty content with stop — retry once
+        if not text.strip() and iteration < 4:
+            logger.warning(f"[agentic] Empty response on iteration {iteration}, retrying")
+            messages.append({"role": "assistant", "content": ""})
+            messages.append({"role": "user", "content": "Please respond to my message above."})
+            continue
+        
         metadata = {"steps": collected_steps} if collected_steps else None
         db.add(ChatMessage(
             user_id=user.id, role="assistant", content=text,
