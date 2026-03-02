@@ -47,14 +47,21 @@ class WorkflowRunner:
         all_edges = [e for e in self.edges if e["source"] == node_id]
         
         if branch:
-            # Try sourceHandle match
-            branched = [e["target"] for e in all_edges if e.get("sourceHandle") == branch]
+            # Normalize: yes/true both match, no/false both match
+            BRANCH_ALIASES = {
+                "yes": {"yes", "true", "Yes", "True"},
+                "no": {"no", "false", "No", "False"},
+            }
+            match_set = BRANCH_ALIASES.get(branch, {branch})
+            
+            # Try sourceHandle match (with aliases)
+            branched = [e["target"] for e in all_edges if e.get("sourceHandle") in match_set]
             if branched:
                 print(f"[WorkflowRunner] Node {node_id} branch='{branch}' → {len(branched)} targets via sourceHandle")
                 return branched
             
-            # Try label match
-            branched = [e["target"] for e in all_edges if e.get("label", "").lower() == branch]
+            # Try label match (with aliases)
+            branched = [e["target"] for e in all_edges if e.get("label", "").lower() in {s.lower() for s in match_set}]
             if branched:
                 print(f"[WorkflowRunner] Node {node_id} branch='{branch}' → {len(branched)} targets via label")
                 return branched
