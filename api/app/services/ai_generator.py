@@ -132,7 +132,7 @@ Return ONLY valid JSON."""
                 {"role": "user", "content": f"Analyze this workflow request: {prompt}"}
             ],
             temperature=0.3,
-            max_tokens=1000
+            max_completion_tokens=1000
         )
         
         content = response.choices[0].message.content
@@ -513,7 +513,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation."""
                 {"role": "user", "content": f"Create a workflow for: {prompt}"}
             ],
             temperature=0.4,
-            max_tokens=2500
+            max_completion_tokens=2500
         )
         
         content = response.choices[0].message.content

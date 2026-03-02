@@ -34,7 +34,12 @@ function TrialBanner() {
   const [usage, setUsage] = useState<any>(null);
 
   useEffect(() => {
-    api.getUsage().then(setUsage).catch(() => {});
+    const fetchUsage = () => api.getUsage().then(setUsage).catch(() => {});
+    fetchUsage();
+    const interval = setInterval(fetchUsage, 30000);
+    const onFocus = () => fetchUsage();
+    window.addEventListener('focus', onFocus);
+    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };
   }, []);
 
   if (!usage || !usage.is_trial) return null;

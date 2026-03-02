@@ -224,7 +224,7 @@ Guidelines:
                 model="gpt-5",
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1000
+                max_completion_tokens=1000
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -293,7 +293,7 @@ TONE:
                 model="gpt-5",
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1500
+                max_completion_tokens=1500
             )
             return response.choices[0].message.content
         except Exception as e:
