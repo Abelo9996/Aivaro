@@ -483,6 +483,9 @@ The condition node checks: input_data[field] <operator> value. Available operato
    - Customer/sender email: {{sender_email}} or {{from}}
    - Customer name: {{sender_name}} or {{customer_name}}
    The system automatically provides user_email and name from the authenticated user's profile at runtime.
+25. NEVER use http_request as a substitute for built-in integrations. If we have a node type for it (calendly_list_events, google_calendar_list, etc.), use that — NOT http_request with a made-up URL. http_request is ONLY for external APIs we don't have built-in support for.
+26. When using ai_reply for field extraction, the AI MUST output a JSON object with fields that downstream condition nodes check. The context param MUST explicitly list the required output fields. Example context: "Extract these fields as JSON: sender_email, requested_date, requested_time, is_appointment (true/false)."
+27. The send_email node's "to" parameter should use {{from}} to reply to the original sender (the email's From header). Do NOT use {{sender_email}} unless a previous ai_reply step explicitly extracts it.
 
 Example for "booking automation with deposit":
 {

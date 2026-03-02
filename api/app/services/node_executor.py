@@ -229,6 +229,12 @@ class NodeExecutor:
         # Pre-interpolate ALL parameters so every executor gets resolved values
         resolved_params = _interpolate_params(parameters, input_data)
         
+        # Warn about unresolved {{variables}} — means expected data is missing
+        import re as _re_check
+        for key, val in resolved_params.items():
+            if isinstance(val, str) and _re_check.search(r'\{\{[^}]+\}\}', val):
+                print(f"[NodeExecutor] WARNING: Unresolved variable in param '{key}': {val}")
+        
         return await executor(resolved_params, input_data)
     
     async def _execute_start(self, params: dict, input_data: dict) -> dict:
