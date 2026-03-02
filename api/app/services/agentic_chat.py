@@ -170,6 +170,28 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "update_workflow_settings",
+            "description": "Update settings on an existing workflow without regenerating it. Use for simple changes like toggling approval on/off, renaming, activating/deactivating, or updating a specific node's parameters. Much faster than modify_workflow for small changes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "workflow_name": {
+                        "type": "string",
+                        "description": "Name or partial name of the workflow"
+                    },
+                    "changes": {
+                        "type": "object",
+                        "description": "Changes to apply. Keys: 'remove_all_approvals' (bool), 'set_active' (bool), 'rename' (string), 'update_node' (object with node_index/node_label and fields to change)",
+                        "additionalProperties": True
+                    }
+                },
+                "required": ["workflow_name", "changes"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "run_agent_task",
             "description": "Run an AI agent to autonomously execute a task using the user's connected tools. Unlike workflows (static step sequences), the agent dynamically decides what to do at each step based on results. Use this when the user wants something done RIGHT NOW — e.g. 'send John a reminder', 'confirm tomorrow's appointments', 'check if payments came in and follow up'. The agent will take real actions (send emails, SMS, create events, etc.) autonomously.",
             "parameters": {
@@ -252,6 +274,7 @@ TOOL_LABELS = {
     "modify_workflow": "Updating your workflow",
     "save_knowledge": "Saving to knowledge base",
     "list_knowledge": "Checking knowledge base",
+    "update_workflow_settings": "Updating workflow settings",
 }
 
 
@@ -475,6 +498,8 @@ def execute_tool(tool_name: str, arguments: dict, user: User, db: Session) -> st
         return _tool_toggle_workflow(arguments, user, db, activate=False)
     elif tool_name == "modify_workflow":
         return _tool_modify_workflow(arguments, user, db)
+    elif tool_name == "update_workflow_settings":
+        return _tool_update_workflow_settings(arguments, user, db)
     elif tool_name == "get_webhook_url":
         return _tool_get_webhook_url(arguments, user, db)
     elif tool_name == "get_step_info":
@@ -629,6 +654,62 @@ def _tool_modify_workflow(args: dict, user: User, db: Session) -> str:
         })
     except Exception as e:
         logger.error(f"modify_workflow error: {e}")
+        return json.dumps({"success": False, "error": str(e)})
+
+
+def _tool_update_workflow_settings(args: dict, user: User, db: Session) -> str:
+    """Apply lightweight settings changes without regenerating the workflow."""
+    try:
+        name = args.get("workflow_name", "")
+        changes = args.get("changes", {})
+        
+        workflows = db.query(Workflow).filter(Workflow.user_id == user.id).all()
+        match = None
+        for wf in workflows:
+            if name.lower() in wf.name.lower():
+                match = wf
+                break
+        
+        if not match:
+            return json.dumps({"success": False, "error": f"No workflow found matching '{name}'"})
+        
+        applied = []
+        
+        if changes.get("remove_all_approvals"):
+            nodes = match.nodes or []
+            count = 0
+            for node in nodes:
+                if node.get("requiresApproval"):
+                    node["requiresApproval"] = False
+                    count += 1
+                if node.get("config", {}).get("requiresApproval"):
+                    node["config"]["requiresApproval"] = False
+                if node.get("parameters", {}).get("requiresApproval"):
+                    node["parameters"]["requiresApproval"] = False
+            match.nodes = nodes
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(match, "nodes")
+            applied.append(f"Removed approval from {count} steps")
+        
+        if "set_active" in changes:
+            match.is_active = bool(changes["set_active"])
+            applied.append(f"Set workflow to {'active' if match.is_active else 'inactive'}")
+        
+        if changes.get("rename"):
+            match.name = changes["rename"]
+            applied.append(f"Renamed to '{changes['rename']}'")
+        
+        db.commit()
+        
+        return json.dumps({
+            "success": True,
+            "workflow_id": match.id,
+            "workflow_name": match.name,
+            "changes_applied": applied,
+            "is_active": match.is_active,
+        })
+    except Exception as e:
+        logger.error(f"update_workflow_settings error: {e}")
         return json.dumps({"success": False, "error": str(e)})
 
 
@@ -941,70 +1022,38 @@ def build_system_prompt(user: User, db: Session) -> str:
     else:
         exec_summary = "RECENT ACTIVITY: No workflow runs yet."
 
+    # Get user timezone
+    user_tz = getattr(user, 'timezone', None) or 'America/Los_Angeles'
+    
     return f"""You are Aivaro — an AI that builds and runs business automations. You're talking to {name}{biz}.
 
-ACCOUNT: {wf_count} workflows.
+ACCOUNT: {wf_count} workflows. Timezone: {user_tz}
 {conn_summary}
 {exec_summary}
 {knowledge_ctx}
 
 YOU ARE THE PRODUCT. You build and run automations — but you build them RIGHT.
 
-BEFORE CREATING A WORKFLOW — GATHER REQUIREMENTS (MANDATORY):
-⚠️ NEVER call create_workflow on the first message. Always gather requirements first.
-
+BUILDING WORKFLOWS — BE FAST, NOT ANNOYING:
 When a user asks to automate something:
 
-STEP 1 — Check what you already know:
-- Call list_knowledge to check the knowledge base for relevant business context (pricing, policies, contacts, hours, etc.)
-- Review what the user told you in the current conversation
+1. Call list_knowledge ONCE to check for business context. Do NOT call it again on follow-up messages.
+2. Read the user's message carefully. Extract EVERYTHING they already told you — triggers, actions, recipients, conditions, tone, approval preferences.
+3. Use the user's timezone (from ACCOUNT section above) as default. Use their business name and context from the knowledge base.
+4. If the user said "no approval needed" or "auto-send" — respect it. Set requiresApproval=false on ALL steps.
 
-STEP 2 — Ask what's missing:
-For EVERY workflow type, there are critical details you MUST know before building. DO NOT guess these — ASK:
+WHEN TO ASK QUESTIONS vs BUILD IMMEDIATELY:
+- If the user gave a detailed message (trigger + actions + conditions), BUILD IMMEDIATELY. State your assumptions briefly and create the workflow. Do NOT ask questions.
+- If critical info is genuinely missing (e.g., they said "send an email" but didn't say what it should say), ask AT MOST 3-4 questions in ONE round. NEVER more than one round of questions.
+- NEVER ask about things you can infer: timezone (use theirs), tone (default professional), notification content (include relevant details), DM vs channel (if they named a person, it's a DM).
+- NEVER re-ask something the user already answered.
+- NEVER ask for confirmation of things the user explicitly stated.
 
-**Booking/appointment workflows:**
-- What service/product is being booked?
-- Deposit amount? (don't default to $20 or any number)
-- What should the confirmation email say? Professional/casual/custom?
-- Cancellation policy?
-- Should a calendar event be created? Which calendar?
-- Who gets notified when a booking comes in?
-
-**Email reply automations:**
-- Trigger: from specific sender, or any email, or keyword in subject?
-- What should the reply contain? What tone?
-- Should it CC anyone?
-- Should certain emails be excluded?
-
-**Payment/invoice workflows:**
-- Amount? Fixed or variable?
-- What's the payment for?
-- Due date?
-- What happens if they don't pay? Follow-up?
-
-**Notification workflows:**
-- Who gets notified?
-- Via what channel (email, SMS, Slack)?
-- What info should be included?
-- When should it fire?
-
-STEP 3 — Ask 2-4 targeted questions in ONE message:
-- Start with a brief intro sentence (1 line max)
-- Then output ONLY questions, each on its own line, numbered like: "1. Question text here"
-- For multiple-choice questions, put options in parentheses: "1. What tone? (a) Professional (b) Friendly/casual (c) Custom"
-- Keep each question SHORT and specific (one line)
-- Do NOT add explanations, bullet sub-points, or paragraphs between questions
-- Do NOT repeat back what the user said before asking
-- Maximum 6 questions total
-- If the knowledge base has info, confirm it: "1. Your deposit is $50 — should I use that? (Yes/No)"
-
-STEP 4 — Build with full details:
-Only AFTER the user answers, call create_workflow with a description that includes every specific detail they gave you. The description should read like a complete spec, not a vague summary.
-
-EXCEPTIONS — skip questions and build immediately ONLY if:
-- The user's message already contains ALL critical details (amounts, recipients, content, timing)
-- AND you have confirmed business context in the knowledge base
-- Even then, state your assumptions: "Using your $50 deposit rate and 24h cancellation policy."
+QUESTION FORMAT (when you must ask):
+- Start with ONE brief intro sentence
+- Number each question on its own line: "1. Question text here?"
+- For choices: "1. What tone? (a) Professional (b) Friendly/casual (c) Custom"
+- Maximum 4 questions. One round only. Then build.
 
 When someone asks you to DO something right now (send a message, confirm an appointment, follow up with a client), use run_agent_task. The agent will autonomously execute the task using their connected tools.
 
