@@ -66,8 +66,15 @@ class WorkflowRunner:
                 print(f"[WorkflowRunner] Node {node_id} branch='{branch}' → {len(branched)} targets via label")
                 return branched
             
-            # No matching branch edges — DO NOT fall back to all edges
-            # This prevents condition nodes from executing both branches
+            # No matching branch edges found
+            # Check if ANY edges from this node have sourceHandle set
+            has_any_handles = any(e.get("sourceHandle") for e in all_edges)
+            if not has_any_handles:
+                # No branching configured at all — treat as linear flow
+                print(f"[WorkflowRunner] Node {node_id} branch='{branch}' but NO edges have sourceHandle. Treating as linear flow → {len(all_edges)} targets.")
+                return [e["target"] for e in all_edges]
+            
+            # Some edges have handles but none matched this branch — stop this path
             edge_handles = [(e.get("sourceHandle"), e.get("label")) for e in all_edges]
             print(f"[WorkflowRunner] WARNING: Node {node_id} branch='{branch}' matched NO edges. Available: {edge_handles}. Stopping this path.")
             return []
