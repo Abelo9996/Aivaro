@@ -399,11 +399,11 @@ Available ACTION node types:
 - append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", sheet_name: "Sheet1", columns: [{name: "...", value: "{{...}}"}]}
 - read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "spreadsheet ID or file name (e.g. 'Contacts.xlsx')", spreadsheet_name: "optional display name", range: "Sheet1!A1:Z1000"}
 - delay: Wait for a duration. Parameters: {duration: 2, unit: "hours/minutes/days"}
-- send_notification: Send a notification. Parameters: {message: "..."}
+- send_notification: Log an internal note to the workflow execution log. Parameters: {message: "..."}. NOTE: This does NOT send any message to anyone — it only records a note in the execution log visible in the dashboard. To actually notify the workflow owner, use send_email (to={{user_email}}), slack_send_dm (email={{user_email}}), or twilio_send_sms. NEVER use send_notification as a substitute for real owner notifications.
 - send_slack: Send a Slack message to a CHANNEL. Parameters: {channel: "#general", message: "..."}. Only use for posting to channels.
 - slack_send_dm: Send a direct message to a specific PERSON on Slack. Parameters: {email: "user@email.com", message: "..."}. Use this when the user wants to message a specific person (NOT a channel).
 - http_request: Make an API call. Parameters: {url: "...", method: "GET/POST"}
-- condition: Branch the workflow based on a condition. Parameters: {field: "calendly_count", operator: "greater_than", value: "0"}. Operators: equals, not_equals, contains, greater_than, less_than, is_empty, is_not_empty. IMPORTANT: Condition nodes create TWO branches. Edges from condition nodes MUST have sourceHandle: "true" (condition met) or "false" (condition not met). Each branch leads to different next steps. Nodes that should only run when the condition is true connect via sourceHandle="yes", and nodes for the false case connect via sourceHandle="no".
+- condition: Branch the workflow based on a condition. Parameters: {field: "calendly_count", operator: "greater_than", value: "0"}. Operators: equals, not_equals, contains, greater_than, less_than, is_empty, is_not_empty. IMPORTANT: Condition nodes create TWO branches. Edges from condition nodes MUST have sourceHandle: "yes" (condition met/true) or sourceHandle: "no" (condition not met/false). NEVER use "true"/"false" as sourceHandle values — ONLY "yes" and "no". Each branch leads to different next steps.
 
 GOOGLE CALENDAR node types:
 - google_calendar_create: Create a calendar event. Parameters: {title: "Meeting with {{name}}", date: "{{date}}", start_time: "{{time}}", duration: 1, description: "...", location: "..."}
@@ -461,7 +461,7 @@ IMPORTANT RULES:
 15. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}, {{ai_response}}
 16. Always connect nodes with edges
 17. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
-18. Set requiresApproval: true for: emails to external recipients, payment processing, campaign sends, phone calls. Set to false for: internal notifications, logging to sheets, calendar events.
+18. Default requiresApproval: true for: emails to external recipients, payment processing, campaign sends, phone calls. BUT if the user explicitly said "no approval", "auto-send", "don't ask me", or similar → set requiresApproval: false on ALL nodes. The user's explicit preference ALWAYS overrides the default.
 19. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
 20. NEVER use node types not listed above. Only use the exact types defined here.
 21. CONDITION BRANCHING: When using condition nodes, create TWO separate paths with edges that have sourceHandle="yes" and sourceHandle="no". The true branch runs when the condition is met, false when not met. Example: condition checks "calendly_count greater_than 0" → true branch = conflict exists (deny), false branch = no conflict (proceed). NEVER run both branches sequentially.
