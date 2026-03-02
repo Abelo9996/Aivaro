@@ -870,24 +870,38 @@ Extract: {fields_to_extract}"""
         operator = params.get("operator", "equals")
         value = params.get("value", "")
         
+        # Support nested field access and interpolation
         field_value = input_data.get(field, "")
         value = _interpolate(str(value), input_data)
         
+        # Normalize boolean-like strings for comparison
+        def _norm(v):
+            s = str(v).strip().lower()
+            if s in ("true", "yes", "1"): return "true"
+            if s in ("false", "no", "0", "none", ""): return "false"
+            return s
+        
         result = False
         if operator == "equals":
-            result = str(field_value) == str(value)
+            result = _norm(field_value) == _norm(value)
         elif operator == "not_equals":
-            result = str(field_value) != str(value)
+            result = _norm(field_value) != _norm(value)
         elif operator == "contains":
-            result = str(value) in str(field_value)
+            result = str(value).lower() in str(field_value).lower()
         elif operator == "greater_than":
-            result = float(field_value) > float(value)
+            try:
+                result = float(field_value) > float(value)
+            except (ValueError, TypeError):
+                result = False
         elif operator == "less_than":
-            result = float(field_value) < float(value)
+            try:
+                result = float(field_value) < float(value)
+            except (ValueError, TypeError):
+                result = False
         elif operator == "is_empty":
-            result = not field_value
+            result = not field_value or str(field_value).strip() == ""
         elif operator == "is_not_empty":
-            result = bool(field_value)
+            result = bool(field_value) and str(field_value).strip() != ""
         
         logs = f"[{datetime.utcnow().isoformat()}] Condition check\n"
         logs += f"  {field} {operator} {value}\n"

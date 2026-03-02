@@ -465,6 +465,16 @@ IMPORTANT RULES:
 19. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
 20. NEVER use node types not listed above. Only use the exact types defined here.
 21. CONDITION BRANCHING: When using condition nodes, create TWO separate paths with edges that have sourceHandle="yes" and sourceHandle="no". The true branch runs when the condition is met, false when not met. Example: condition checks "calendly_count greater_than 0" → true branch = conflict exists (deny), false branch = no conflict (proceed). NEVER run both branches sequentially.
+
+IMPORTANT — CONDITION NODES CAN ONLY DO SIMPLE FIELD COMPARISONS:
+The condition node checks: input_data[field] <operator> value. Available operators: equals, not_equals, contains, greater_than, less_than, is_empty, is_not_empty.
+- The "field" MUST be a key that a previous node's output actually produces.
+- For AI extraction steps (ai_reply with extract mode), the output keys are whatever the AI returns — typically: is_appointment (true/false), customer_name, customer_email, requested_date, requested_time, etc.
+- When checking boolean AI outputs, use: field="is_appointment", operator="equals", value="true" (string comparison — AI outputs are always strings).
+- When checking list counts, use: field="calendly_count", operator="greater_than", value="0".
+- DO NOT create conditions that check fields no previous node produces.
+- If you need complex logic (e.g., "is this email about an appointment?"), use an ai_reply node first that outputs a clear field like "is_appointment": "true", then condition on that field.
+- The "contains" operator checks if VALUE is contained in FIELD — e.g., field="subject", operator="contains", value="appointment" checks if the subject contains "appointment".
 22. SLACK DMs vs CHANNELS: When the user wants to message a specific person on Slack, use slack_send_dm (NOT send_slack). send_slack is ONLY for posting to channels like #general. slack_send_dm takes an email parameter to find the user.
 23. When the user asks to "notify" or "message" a specific person on Slack, use slack_send_dm with that person's email (or ask for their email if not provided).
 
