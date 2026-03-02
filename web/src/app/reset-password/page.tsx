@@ -1,4 +1,6 @@
 'use client';
+import VantaBackground from '@/components/VantaBackground';
+import PageTransition from '@/components/PageTransition';
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -69,7 +71,7 @@ function ResetPasswordContent() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: `linear-gradient(135deg, ${colors.darkerBg} 0%, ${colors.darkBg} 50%, ${colors.darkerBg} 100%)`,
+        background: colors.darkBg,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -97,7 +99,7 @@ function ResetPasswordContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: `linear-gradient(135deg, ${colors.darkerBg} 0%, ${colors.darkBg} 50%, ${colors.darkerBg} 100%)`,
+      background: colors.darkBg,
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
@@ -106,10 +108,11 @@ function ResetPasswordContent() {
       position: 'relative',
       overflow: 'hidden',
     }}>
+      <VantaBackground />
       <Link
         href="/login"
         style={{
-          position: 'absolute', top: '24px', left: '24px',
+          position: 'absolute', top: '24px', left: '24px', zIndex: 10,
           display: 'flex', alignItems: 'center', gap: '8px',
           color: colors.textMuted, textDecoration: 'none', fontSize: '14px',
         }}
@@ -125,6 +128,8 @@ function ResetPasswordContent() {
         borderRadius: '24px',
         border: '1px solid rgba(139, 92, 246, 0.2)',
         padding: '40px',
+        position: 'relative',
+        zIndex: 10,
         textAlign: 'center',
       }}>
         {status === 'success' ? (
@@ -240,8 +245,10 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
+    <PageTransition>
     <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 size={32} className="animate-spin" style={{ color: '#666' }} /></div>}>
       <ResetPasswordContent />
     </Suspense>
+    </PageTransition>
   );
 }

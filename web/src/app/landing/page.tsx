@@ -1,4 +1,6 @@
 'use client';
+import PageTransition from '@/components/PageTransition';
+import VantaBackground from '@/components/VantaBackground';
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
@@ -13,6 +15,7 @@ const styles = {
   textSecondary: 'rgba(226, 232, 240, 0.8)',
   textMuted: 'rgba(226, 232, 240, 0.6)',
 };
+
 
 function useResponsive() {
   const [windowSize, setWindowSize] = useState({ width: 1200, height: 800 });
@@ -92,7 +95,7 @@ function Header() {
                     href={`#${item}`}
                     onClick={(e) => { e.preventDefault(); smoothScrollTo(item); }}
                     style={{ color: styles.textMuted, fontSize: 14, fontWeight: 500, textDecoration: 'none', cursor: 'pointer', textTransform: 'capitalize' }}
-                    whileHover={{ color: styles.textPrimary }}
+                    whileHover={{ color: styles.textPrimary, scale: 1.05 }}
                   >
                     {item.replace(/-/g, ' ')}
                   </motion.a>
@@ -105,7 +108,7 @@ function Header() {
                 <Link href="/login" style={{ textDecoration: 'none' }}>
                   <motion.div
                     style={{ color: styles.textSecondary, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
-                    whileHover={{ color: styles.textPrimary }}
+                    whileHover={{ color: styles.textPrimary, scale: 1.05 }}
                   >
                     Sign in
                   </motion.div>
@@ -113,8 +116,8 @@ function Header() {
                 <Link href="/signup" style={{ textDecoration: 'none' }}>
                   <motion.div
                     style={{ background: styles.primary, color: '#ffffff', padding: '8px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-                    whileHover={{ opacity: 0.9 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}
+whileTap={{ scale: 0.95 }}
                   >
                     Get Started Free
                   </motion.div>
@@ -220,8 +223,8 @@ function HeroSection() {
             <Link href="/signup" style={{ textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
               <motion.div
                 style={{ background: styles.primary, color: '#ffffff', padding: '14px 32px', borderRadius: 10, fontSize: 16, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: isMobile ? '100%' : 'auto' }}
-                whileHover={{ opacity: 0.9 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}
+whileTap={{ scale: 0.95 }}
               >
                 Start Free Trial
                 <ArrowRight size={18} />
@@ -230,7 +233,8 @@ function HeroSection() {
             <Link href="/demo" style={{ textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
               <motion.div
                 style={{ color: styles.textSecondary, padding: '14px 32px', borderRadius: 10, fontSize: 16, fontWeight: 500, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1px solid rgba(255,255,255,0.12)', width: isMobile ? '100%' : 'auto' }}
-                whileHover={{ borderColor: 'rgba(255,255,255,0.25)' }}
+                whileHover={{ borderColor: 'rgba(255,255,255,0.35)', scale: 1.03, boxShadow: '0 0 20px rgba(255,255,255,0.05)' }}
+whileTap={{ scale: 0.96 }}
               >
                 See How It Works
               </motion.div>
@@ -254,7 +258,7 @@ function HeroSection() {
             transition={{ duration: 0.7, delay: 0.5 }}
           >
             <div style={{
-              background: 'rgba(15, 15, 30, 0.8)',
+              background: 'rgba(10, 10, 30, 0.92)', backdropFilter: 'blur(12px)',
               borderRadius: 14,
               border: '1px solid rgba(139, 92, 246, 0.2)',
               overflow: 'hidden',
@@ -329,12 +333,14 @@ function IntegrationLogosSection() {
           Works with the tools you already use
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: isMobile ? 20 : 32, alignItems: 'center' }}>
-          {integrations.map((int) => (
+          {integrations.map((int, i) => (
             <motion.div
               key={int.name}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: 0.7 }}
-              whileHover={{ opacity: 1, scale: 1.05 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 0.7, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 + i * 0.05 }}
+              whileHover={{ opacity: 1, scale: 1.15, y: -4 }}
             >
               <img
                 src={int.src}
@@ -430,15 +436,15 @@ function TemplateGallerySection() {
             <motion.div
               key={i}
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
                 borderRadius: 14,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 padding: isMobile ? 20 : 24,
               }}
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-              whileHover={{ borderColor: 'rgba(139, 92, 246, 0.3)', background: 'rgba(255, 255, 255, 0.05)' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20, delay: i * 0.08 }}
+              whileHover={{ borderColor: 'rgba(139, 92, 246, 0.4)', y: -4, boxShadow: '0 8px 30px rgba(139, 92, 246, 0.15)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.iconColor }}>
@@ -470,7 +476,7 @@ function TemplateGallerySection() {
           <Link href="/signup" style={{ textDecoration: 'none' }}>
             <motion.span
               style={{ fontSize: 14, color: styles.primaryLight, fontWeight: 500, cursor: 'pointer' }}
-              whileHover={{ color: styles.textPrimary }}
+              whileHover={{ color: styles.textPrimary, scale: 1.05 }}
             >
               Browse all templates →
             </motion.span>
@@ -489,7 +495,7 @@ function ApprovalFeatureSection() {
   return (
     <div style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
       <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 32 : 64, alignItems: 'center', background: 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)', borderRadius: 16, border: '1px solid rgba(255, 255, 255, 0.08)', padding: isMobile ? 24 : 40 }}>
           {/* Left - Copy */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -530,7 +536,7 @@ function ApprovalFeatureSection() {
             transition={{ duration: 0.5, delay: 0.15 }}
           >
             <div style={{
-              background: 'rgba(15, 15, 30, 0.8)',
+              background: 'rgba(10, 10, 30, 0.92)', backdropFilter: 'blur(12px)',
               borderRadius: 14,
               border: '1px solid rgba(255, 255, 255, 0.1)',
               overflow: 'hidden',
@@ -563,15 +569,17 @@ function ApprovalFeatureSection() {
                 <div style={{ display: 'flex', gap: 10 }}>
                   <motion.div
                     style={{ flex: 1, background: styles.accent, color: '#fff', padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', cursor: 'pointer' }}
-                    whileHover={{ opacity: 0.9 }}
-                  >
-                    Approve
+                    whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(16, 185, 129, 0.3)' }}
+whileTap={{ scale: 0.95 }}
+>
+Approve
                   </motion.div>
                   <motion.div
                     style={{ flex: 1, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', cursor: 'pointer', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-                    whileHover={{ opacity: 0.9 }}
-                  >
-                    Reject
+                    whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)' }}
+whileTap={{ scale: 0.95 }}
+>
+Reject
                   </motion.div>
                 </div>
               </div>
@@ -615,14 +623,15 @@ function HowItWorksSection() {
             <motion.div
               key={i}
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
                 borderRadius: 14,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 padding: isMobile ? 24 : 28,
               }}
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              transition={{ duration: 0.5, delay: i * 0.15 }}
+              whileHover={{ y: -6, borderColor: 'rgba(139, 92, 246, 0.3)', boxShadow: '0 12px 30px rgba(139, 92, 246, 0.12)' }}
             >
               <div style={{
                 width: 40, height: 40, borderRadius: 10,
@@ -675,7 +684,7 @@ function ResultsSection() {
             <motion.div
               key={i}
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
                 borderRadius: 14,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 padding: isMobile ? 20 : 24,
@@ -684,6 +693,7 @@ function ResultsSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4, delay: 0.2 + i * 0.08 }}
+              whileHover={{ y: -4, borderColor: 'rgba(139, 92, 246, 0.3)', boxShadow: '0 8px 24px rgba(139, 92, 246, 0.1)' }}
             >
               <div style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: styles.primary, marginBottom: 4 }}>{stat.value}</div>
               <div style={{ fontSize: 14, color: styles.textPrimary, fontWeight: 600, marginBottom: 2 }}>{stat.label}</div>
@@ -696,7 +706,7 @@ function ResultsSection() {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
           <motion.div
             style={{
-              background: 'rgba(239, 68, 68, 0.04)',
+              background: 'rgba(30, 10, 10, 0.85)', backdropFilter: 'blur(12px)',
               borderRadius: 14,
               border: '1px solid rgba(239, 68, 68, 0.15)',
               padding: isMobile ? 20 : 28,
@@ -723,7 +733,7 @@ function ResultsSection() {
 
           <motion.div
             style={{
-              background: 'rgba(16, 185, 129, 0.04)',
+              background: 'rgba(10, 25, 20, 0.85)', backdropFilter: 'blur(12px)',
               borderRadius: 14,
               border: '1px solid rgba(16, 185, 129, 0.15)',
               padding: isMobile ? 20 : 28,
@@ -753,7 +763,7 @@ function ResultsSection() {
         <motion.div
           style={{
             marginTop: isMobile ? 32 : 48,
-            background: 'rgba(139, 92, 246, 0.04)',
+            background: 'rgba(15, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
             borderRadius: 14,
             border: '1px solid rgba(139, 92, 246, 0.15)',
             padding: isMobile ? 24 : 32,
@@ -811,7 +821,7 @@ function FeaturesSection() {
             <motion.div
               key={i}
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
                 borderRadius: 14,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 padding: isMobile ? 20 : 24,
@@ -819,6 +829,7 @@ function FeaturesSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4, delay: i * 0.06 }}
+              whileHover={{ y: -6, borderColor: 'rgba(139, 92, 246, 0.3)', boxShadow: '0 12px 30px rgba(139, 92, 246, 0.12)' }}
             >
               <div style={{ color: styles.primary, marginBottom: 12 }}>{f.icon}</div>
               <h3 style={{ fontSize: 16, fontWeight: 600, color: styles.textPrimary, marginBottom: 6 }}>{f.title}</h3>
@@ -896,7 +907,7 @@ function PricingSection() {
             <motion.div
               key={i}
               style={{
-                background: plan.popular ? 'rgba(139, 92, 246, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                background: plan.popular ? 'rgba(20, 12, 40, 0.9)' : 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
                 borderRadius: 14,
                 border: plan.popular ? '1.5px solid rgba(139, 92, 246, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
                 padding: isMobile ? 24 : 28,
@@ -905,11 +916,16 @@ function PricingSection() {
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4, delay: i * 0.08 }}
+              whileHover={{ y: -8, boxShadow: plan.popular ? '0 16px 40px rgba(139, 92, 246, 0.25)' : '0 12px 30px rgba(139, 92, 246, 0.1)' }}
             >
               {plan.popular && (
-                <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: styles.primary, color: '#fff', padding: '3px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
+                <motion.div
+                  style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: styles.primary, color: '#fff', padding: '3px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}
+                  animate={{ boxShadow: ['0 0 8px rgba(139, 92, 246, 0.3)', '0 0 20px rgba(139, 92, 246, 0.6)', '0 0 8px rgba(139, 92, 246, 0.3)'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                >
                   Popular
-                </div>
+                </motion.div>
               )}
               <h3 style={{ fontSize: 18, fontWeight: 600, color: styles.textPrimary, marginBottom: 4 }}>{plan.name}</h3>
               <div style={{ marginBottom: 20 }}>
@@ -938,8 +954,8 @@ function PricingSection() {
                     cursor: 'pointer',
                     textAlign: 'center',
                   }}
-                  whileHover={{ opacity: 0.9 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}
+whileTap={{ scale: 0.95 }}
                 >
                   {plan.cta}
                 </motion.div>
@@ -963,7 +979,7 @@ function CTASection() {
         <motion.div
           ref={ref}
           style={{
-            background: 'rgba(139, 92, 246, 0.06)',
+            background: 'rgba(15, 10, 30, 0.85)', backdropFilter: 'blur(12px)',
             borderRadius: 16,
             border: '1px solid rgba(139, 92, 246, 0.2)',
             padding: isMobile ? 32 : 48,
@@ -987,8 +1003,8 @@ function CTASection() {
                 padding: isMobile ? '14px 28px' : '16px 32px',
                 borderRadius: 10, fontSize: 16, fontWeight: 600, cursor: 'pointer',
               }}
-              whileHover={{ opacity: 0.9 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}
+whileTap={{ scale: 0.95 }}
             >
               Start Automating Free
               <ArrowRight size={18} />
@@ -1030,6 +1046,7 @@ function Footer() {
 
 export default function LandingPage() {
   return (
+    <PageTransition>
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       minHeight: '100vh',
@@ -1042,36 +1059,9 @@ export default function LandingPage() {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.85); }
         }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px) translateX(0px); }
-          50% { transform: translateY(-30px) translateX(10px); }
-        }
       `}</style>
-      {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #0a0a1a 0%, #050510 100%)' }} />
-        {/* Dot grid pattern */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'radial-gradient(rgba(139, 92, 246, 0.15) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-          maskImage: 'radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%)',
-        }} />
-        {/* Primary glow */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% -10%, rgba(139, 92, 246, 0.15), transparent 55%)' }} />
-        {/* Secondary accent glow */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.06), transparent 50%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 80% 50%, rgba(16, 185, 129, 0.04), transparent 50%)' }} />
-        {/* Floating orbs */}
-        <div style={{ position: 'absolute', top: '15%', left: '10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139, 92, 246, 0.06), transparent 70%)', animation: 'float 8s ease-in-out infinite', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '60%', right: '8%', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05), transparent 70%)', animation: 'float-slow 12s ease-in-out infinite', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '40%', left: '60%', width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.05), transparent 70%)', animation: 'float 10s ease-in-out infinite 2s', pointerEvents: 'none' }} />
-      </div>
+      {/* Vanta Background */}
+      <VantaBackground />
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 10 }}>
@@ -1088,5 +1078,6 @@ export default function LandingPage() {
         <Footer />
       </div>
     </div>
+    </PageTransition>
   );
 }

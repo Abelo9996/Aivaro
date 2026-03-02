@@ -1,4 +1,6 @@
 'use client';
+import VantaBackground from '@/components/VantaBackground';
+import PageTransition from '@/components/PageTransition';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -77,8 +79,13 @@ export default function SignupPage() {
   const { strength, label } = passwordStrength();
 
   return (
-    <div style={{
-      minHeight: '100vh',
+    <PageTransition>
+    <style>{`
+      .signup-wrap *, .signup-wrap *::before, .signup-wrap *::after { box-sizing: border-box; }
+    `}</style>
+    <div className="signup-wrap" style={{
+      height: '100vh',
+      overflow: 'hidden',
       background: `linear-gradient(135deg, ${colors.darkerBg} 0%, ${colors.darkBg} 50%, ${colors.darkerBg} 100%)`,
       display: 'flex',
       flexDirection: 'column',
@@ -86,41 +93,9 @@ export default function SignupPage() {
       alignItems: 'center',
       padding: '24px',
       position: 'relative',
-      overflow: 'hidden',
     }}>
       {/* Background Effects */}
-      <div style={{
-        position: 'absolute',
-        top: '-30%',
-        left: '-20%',
-        width: '60%',
-        height: '60%',
-        background: `radial-gradient(circle, ${colors.primary}15 0%, transparent 70%)`,
-        filter: 'blur(80px)',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '-30%',
-        right: '-20%',
-        width: '60%',
-        height: '60%',
-        background: `radial-gradient(circle, ${colors.secondary}15 0%, transparent 70%)`,
-        filter: 'blur(80px)',
-        pointerEvents: 'none',
-      }} />
-
-      {/* Grid Pattern */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: `
-          linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px)
-        `,
-        backgroundSize: '50px 50px',
-        pointerEvents: 'none',
-      }} />
+      <VantaBackground />
 
       {/* Back to Landing */}
       <Link
@@ -148,11 +123,12 @@ export default function SignupPage() {
       <div style={{
         width: '100%',
         maxWidth: '440px',
+        
         background: 'rgba(15, 15, 35, 0.8)',
         backdropFilter: 'blur(20px)',
         borderRadius: '24px',
         border: '1px solid rgba(139, 92, 246, 0.2)',
-        padding: '40px',
+        padding: '24px 32px',
         position: 'relative',
         zIndex: 10,
       }}>
@@ -241,7 +217,7 @@ export default function SignupPage() {
         <div style={{
           display: 'flex',
           justifyContent: 'center',
-          marginBottom: '24px',
+          marginBottom: '12px',
         }}>
           <div style={{
             display: 'flex',
@@ -251,7 +227,7 @@ export default function SignupPage() {
             <img 
               src="/logo.png" 
               alt="Aivaro" 
-              style={{ height: 48, width: 'auto' }}
+              style={{ height: 36, width: 'auto' }}
             />
           </div>
         </div>
@@ -262,7 +238,7 @@ export default function SignupPage() {
           fontWeight: 700,
           color: colors.textPrimary,
           textAlign: 'center',
-          marginBottom: '8px',
+          marginBottom: '4px',
         }}>
           Create your account
         </h1>
@@ -270,7 +246,7 @@ export default function SignupPage() {
           fontSize: '14px',
           color: colors.textMuted,
           textAlign: 'center',
-          marginBottom: '32px',
+          marginBottom: '16px',
         }}>
           Start automating your workflows today
         </p>
@@ -293,7 +269,7 @@ export default function SignupPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Full Name */}
           <div>
             <label style={{
@@ -301,7 +277,7 @@ export default function SignupPage() {
               fontSize: '14px',
               fontWeight: 500,
               color: colors.textSecondary,
-              marginBottom: '8px',
+              marginBottom: '4px',
             }}>
               Full name
             </label>
@@ -311,8 +287,7 @@ export default function SignupPage() {
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Jane Doe"
               style={{
-                width: '100%',
-                padding: '14px 16px',
+                boxSizing: 'border-box' as const, width: '100%', padding: '12px 16px',
                 background: colors.inputBg,
                 border: '1px solid rgba(139, 92, 246, 0.2)',
                 borderRadius: '12px',
@@ -339,7 +314,7 @@ export default function SignupPage() {
               fontSize: '14px',
               fontWeight: 500,
               color: colors.textSecondary,
-              marginBottom: '8px',
+              marginBottom: '4px',
             }}>
               Email address
             </label>
@@ -350,8 +325,7 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               style={{
-                width: '100%',
-                padding: '14px 16px',
+                boxSizing: 'border-box' as const, width: '100%', padding: '12px 16px',
                 background: colors.inputBg,
                 border: '1px solid rgba(139, 92, 246, 0.2)',
                 borderRadius: '12px',
@@ -378,7 +352,7 @@ export default function SignupPage() {
               fontSize: '14px',
               fontWeight: 500,
               color: colors.textSecondary,
-              marginBottom: '8px',
+              marginBottom: '4px',
             }}>
               Password
             </label>
@@ -391,8 +365,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
                 style={{
-                  width: '100%',
-                  padding: '14px 48px 14px 16px',
+                  boxSizing: 'border-box' as const, width: '100%', padding: '12px 48px 12px 16px',
                   background: colors.inputBg,
                   border: '1px solid rgba(139, 92, 246, 0.2)',
                   borderRadius: '12px',
@@ -480,7 +453,7 @@ export default function SignupPage() {
               fontSize: '14px',
               fontWeight: 500,
               color: colors.textSecondary,
-              marginBottom: '8px',
+              marginBottom: '4px',
             }}>
               Confirm password
             </label>
@@ -492,8 +465,7 @@ export default function SignupPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm your password"
                 style={{
-                  width: '100%',
-                  padding: '14px 48px 14px 16px',
+                  boxSizing: 'border-box' as const, width: '100%', padding: '12px 48px 12px 16px',
                   background: colors.inputBg,
                   border: `1px solid ${confirmPassword && password !== confirmPassword ? 'rgba(239, 68, 68, 0.5)' : 'rgba(139, 92, 246, 0.2)'}`,
                   borderRadius: '12px',
@@ -732,5 +704,6 @@ export default function SignupPage() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }

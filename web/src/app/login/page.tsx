@@ -1,4 +1,6 @@
 'use client';
+import VantaBackground from '@/components/VantaBackground';
+import PageTransition from '@/components/PageTransition';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -60,6 +62,7 @@ export default function LoginPage() {
   };
 
   return (
+    <PageTransition>
     <div style={{
       minHeight: '100vh',
       display: 'flex',
@@ -71,32 +74,7 @@ export default function LoginPage() {
       overflow: 'hidden',
     }}>
       {/* Tech Background with Glows and Patterns */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: 'none',
-      }}>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `
-            radial-gradient(circle at 20% 30%, ${colors.primary}33 0%, transparent 40%),
-            radial-gradient(circle at 80% 70%, ${colors.secondary}33 0%, transparent 40%),
-            radial-gradient(circle at 50% 50%, ${colors.accent}1a 0%, transparent 50%)
-          `,
-        }} />
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `
-            linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
-          opacity: 0.3,
-        }} />
-      </div>
+      <VantaBackground />
 
       <div style={{
         width: '100%',
@@ -105,7 +83,7 @@ export default function LoginPage() {
         flexDirection: 'column',
         gap: '32px',
         position: 'relative',
-        zIndex: 1,
+        zIndex: 10,
       }}>
         {/* Logo */}
         <div style={{ marginBottom: '24px' }}>
@@ -454,5 +432,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }

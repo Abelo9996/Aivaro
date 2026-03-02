@@ -1,4 +1,6 @@
 'use client';
+import VantaBackground from '@/components/VantaBackground';
+import PageTransition from '@/components/PageTransition';
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -12,6 +14,7 @@ const styles = {
 
 export default function DemoPage() {
   return (
+    <PageTransition>
     <div style={{ 
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", 
       minHeight: '100vh',
@@ -21,11 +24,7 @@ export default function DemoPage() {
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #0a0a1a 0%, #050510 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.08), transparent 60%)' }} />
-      </div>
+      <VantaBackground />
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 10, maxWidth: 640, width: '100%', margin: '0 auto', padding: '40px 24px', textAlign: 'center' }}>
@@ -56,8 +55,8 @@ export default function DemoPage() {
             <Link href="/signup" style={{ textDecoration: 'none' }}>
               <motion.div
                 style={{ background: styles.primary, color: '#fff', padding: '12px 24px', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
-                whileHover={{ opacity: 0.9 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
               >
                 Try Aivaro Free
               </motion.div>
@@ -65,7 +64,8 @@ export default function DemoPage() {
             <Link href="/landing" style={{ textDecoration: 'none' }}>
               <motion.div
                 style={{ display: 'flex', alignItems: 'center', gap: 6, color: styles.textMuted, padding: '12px 24px', borderRadius: 8, fontSize: 15, fontWeight: 500, border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer' }}
-                whileHover={{ borderColor: 'rgba(255,255,255,0.25)' }}
+                whileHover={{ borderColor: 'rgba(255,255,255,0.35)', scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
               >
                 <ArrowLeft size={16} />
                 Back to Home
@@ -75,5 +75,6 @@ export default function DemoPage() {
         </motion.div>
       </div>
     </div>
+    </PageTransition>
   );
 }
