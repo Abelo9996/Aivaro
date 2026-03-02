@@ -1,4 +1,6 @@
 'use client';
+import VantaBackground from '@/components/VantaBackground';
+import PageTransition from '@/components/PageTransition';
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -14,11 +16,15 @@ const colors = {
 
 export default function TermsPage() {
   return (
+    <PageTransition>
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       minHeight: '100vh',
-      background: `linear-gradient(135deg, ${colors.darkerBg} 0%, ${colors.darkBg} 50%, ${colors.darkerBg} 100%)`,
+      background: colors.darkBg,
+      position: 'relative',
     }}>
+      <VantaBackground />
+      <div style={{ position: 'relative', zIndex: 10 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 80px' }}>
         <Link href="/landing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: colors.textMuted, textDecoration: 'none', fontSize: 14, marginBottom: 40 }}>
           <ArrowLeft size={18} /> Back to Home
@@ -135,7 +141,9 @@ export default function TermsPage() {
           </Section>
         </div>
       </div>
+      </div>
     </div>
+    </PageTransition>
   );
 }
 
