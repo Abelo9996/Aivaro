@@ -693,7 +693,10 @@ def _tool_create_workflow(args: dict, user: User, db: Session) -> str:
         
         description = args["description"]
         name = args.get("name", "New Workflow")
-        result = generate_workflow_from_prompt(description)
+        # Get connected providers for context-aware generation
+        user_conns = _get_user_connections(user, db)
+        connected = [k for k, v in user_conns.items() if v.get("connected")]
+        result = generate_workflow_from_prompt(description, connected_providers=connected)
         if not result or not result.get("nodes"):
             return json.dumps({"success": False, "error": "Failed to generate workflow."})
         workflow = Workflow(
@@ -772,7 +775,9 @@ def _tool_modify_workflow(args: dict, user: User, db: Session) -> str:
         if not match:
             return json.dumps({"error": f"No workflow found matching '{args.get('workflow_name')}'"})
 
-        result = generate_workflow_from_prompt(description)
+        user_conns = _get_user_connections(user, db)
+        connected = [k for k, v in user_conns.items() if v.get("connected")]
+        result = generate_workflow_from_prompt(description, connected_providers=connected)
         if not result or not result.get("nodes"):
             return json.dumps({"success": False, "error": "Failed to generate updated workflow."})
 

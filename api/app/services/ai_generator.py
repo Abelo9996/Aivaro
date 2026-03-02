@@ -311,12 +311,18 @@ def generate_workflow_with_context(prompt: str, clarifications: Dict[str, Any] =
     return generate_workflow_from_prompt(enhanced_prompt)
 
 
-def generate_workflow_from_prompt(prompt: str) -> dict:
-    """Generate a workflow from a plain English prompt"""
+def generate_workflow_from_prompt(prompt: str, connected_providers: list[str] = None) -> dict:
+    """Generate a workflow from a plain English prompt.
+    
+    Args:
+        prompt: Plain English description of the workflow.
+        connected_providers: List of connected provider names (e.g. ['google', 'slack', 'stripe']).
+            Used to filter available node types and warn about missing connections.
+    """
     
     # If OpenAI key is available, use it
     if settings.openai_api_key:
-        result = _generate_with_openai(prompt)
+        result = _generate_with_openai(prompt, connected_providers=connected_providers)
     else:
         # Otherwise, use deterministic generator
         result = _generate_deterministic(prompt)
@@ -393,12 +399,22 @@ def apply_approval_defaults(nodes: list) -> list:
     return nodes
 
 
-def _generate_with_openai(prompt: str) -> dict:
+def _generate_with_openai(prompt: str, connected_providers: list[str] = None) -> dict:
     """Use OpenAI to generate workflow"""
     try:
         import openai
         
         client = openai.OpenAI(api_key=settings.openai_api_key)
+
+        # Build dynamic connection context
+        connection_context = ""
+        if connected_providers:
+            connected_str = ", ".join(connected_providers)
+            connection_context = (
+                "\n\nUSER'S CONNECTED SERVICES: " + connected_str +
+                "\n- Only use node types for services the user has connected."
+                "\n- If the workflow requires a service not in the list above, still include it but add a note in the workflow summary.\n"
+            )
         
         system_prompt = """You are a workflow automation assistant for Aivaro, a tool that helps non-technical founders automate their business processes.
 
@@ -407,8 +423,7 @@ Generate a workflow based on the user's description. Return a JSON object with:
 - summary: A plain English sentence starting with "When... Aivaro will..."
 - nodes: Array of nodes with {id, type, label, position: {x, y}, parameters, requiresApproval}
 - edges: Array of edges with {id, source, target}
-
-Available TRIGGER node types (must be first node):
+""" + connection_context + """Available TRIGGER node types (must be first node):
 - start_manual: Manual start trigger (when user clicks "Run")
 - start_form: Form submission trigger (when someone fills a form)
 - start_schedule: Scheduled trigger (runs on a schedule). Parameters: {time: "09:00", frequency: "daily/weekly/monthly"}

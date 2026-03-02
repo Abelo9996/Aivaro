@@ -228,6 +228,9 @@ class NodeExecutor:
         
         # Pre-interpolate ALL parameters so every executor gets resolved values
         resolved_params = _interpolate_params(parameters, input_data)
+
+        # Tag params with node_type for MCP fallback
+        resolved_params["__node_type"] = node_type
         
         # Centralized connection check — fail fast if required service isn't connected
         NODE_SERVICE_MAP = {
@@ -2605,8 +2608,30 @@ Extract: {fields_to_extract}"""
         return {"success": True, "output": {**input_data, "approval_status": "approved"}, "logs": logs}
 
     async def _execute_default(self, params: dict, input_data: dict) -> dict:
-        """Default executor for unknown node types."""
-        logs = f"[{datetime.utcnow().isoformat()}] Unknown node type\n"
+        """Fallback executor — try MCP registry for unknown node types."""
+        node_type = params.get("__node_type", "unknown")
+        logs = f"[{datetime.utcnow().isoformat()}] Node type '{node_type}' not in built-in executors\n"
+
+        # Try MCP registry as fallback
+        try:
+            from app.mcp_servers.registry import MCPToolRegistry
+            registry = MCPToolRegistry(self.connections)
+            try:
+                if registry.has_tool(node_type):
+                    logs += f"  Routing to MCP server ({registry.get_provider_for_tool(node_type)})\n"
+                    result = await registry.call_tool(node_type, params)
+                    if "error" in result:
+                        logs += f"  MCP error: {result['error']}\n"
+                        return {"success": False, "output": input_data, "logs": logs, "error": result["error"]}
+                    logs += f"  MCP call successful\n"
+                    return {"success": True, "output": {**input_data, **result}, "logs": logs}
+                else:
+                    logs += f"  No MCP tool found for '{node_type}'\n"
+            finally:
+                await registry.close()
+        except Exception as e:
+            logs += f"  MCP fallback failed: {e}\n"
+
         logs += f"  Parameters: {params}\n"
         return {"success": True, "output": input_data, "logs": logs}
 
