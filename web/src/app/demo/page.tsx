@@ -28,7 +28,7 @@ export default function DemoPage() {
       </div>
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 10, maxWidth: 520, margin: '0 auto', padding: '40px 24px', textAlign: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 10, maxWidth: 640, width: '100%', margin: '0 auto', padding: '40px 24px', textAlign: 'center' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

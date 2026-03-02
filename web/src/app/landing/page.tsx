@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { ArrowRight, Zap, Shield, Clock, Check, Bot, Mail, DollarSign, Calendar, Bell, Menu, X, MessageSquare, ChevronDown } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Clock, Check, Bot, Mail, DollarSign, Calendar, Bell, Menu, X, MessageSquare, ChevronDown, CreditCard, Phone, Users, FileText, ShieldCheck } from 'lucide-react';
 
 const styles = {
   primary: '#8b5cf6',
@@ -73,7 +73,7 @@ function Header() {
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '8px 16px' : isTablet ? '8px 32px' : '8px 64px' }}>
+        <div style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '8px 20px' : isTablet ? '8px 40px' : '8px 80px' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -172,7 +172,7 @@ function HeroSection() {
 
   return (
     <div style={{ background: 'transparent', position: 'relative' }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '64px 16px 48px' : isTablet ? '80px 32px 64px' : '120px 64px 80px' }}>
+      <div style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '64px 20px 48px' : isTablet ? '80px 40px 64px' : '120px 80px 80px' }}>
         <motion.div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
 
           <motion.div
@@ -182,33 +182,33 @@ function HeroSection() {
             transition={{ duration: 0.5 }}
           >
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }} />
-            <span style={{ fontSize: 13, color: '#6ee7b7', fontWeight: 500 }}>Trusted by 15+ businesses in beta</span>
+            <span style={{ fontSize: 13, color: '#6ee7b7', fontWeight: 500 }}>Now in early access</span>
           </motion.div>
 
           <motion.h1
-            style={{ fontSize: isMobile ? 36 : isTablet ? 52 : 64, lineHeight: 1.05, letterSpacing: '-1.5px', fontWeight: 700, color: styles.textPrimary, margin: '0 0 20px', maxWidth: 800 }}
+            style={{ fontSize: isMobile ? 36 : isTablet ? 52 : 72, lineHeight: 1.05, letterSpacing: '-1.5px', fontWeight: 700, color: styles.textPrimary, margin: '0 0 20px', maxWidth: 900 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            Automate your business{' '}
+            An AI employee that{' '}
             <span style={{
               background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 40%, #10b981 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
             }}>
-              in plain English
+              runs your operations
             </span>
           </motion.h1>
 
           <motion.p
-            style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.6, color: styles.textMuted, margin: '0 0 36px', maxWidth: 580 }}
+            style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.6, color: styles.textMuted, margin: '0 0 36px', maxWidth: 640 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Describe what you need. Aivaro builds the workflow, connects your tools, and runs it 24/7.
+            Describe what you need in plain English. Aivaro builds the workflow, connects your tools, and runs it 24/7 — asking permission before anything sensitive.
           </motion.p>
 
           <motion.div
@@ -248,7 +248,7 @@ function HeroSection() {
 
           {/* Chat example card */}
           <motion.div
-            style={{ width: '100%', maxWidth: 720, marginTop: isMobile ? 40 : 56 }}
+            style={{ width: '100%', maxWidth: 840, marginTop: isMobile ? 40 : 56 }}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.5 }}
@@ -308,6 +308,281 @@ function HeroSection() {
   );
 }
 
+function IntegrationLogosSection() {
+  const { isMobile } = useResponsive();
+  const integrations = [
+    { name: 'Gmail', src: '/icons/gmail.svg' },
+    { name: 'Google Calendar', src: '/icons/calendar.svg' },
+    { name: 'Stripe', src: '/icons/stripe.svg' },
+    { name: 'Twilio', src: '/icons/twilio.svg' },
+    { name: 'Slack', src: '/icons/slack.svg' },
+    { name: 'Airtable', src: '/icons/airtable.svg' },
+    { name: 'Notion', src: '/icons/notion.svg' },
+    { name: 'Calendly', src: '/icons/calendly.svg' },
+    { name: 'Mailchimp', src: '/icons/mailchimp.svg' },
+  ];
+
+  return (
+    <div style={{ padding: isMobile ? '32px 0 0' : '48px 0 0' }}>
+      <div style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : '0 80px', textAlign: 'center' }}>
+        <p style={{ fontSize: 13, color: styles.textMuted, marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
+          Works with the tools you already use
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: isMobile ? 20 : 32, alignItems: 'center' }}>
+          {integrations.map((int) => (
+            <motion.div
+              key={int.name}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: 0.7 }}
+              whileHover={{ opacity: 1, scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
+              <img
+                src={int.src}
+                alt={int.name}
+                style={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36, objectFit: 'contain', filter: 'brightness(0) invert(1)', opacity: 0.8 }}
+              />
+              <span style={{ fontSize: 11, color: styles.textMuted }}>{int.name}</span>
+            </motion.div>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: styles.textMuted, marginTop: 16, opacity: 0.6 }}>
+          More integrations coming soon
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function TemplateGallerySection() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const { isMobile, isTablet } = useResponsive();
+
+  const templates = [
+    {
+      icon: <Calendar size={20} />,
+      name: 'Appointment Reminders',
+      description: 'Automatically send SMS and email reminders before appointments. Reduce no-shows by up to 70%.',
+      integrations: ['Twilio', 'Gmail', 'Google Calendar'],
+      timeSaved: '3 hrs/week',
+      color: 'rgba(139, 92, 246, 0.15)',
+      iconColor: '#a78bfa',
+    },
+    {
+      icon: <CreditCard size={20} />,
+      name: 'Invoice & Payment Collection',
+      description: 'Send Stripe payment links after booking. Auto-follow-up on unpaid invoices.',
+      integrations: ['Stripe', 'Gmail'],
+      timeSaved: '2 hrs/week',
+      color: 'rgba(16, 185, 129, 0.15)',
+      iconColor: '#6ee7b7',
+    },
+    {
+      icon: <Users size={20} />,
+      name: 'New Lead Auto-Response',
+      description: 'Instantly respond to new leads via email with personalized messages that match your voice.',
+      integrations: ['Gmail', 'Airtable'],
+      timeSaved: '4 hrs/week',
+      color: 'rgba(251, 146, 60, 0.15)',
+      iconColor: '#fb923c',
+    },
+    {
+      icon: <FileText size={20} />,
+      name: 'Weekly Business Report',
+      description: 'Get a summary of your week — new bookings, revenue, and follow-ups — delivered every Monday.',
+      integrations: ['Gmail', 'Airtable', 'Stripe'],
+      timeSaved: '1 hr/week',
+      color: 'rgba(56, 189, 248, 0.15)',
+      iconColor: '#38bdf8',
+    },
+    {
+      icon: <MessageSquare size={20} />,
+      name: 'Customer Follow-Up',
+      description: 'Automatically check in with customers after service. Request reviews and build loyalty.',
+      integrations: ['Gmail', 'Twilio'],
+      timeSaved: '2 hrs/week',
+      color: 'rgba(244, 114, 182, 0.15)',
+      iconColor: '#f472b6',
+    },
+  ];
+
+  return (
+    <div id="templates" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 56 }}
+        >
+          <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: styles.textPrimary, marginBottom: 8, lineHeight: 1.1 }}>
+            Start with a{' '}
+            <span style={{ background: 'linear-gradient(135deg, #a78bfa, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              proven template
+            </span>
+          </h2>
+          <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted }}>
+            One click to deploy. Customize with plain English.
+          </p>
+        </motion.div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 12 : 16 }}>
+          {templates.slice(0, isMobile ? 3 : isTablet ? 4 : 5).map((t, i) => (
+            <motion.div
+              key={i}
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: 14,
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                padding: isMobile ? 20 : 24,
+              }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+              whileHover={{ borderColor: 'rgba(139, 92, 246, 0.3)', background: 'rgba(255, 255, 255, 0.05)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.iconColor }}>
+                  {t.icon}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: styles.textPrimary, margin: 0 }}>{t.name}</h3>
+                  <span style={{ fontSize: 12, color: styles.accent, fontWeight: 500 }}>Saves ~{t.timeSaved}</span>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: styles.textMuted, margin: '0 0 14px', lineHeight: 1.6 }}>{t.description}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {t.integrations.map((int, j) => (
+                  <span key={j} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: styles.textMuted }}>
+                    {int}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.5 }}
+          style={{ textAlign: 'center', marginTop: 32 }}
+        >
+          <Link href="/signup" style={{ textDecoration: 'none' }}>
+            <motion.span
+              style={{ fontSize: 14, color: styles.primaryLight, fontWeight: 500, cursor: 'pointer' }}
+              whileHover={{ color: styles.textPrimary }}
+            >
+              Browse all templates →
+            </motion.span>
+          </Link>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+function ApprovalFeatureSection() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const { isMobile, isTablet } = useResponsive();
+
+  return (
+    <div style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+          {/* Left - Copy */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5 }}
+          >
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: 16 }}>
+              <ShieldCheck size={14} color={styles.accent} />
+              <span style={{ fontSize: 12, color: styles.accent, fontWeight: 500 }}>Built-in guardrails</span>
+            </div>
+            <h2 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 700, color: styles.textPrimary, marginBottom: 12, lineHeight: 1.15 }}>
+              AI that asks before it acts
+            </h2>
+            <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
+              Payments, external emails, and SMS messages automatically require your approval. You stay in control — Aivaro never sends money or contacts customers without your OK.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                'Payments and invoices need your approval',
+                'External emails reviewed before sending',
+                'SMS and calls gated by default',
+                'Toggle approval on any workflow step',
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Check size={12} color={styles.accent} />
+                  </div>
+                  <span style={{ fontSize: 14, color: styles.textSecondary }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Right - Approval mockup */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.15 }}
+          >
+            <div style={{
+              background: 'rgba(15, 15, 30, 0.8)',
+              borderRadius: 14,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              overflow: 'hidden',
+            }}>
+              {/* Header */}
+              <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', animation: 'pulse 2s ease-in-out infinite' }} />
+                <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 500 }}>Approval Required</span>
+              </div>
+              {/* Content */}
+              <div style={{ padding: 20 }}>
+                <p style={{ fontSize: 14, color: styles.textSecondary, margin: '0 0 16px', lineHeight: 1.6 }}>
+                  <span style={{ fontWeight: 600, color: styles.textPrimary }}>Send Invoice</span> wants to charge{' '}
+                  <span style={{ fontWeight: 600, color: styles.textPrimary }}>$500.00</span> via Stripe to:
+                </p>
+                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 14, marginBottom: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: styles.textMuted }}>Customer</span>
+                    <span style={{ fontSize: 13, color: styles.textPrimary }}>john@client.com</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: styles.textMuted }}>Amount</span>
+                    <span style={{ fontSize: 13, color: styles.textPrimary }}>$500.00</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 13, color: styles.textMuted }}>Workflow</span>
+                    <span style={{ fontSize: 13, color: styles.textPrimary }}>Post-Booking Deposit</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <motion.div
+                    style={{ flex: 1, background: styles.accent, color: '#fff', padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', cursor: 'pointer' }}
+                    whileHover={{ opacity: 0.9 }}
+                  >
+                    Approve
+                  </motion.div>
+                  <motion.div
+                    style={{ flex: 1, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', cursor: 'pointer', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                    whileHover={{ opacity: 0.9 }}
+                  >
+                    Reject
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HowItWorksSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
@@ -321,7 +596,7 @@ function HowItWorksSection() {
 
   return (
     <div id="how-it-works" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -381,7 +656,7 @@ function ResultsSection() {
 
   return (
     <div id="results" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -473,6 +748,29 @@ function ResultsSection() {
             </div>
           </motion.div>
         </div>
+
+        {/* Testimonial */}
+        <motion.div
+          style={{
+            marginTop: isMobile ? 32 : 48,
+            background: 'rgba(139, 92, 246, 0.04)',
+            borderRadius: 14,
+            border: '1px solid rgba(139, 92, 246, 0.15)',
+            padding: isMobile ? 24 : 32,
+            textAlign: 'center',
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <p style={{ fontSize: isMobile ? 16 : 18, color: styles.textSecondary, lineHeight: 1.7, fontStyle: 'italic', margin: '0 0 16px', maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
+            &ldquo;I used to spend hours every week confirming bookings and chasing people who didn&apos;t show up. Now it&apos;s all automatic — reminders go out, deposits get collected, and my no-show rate dropped from 25% to 8%. I don&apos;t even think about it anymore.&rdquo;
+          </p>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: styles.textPrimary }}>David Y.</span>
+            <span style={{ fontSize: 13, color: styles.textMuted }}> · Liquidation & Auction Services</span>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -494,7 +792,7 @@ function FeaturesSection() {
 
   return (
     <div style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -579,7 +877,7 @@ function PricingSection() {
 
   return (
     <div id="pricing" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
-      <div ref={ref} style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -661,7 +959,7 @@ function CTASection() {
 
   return (
     <div style={{ padding: isMobile ? '48px 0' : '80px 0' }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
+      <div style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
         <motion.div
           ref={ref}
           style={{
@@ -706,7 +1004,7 @@ function Footer() {
   const { isMobile, isTablet } = useResponsive();
   return (
     <div style={{ padding: isMobile ? '32px 0' : '48px 0', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: isMobile ? '0 16px' : isTablet ? '0 32px' : '0 64px' }}>
+      <div style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <Logo small />
@@ -779,8 +1077,11 @@ export default function LandingPage() {
       <div style={{ position: 'relative', zIndex: 10 }}>
         <Header />
         <HeroSection />
+        <IntegrationLogosSection />
         <HowItWorksSection />
+        <TemplateGallerySection />
         <ResultsSection />
+        <ApprovalFeatureSection />
         <FeaturesSection />
         <PricingSection />
         <CTASection />
