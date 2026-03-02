@@ -1032,8 +1032,14 @@ function Footer() {
               { label: 'Terms', href: '/terms' },
               { label: 'Demo', href: '/demo' },
             ].map((item) => (
-              <Link key={item.label} href={item.href} style={{ fontSize: 13, color: styles.textMuted, textDecoration: 'none' }}>
-                {item.label}
+              <Link key={item.label} href={item.href} style={{ textDecoration: 'none' }}>
+                <motion.span
+                  style={{ fontSize: 13, color: styles.textMuted, cursor: 'pointer', display: 'inline-block' }}
+                  whileHover={{ color: '#e2e8f0', y: -1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {item.label}
+                </motion.span>
               </Link>
             ))}
           </div>

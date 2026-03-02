@@ -26,10 +26,11 @@ export default function TermsPage() {
       <VantaBackground />
       <div style={{ position: 'relative', zIndex: 10 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link href="/landing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: colors.textMuted, textDecoration: 'none', fontSize: 14, marginBottom: 40 }}>
+        <Link href="/landing" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: colors.textMuted, textDecoration: 'none', fontSize: 14, marginBottom: 24 }}>
           <ArrowLeft size={18} /> Back to Home
         </Link>
 
+        <div style={{ background: 'rgba(10, 10, 30, 0.85)', backdropFilter: 'blur(12px)', borderRadius: 16, border: '1px solid rgba(255, 255, 255, 0.08)', padding: '40px' }}>
         <h1 style={{ fontSize: 40, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>Terms of Service</h1>
         <p style={{ fontSize: 14, color: colors.textMuted, marginBottom: 48 }}>Last updated: February 28, 2026</p>
 
@@ -139,6 +140,7 @@ export default function TermsPage() {
           <Section title="14. Contact Us">
             Questions about these Terms? Contact us at <a href="mailto:support@aivaro-ai.com" style={{ color: colors.primary, textDecoration: 'none' }}>support@aivaro-ai.com</a>.
           </Section>
+        </div>
         </div>
       </div>
       </div>
