@@ -5,7 +5,7 @@ import VantaBackground from '@/components/VantaBackground';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { ArrowRight, Zap, Shield, Clock, Check, Bot, Mail, DollarSign, Calendar, Bell, Menu, X, MessageSquare, ChevronDown, CreditCard, Phone, Users, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Clock, Check, Bot, Mail, DollarSign, Calendar, Bell, Menu, X, MessageSquare, ChevronDown, CreditCard, Phone, Users, FileText, ShieldCheck, Play, Link2, Brain, Workflow, FormInput } from 'lucide-react';
 
 const styles = {
   primary: '#8b5cf6',
@@ -89,7 +89,7 @@ function Header() {
 
             {!isMobile && !isTablet && (
               <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-                {['how-it-works', 'results', 'pricing'].map((item) => (
+                {['how-it-works', 'see-it-work', 'results', 'pricing'].map((item) => (
                   <motion.a
                     key={item}
                     href={`#${item}`}
@@ -145,7 +145,7 @@ whileTap={{ scale: 0.95 }}
           style={{ position: 'fixed', top: 60, left: 0, right: 0, background: 'rgba(10, 10, 26, 0.98)', backdropFilter: 'blur(20px)', zIndex: 999, padding: '24px 16px', borderBottom: '1px solid rgba(139, 92, 246, 0.2)' }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {['how-it-works', 'results', 'pricing'].map((item) => (
+            {['how-it-works', 'see-it-work', 'results', 'pricing'].map((item) => (
               <motion.a
                 key={item}
                 href={`#${item}`}
@@ -354,6 +354,245 @@ function IntegrationLogosSection() {
         <p style={{ fontSize: 12, color: styles.textMuted, marginTop: 16, opacity: 0.6 }}>
           More integrations coming soon
         </p>
+      </div>
+    </div>
+  );
+}
+
+function DemoShowcaseSection() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const { isMobile, isTablet } = useResponsive();
+  const [activeDemo, setActiveDemo] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const demos = [
+    {
+      id: 'connect',
+      title: 'Connect Your Tools',
+      description: 'One-click OAuth setup for Gmail, Stripe, Slack, and more. No API keys, no docs.',
+      icon: <Link2 size={18} />,
+      video: '/demos/Tool_Connection.mp4',
+      color: '#a78bfa',
+      bgColor: 'rgba(139, 92, 246, 0.12)',
+    },
+    {
+      id: 'knowledge',
+      title: 'AI Knowledge Base',
+      description: 'Teach Aivaro your business — pricing, policies, tone. Every response sounds like you.',
+      icon: <Brain size={18} />,
+      video: '/demos/Chat_Knowledge_Base.mp4',
+      color: '#6ee7b7',
+      bgColor: 'rgba(16, 185, 129, 0.12)',
+    },
+    {
+      id: 'workflow',
+      title: 'Build Workflows in Chat',
+      description: 'Describe what you need in plain English. Aivaro creates the entire workflow instantly.',
+      icon: <MessageSquare size={18} />,
+      video: '/demos/Chat_Workflow_Creation.mp4',
+      color: '#38bdf8',
+      bgColor: 'rgba(56, 189, 248, 0.12)',
+    },
+    {
+      id: 'forms',
+      title: 'Smart Form Collection',
+      description: 'Collect customer info through chat. Aivaro asks the right questions and fills in the workflow.',
+      icon: <FormInput size={18} />,
+      video: '/demos/Chat_Form_Input.mp4',
+      color: '#fb923c',
+      bgColor: 'rgba(251, 146, 60, 0.12)',
+    },
+    {
+      id: 'visualizer',
+      title: 'Visual Workflow Editor',
+      description: 'See your workflows as visual flowcharts. Inspect, edit, and understand every step.',
+      icon: <Workflow size={18} />,
+      video: '/demos/Workflows_Visualizer.mp4',
+      color: '#f472b6',
+      bgColor: 'rgba(244, 114, 182, 0.12)',
+    },
+  ];
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
+  }, [activeDemo]);
+
+  // Auto-advance every 8 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveDemo((prev) => (prev + 1) % demos.length);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [demos.length]);
+
+  const active = demos[activeDemo];
+
+  return (
+    <div id="see-it-work" style={{ padding: isMobile ? '60px 0' : '100px 0' }}>
+      <div ref={ref} style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : isTablet ? '0 40px' : '0 80px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}
+        >
+          <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: styles.textPrimary, marginBottom: 8, lineHeight: 1.1 }}>
+            See it in{' '}
+            <span style={{ background: 'linear-gradient(135deg, #a78bfa, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              action
+            </span>
+          </h2>
+          <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted }}>
+            Real product. Real workflows. No smoke and mirrors.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.15 }}
+          style={{
+            background: 'rgba(10, 10, 30, 0.92)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 16,
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Tab bar */}
+          <div style={{
+            display: 'flex',
+            overflowX: 'auto',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            padding: '0 4px',
+            gap: 0,
+            scrollbarWidth: 'none',
+          }}>
+            {demos.map((demo, i) => (
+              <motion.button
+                key={demo.id}
+                onClick={() => setActiveDemo(i)}
+                style={{
+                  flex: isMobile ? 'none' : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: isMobile ? '14px 16px' : '16px 20px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: i === activeDemo ? `2px solid ${demo.color}` : '2px solid transparent',
+                  color: i === activeDemo ? demo.color : styles.textMuted,
+                  cursor: 'pointer',
+                  fontSize: isMobile ? 12 : 13,
+                  fontWeight: i === activeDemo ? 600 : 500,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                  minWidth: isMobile ? 'auto' : 0,
+                }}
+                whileHover={{ color: demo.color, background: 'rgba(255,255,255,0.03)' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', opacity: i === activeDemo ? 1 : 0.6 }}>{demo.icon}</span>
+                {!isMobile && <span>{demo.title}</span>}
+                {isMobile && <span style={{ fontSize: 11 }}>{demo.title.split(' ').slice(0, 2).join(' ')}</span>}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Video + description area */}
+          <div style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+          }}>
+            {/* Video */}
+            <div style={{
+              flex: isMobile ? 'none' : '1 1 65%',
+              position: 'relative',
+              background: 'rgba(0,0,0,0.4)',
+              minHeight: isMobile ? 220 : 400,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <motion.video
+                ref={videoRef}
+                key={active.video}
+                src={active.video}
+                autoPlay
+                loop
+                muted
+                playsInline
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  maxHeight: isMobile ? 260 : 450,
+                }}
+              />
+            </div>
+
+            {/* Description sidebar */}
+            <div style={{
+              flex: isMobile ? 'none' : '0 0 35%',
+              padding: isMobile ? '20px 20px 24px' : '32px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)',
+              borderTop: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none',
+            }}>
+              <motion.div
+                key={activeDemo}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '6px 12px', borderRadius: 8,
+                  background: active.bgColor,
+                  marginBottom: 16,
+                }}>
+                  <span style={{ color: active.color, display: 'flex', alignItems: 'center' }}>{active.icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: active.color }}>{active.title}</span>
+                </div>
+                <p style={{
+                  fontSize: isMobile ? 15 : 17,
+                  color: styles.textSecondary,
+                  lineHeight: 1.7,
+                  margin: '0 0 20px',
+                }}>
+                  {active.description}
+                </p>
+
+                {/* Progress dots */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {demos.map((_, i) => (
+                    <motion.div
+                      key={i}
+                      onClick={() => setActiveDemo(i)}
+                      style={{
+                        width: i === activeDemo ? 24 : 8,
+                        height: 8,
+                        borderRadius: 4,
+                        background: i === activeDemo ? active.color : 'rgba(255,255,255,0.15)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s',
+                      }}
+                      whileHover={{ background: i === activeDemo ? active.color : 'rgba(255,255,255,0.3)' }}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -1075,6 +1314,7 @@ export default function LandingPage() {
         <HeroSection />
         <IntegrationLogosSection />
         <HowItWorksSection />
+        <DemoShowcaseSection />
         <TemplateGallerySection />
         <ResultsSection />
         <ApprovalFeatureSection />
