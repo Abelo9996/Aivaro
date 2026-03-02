@@ -223,7 +223,6 @@ Guidelines:
             response = client.chat.completions.create(
                 model="gpt-5",
                 messages=messages,
-                temperature=0.7,
                 max_completion_tokens=1000
             )
             return response.choices[0].message.content
@@ -292,7 +291,6 @@ TONE:
             response = client.chat.completions.create(
                 model="gpt-5",
                 messages=messages,
-                temperature=0.7,
                 max_completion_tokens=1500
             )
             return response.choices[0].message.content

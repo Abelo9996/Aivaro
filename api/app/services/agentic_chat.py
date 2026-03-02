@@ -1246,7 +1246,6 @@ async def agentic_chat_stream(
             messages=msgs,
             tools=TOOLS,
             tool_choice="auto",
-            temperature=0.7,
             max_completion_tokens=1500,
         )
 

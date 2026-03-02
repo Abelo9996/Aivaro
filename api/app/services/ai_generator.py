@@ -131,7 +131,6 @@ Return ONLY valid JSON."""
                 {"role": "system", "content": analysis_prompt},
                 {"role": "user", "content": f"Analyze this workflow request: {prompt}"}
             ],
-            temperature=0.3,
             max_completion_tokens=1000
         )
         
@@ -512,7 +511,6 @@ Return ONLY valid JSON, no markdown code blocks or explanation."""
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Create a workflow for: {prompt}"}
             ],
-            temperature=0.4,
             max_completion_tokens=2500
         )
         
