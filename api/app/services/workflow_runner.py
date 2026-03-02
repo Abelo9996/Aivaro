@@ -40,7 +40,7 @@ class WorkflowRunner:
     def get_next_nodes(self, node_id: str, branch: str = None) -> list[str]:
         """Get node IDs connected from this node, optionally filtered by branch.
         
-        For condition nodes, edges should have sourceHandle='true' or sourceHandle='false'.
+        For condition nodes, edges should have sourceHandle='yes' or sourceHandle='no'.
         If branch is specified, only return edges matching that branch.
         If no edges match the branch filter, fall back to all edges (backward compat).
         """

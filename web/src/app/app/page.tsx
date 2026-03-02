@@ -124,6 +124,9 @@ function parseQuestions(content: string): { intro: string; questions: ParsedQues
     if (match) {
       const num = parseInt(match[1]);
       let text = match[2];
+      // Only count as a question if it ends with ? or has (a)/(b) options or Yes/No
+      const isQuestion = /\?(\s|$)/.test(text) || /\([a-z]\)\s/.test(text) || /\(Yes\/No\)/i.test(text);
+      if (!isQuestion) continue;
       // Parse options like (a) Professional (b) Casual (c) Custom
       const optMatch = text.match(/^(.+?)\s*(\([a-z]\)\s+.+)$/);
       let options: { key: string; label: string }[] | undefined;
@@ -138,12 +141,18 @@ function parseQuestions(content: string): { intro: string; questions: ParsedQues
           });
         }
       }
+      // Also handle Yes/No as options
+      if (/\(Yes\/No\)/i.test(text)) {
+        text = text.replace(/\s*\(Yes\/No\)/i, '');
+        options = [{ key: 'y', label: 'Yes' }, { key: 'n', label: 'No' }];
+      }
       questions.push({ num, text, options });
     } else if (questions.length === 0) {
       introLines.push(line);
     }
   }
   
+  // Need at least 2 actual questions to show form
   if (questions.length < 2) return null;
   return { intro: introLines.join(' '), questions };
 }

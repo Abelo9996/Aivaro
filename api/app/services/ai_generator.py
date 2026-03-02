@@ -403,7 +403,7 @@ Available ACTION node types:
 - send_slack: Send a Slack message to a CHANNEL. Parameters: {channel: "#general", message: "..."}. Only use for posting to channels.
 - slack_send_dm: Send a direct message to a specific PERSON on Slack. Parameters: {email: "user@email.com", message: "..."}. Use this when the user wants to message a specific person (NOT a channel).
 - http_request: Make an API call. Parameters: {url: "...", method: "GET/POST"}
-- condition: Branch the workflow based on a condition. Parameters: {field: "calendly_count", operator: "greater_than", value: "0"}. Operators: equals, not_equals, contains, greater_than, less_than, is_empty, is_not_empty. IMPORTANT: Condition nodes create TWO branches. Edges from condition nodes MUST have sourceHandle: "true" (condition met) or "false" (condition not met). Each branch leads to different next steps. Nodes that should only run when the condition is true connect via sourceHandle="true", and nodes for the false case connect via sourceHandle="false".
+- condition: Branch the workflow based on a condition. Parameters: {field: "calendly_count", operator: "greater_than", value: "0"}. Operators: equals, not_equals, contains, greater_than, less_than, is_empty, is_not_empty. IMPORTANT: Condition nodes create TWO branches. Edges from condition nodes MUST have sourceHandle: "true" (condition met) or "false" (condition not met). Each branch leads to different next steps. Nodes that should only run when the condition is true connect via sourceHandle="yes", and nodes for the false case connect via sourceHandle="no".
 
 GOOGLE CALENDAR node types:
 - google_calendar_create: Create a calendar event. Parameters: {title: "Meeting with {{name}}", date: "{{date}}", start_time: "{{time}}", duration: 1, description: "...", location: "..."}
@@ -464,7 +464,7 @@ IMPORTANT RULES:
 18. Set requiresApproval: true for: emails to external recipients, payment processing, campaign sends, phone calls. Set to false for: internal notifications, logging to sheets, calendar events.
 19. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
 20. NEVER use node types not listed above. Only use the exact types defined here.
-21. CONDITION BRANCHING: When using condition nodes, create TWO separate paths with edges that have sourceHandle="true" and sourceHandle="false". The true branch runs when the condition is met, false when not met. Example: condition checks "calendly_count greater_than 0" → true branch = conflict exists (deny), false branch = no conflict (proceed). NEVER run both branches sequentially.
+21. CONDITION BRANCHING: When using condition nodes, create TWO separate paths with edges that have sourceHandle="yes" and sourceHandle="no". The true branch runs when the condition is met, false when not met. Example: condition checks "calendly_count greater_than 0" → true branch = conflict exists (deny), false branch = no conflict (proceed). NEVER run both branches sequentially.
 22. SLACK DMs vs CHANNELS: When the user wants to message a specific person on Slack, use slack_send_dm (NOT send_slack). send_slack is ONLY for posting to channels like #general. slack_send_dm takes an email parameter to find the user.
 23. When the user asks to "notify" or "message" a specific person on Slack, use slack_send_dm with that person's email (or ask for their email if not provided).
 
@@ -497,8 +497,8 @@ Example for condition branching (appointment with conflict check):
   "edges": [
     {"id": "e1", "source": "1", "target": "2"},
     {"id": "e2", "source": "2", "target": "3"},
-    {"id": "e3", "source": "3", "target": "4", "sourceHandle": "true", "label": "conflict"},
-    {"id": "e4", "source": "3", "target": "5", "sourceHandle": "false", "label": "no conflict"},
+    {"id": "e3", "source": "3", "target": "4", "sourceHandle": "yes", "label": "conflict"},
+    {"id": "e4", "source": "3", "target": "5", "sourceHandle": "no", "label": "no conflict"},
     {"id": "e5", "source": "5", "target": "6"}
   ]
 }

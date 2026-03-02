@@ -1000,7 +1000,7 @@ Extract: {fields_to_extract}"""
             "success": True,
             "output": {**input_data, "condition_result": result},
             "logs": logs,
-            "branch": "true" if result else "false"
+            "branch": "yes" if result else "no"
         }
     
     async def _execute_transform(self, params: dict, input_data: dict, is_test: bool) -> dict:

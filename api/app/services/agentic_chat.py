@@ -1295,7 +1295,8 @@ async def agentic_chat_stream(
 
                     goal = fn_args.get("goal", "")
                     context = fn_args.get("context", None)
-                    is_test = fn_args.get("is_test", False)
+                    # Always run live — is_test=true only via explicit API call, never from chat
+                    is_test = False
 
                     agent_steps = []
                     agent_summary = ""
