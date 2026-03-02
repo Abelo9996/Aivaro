@@ -325,6 +325,10 @@ def generate_workflow_from_prompt(prompt: str) -> dict:
     if result and result.get("nodes"):
         result["nodes"] = apply_approval_defaults(result["nodes"])
     
+    # Fix condition edges missing sourceHandle
+    if result and result.get("nodes") and result.get("edges"):
+        result["edges"] = fix_condition_edges(result["nodes"], result["edges"])
+    
     return result
 
 
@@ -354,6 +358,26 @@ NO_APPROVAL_NODES = {
     "ai_reply", "ai_summarize", "ai_extract",
     "send_slack", "slack_send_dm", "http_request",
 }
+
+
+def fix_condition_edges(nodes: list, edges: list) -> list:
+    """Ensure edges from condition nodes have sourceHandle='yes'/'no'.
+    
+    If a condition node has exactly 2 outgoing edges without sourceHandle,
+    assign 'yes' to the first and 'no' to the second.
+    """
+    condition_ids = {n["id"] for n in nodes if n.get("type") == "condition"}
+    if not condition_ids:
+        return edges
+    
+    for cid in condition_ids:
+        outgoing = [e for e in edges if e["source"] == cid]
+        if len(outgoing) == 2 and not any(e.get("sourceHandle") for e in outgoing):
+            outgoing[0]["sourceHandle"] = "yes"
+            outgoing[1]["sourceHandle"] = "no"
+            print(f"[AI Generator] Auto-fixed sourceHandle on edges from condition node {cid}")
+    
+    return edges
 
 
 def apply_approval_defaults(nodes: list) -> list:
