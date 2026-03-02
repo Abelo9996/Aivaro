@@ -1,4 +1,4 @@
-"""
+﻿"""
 LLM Chat Service for Aivaro
 Provides two chat functionalities:
 1. Execution Results Chat - Context-aware chat about specific workflow execution results
@@ -51,7 +51,6 @@ def build_execution_context(execution: Execution, workflow: Workflow) -> str:
     context_parts.append(f"- Started: {execution.started_at}")
     if execution.completed_at:
         context_parts.append(f"- Completed: {execution.completed_at}")
-    context_parts.append(f"- Test Run: {'Yes' if execution.is_test else 'No'}")
     
     # Trigger data
     if execution.trigger_data:

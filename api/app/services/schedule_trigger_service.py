@@ -1,4 +1,4 @@
-"""
+﻿"""
 Schedule Trigger Service - Polls for workflows with start_schedule triggers and runs them at the right time.
 """
 import asyncio
@@ -156,7 +156,6 @@ async def poll_schedule_triggers():
                 execution = Execution(
                     workflow_id=workflow.id,
                     status="running",
-                    is_test=False,
                     trigger_data={"trigger": "schedule", "time": now.isoformat()},
                 )
                 db.add(execution)

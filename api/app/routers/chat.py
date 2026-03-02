@@ -240,7 +240,6 @@ async def run_agent(
             user=current_user,
             goal=request.goal,
             context=request.context,
-            is_test=request.is_test or False,
         ):
             yield f"data: {json.dumps(event)}\n\n"
         yield f"data: {json.dumps({'type': 'done'})}\n\n"

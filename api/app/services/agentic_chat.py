@@ -1,4 +1,4 @@
-"""
+﻿"""
 Streaming Agentic Chat for Aivaro
 Uses SSE (Server-Sent Events) to stream progress steps to the frontend
 as the AI thinks and executes tools in real-time.
@@ -205,10 +205,6 @@ TOOLS = [
                         "type": "object",
                         "description": "Any relevant context data (names, emails, phone numbers, dates, amounts, etc.)",
                         "additionalProperties": True
-                    },
-                    "is_test": {
-                        "type": "boolean",
-                        "description": "ONLY set to true if the user explicitly says 'simulate' or 'dry run'. For 'test run', 'give it a test', or 'try it out', keep this FALSE — the user wants real execution with real data, just on-demand rather than waiting for the trigger. Default false."
                     }
                 },
                 "required": ["goal"]
@@ -843,7 +839,6 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
 
     goal = args.get("goal", "")
     context = args.get("context", None)
-    is_test = args.get("is_test", False)
 
     if not goal:
         return json.dumps({"success": False, "error": "No goal provided"})
@@ -857,7 +852,7 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
     async def _collect():
         nonlocal summary, status
         async for event in run_agent_task(
-            db=db, user=user, goal=goal, context=context, is_test=is_test
+            db=db, user=user, goal=goal, context=context
         ):
             events.append(event)
             if event["type"] == "tool_result":
@@ -900,7 +895,6 @@ def _tool_run_agent_task(args: dict, user: User, db: Session) -> str:
         "summary": summary,
         "steps_taken": steps_taken,
         "step_count": len(steps_taken),
-        "is_test": is_test,
     })
 
 
@@ -1085,8 +1079,7 @@ CHOOSING THE RIGHT MODE:
 - KEY DISTINCTION: "Create a Calendly event for 12:30 PM" = run_agent_task (do it now). "Whenever someone books on Calendly, send a reminder" = create_workflow (repeatable automation). The word "create" does NOT always mean create_workflow. If they're asking you to DO something once, use run_agent_task.
 
 TEST RUNS:
-- When a user asks to "test" or "run" a workflow they just created, use run_agent_task to execute the same logic the workflow would.
-- CRITICAL: Set is_test=false (the default). "Test run" means "run it now for real" — NOT "simulate with fake data". The user wants to see real results from their real integrations. Only set is_test=true if the user explicitly says "simulate" or "dry run".
+- When a user asks to "test" or "run" a workflow they just created, use run_agent_task to execute the same logic the workflow would. All runs use real data from real integrations — there is no test/demo mode.
 - For email summary workflows: fetch the most recent email, generate a summary, and send it to the specified recipient.
 - For booking workflows: walk through the steps with sample/real data.
 - NEVER say "the workflow is inactive so I can't test it." You CAN test it using the agent.
@@ -1351,15 +1344,13 @@ async def agentic_chat_stream(
 
                     goal = fn_args.get("goal", "")
                     context = fn_args.get("context", None)
-                    # Always run live — is_test=true only via explicit API call, never from chat
-                    is_test = False
 
                     agent_steps = []
                     agent_summary = ""
                     agent_status = "unknown"
 
                     async for agent_event in _run_agent(
-                        db=db, user=user, goal=goal, context=context, is_test=is_test
+                        db=db, user=user, goal=goal, context=context
                     ):
                         evt_type = agent_event.get("type")
                         if evt_type == "thinking":
@@ -1410,8 +1401,7 @@ async def agentic_chat_stream(
                         "summary": agent_summary,
                         "steps_taken": agent_steps,
                         "step_count": len(agent_steps),
-                        "is_test": is_test,
-                    })
+                                    })
                 else:
                     result = await asyncio.get_event_loop().run_in_executor(
                         _executor, execute_tool, fn_name, fn_args, user, db

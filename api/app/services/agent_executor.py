@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Executor - LLM-driven autonomous task execution.
 
 Instead of walking a static DAG, an LLM agent decides what to do next
@@ -1295,7 +1295,6 @@ class AgentExecutor:
                 node_type=node_type,
                 parameters=params,
                 input_data=input_data,
-                is_test=self.execution.is_test,
             )
             return result
         except Exception as e:
@@ -1422,7 +1421,6 @@ async def run_agent_task(
     user: User,
     goal: str,
     context: Optional[dict] = None,
-    is_test: bool = False,
     workflow_id: Optional[str] = None,
 ) -> AsyncGenerator[dict, None]:
     """
@@ -1452,7 +1450,6 @@ async def run_agent_task(
     execution = Execution(
         workflow_id=workflow_id,
         status="running",
-        is_test=is_test,
         trigger_data={"goal": goal, "context": context, "mode": "agent"},
     )
     db.add(execution)

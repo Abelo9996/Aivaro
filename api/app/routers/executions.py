@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+﻿from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -48,7 +48,6 @@ async def create_execution(
     
     execution = Execution(
         workflow_id=workflow.id,
-        is_test=execution_data.is_test,
         trigger_data=execution_data.trigger_data
     )
     db.add(execution)
@@ -83,7 +82,6 @@ async def create_execution_stream(
     
     execution = Execution(
         workflow_id=workflow.id,
-        is_test=execution_data.is_test,
         trigger_data=execution_data.trigger_data
     )
     db.add(execution)

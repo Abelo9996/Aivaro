@@ -1,4 +1,4 @@
-"""
+﻿"""
 Email Trigger Service - Polls Gmail for new emails and triggers matching workflows.
 """
 import asyncio
@@ -144,7 +144,6 @@ class EmailTriggerService:
                 execution = Execution(
                     workflow_id=workflow.id,
                     status="running",
-                    is_test=False,
                     started_at=datetime.utcnow(),
                     trigger_data=email_data
                 )

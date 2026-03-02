@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+﻿from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
@@ -137,21 +137,14 @@ class WorkflowRunner:
             # Real trigger data - use it, with base data as fallback
             return {**base_data, **trigger_data}
         
-        # No trigger data - check if this is a test run or MANUAL run
-        # For both test runs AND manual runs (without real trigger data), use mock data
-        # This allows users to "preview" the workflow behavior
-        is_test = self.execution.is_test if self.execution else False
+        # No trigger data - manual run without real trigger data
+        # Use base data only, no mock/demo data
         is_manual = self.execution.trigger_data is None or len(self.execution.trigger_data or {}) == 0
         
-        if is_test or is_manual:
-            # Test run OR manual run without trigger data - use mock data
-            run_type = "TEST RUN" if is_test else "MANUAL RUN (no trigger data)"
-            print(f"[WorkflowRunner] {run_type} - using mock data for demonstration")
-            return self._generate_mock_trigger_data()
+        if is_manual:
+            print(f"[WorkflowRunner] MANUAL RUN - no trigger data available, using base user data only")
+            return base_data
         else:
-            # LIVE run with real trigger data would have been caught above
-            # This branch shouldn't normally be reached
-            print(f"[WorkflowRunner] LIVE RUN - no trigger data, using only base user data")
             return base_data
     
     def _execute_from_node(self, node_id: str, input_data: dict):
@@ -192,7 +185,6 @@ class WorkflowRunner:
                 node_type=node["type"],
                 parameters=node.get("parameters", {}),
                 input_data=input_data,
-                is_test=self.execution.is_test,
                 connections=self.connections,
                 user_id=str(self.workflow.user_id),
                 db=self.db,
@@ -382,38 +374,6 @@ class WorkflowRunner:
             result = result.replace(f"{{{{{key}}}}}", str(value))
         return result
     
-    def _generate_mock_trigger_data(self) -> dict:
-        """Generate initial data for manual runs - uses actual user info when available"""
-        # Get the user's actual email from the workflow owner
-        user_email = None
-        user_name = None
-        if self.workflow and self.workflow.user:
-            user_email = self.workflow.user.email
-            user_name = self.workflow.user.full_name or self.workflow.user.email.split('@')[0]
-        
-        base_data = {
-            "name": user_name or "User",
-            "email": user_email or "user@example.com",
-            "user_email": user_email or "user@example.com",
-            "today": datetime.utcnow().strftime("%Y-%m-%d"),
-            "date": datetime.utcnow().strftime("%Y-%m-%d"),
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-        
-        # Check if this is an email-triggered workflow - add mock email data
-        start_nodes = self.get_start_nodes()
-        if start_nodes and start_nodes[0].get("type") == "start_email":
-            # Add mock email data for testing email workflows manually
-            base_data.update({
-                "from": "customer@example.com",
-                "to": user_email or "user@example.com",
-                "subject": "Appointment Scheduled - John Doe",
-                "snippet": "Hi, I'd like to schedule a pickup. Name: John Doe, Email: john@example.com, Date: 2026-02-15, Time: 10:00 AM, Phone: (555) 123-4567, Service: Standard Pickup. Please confirm my booking. Thanks!",
-                "body": "Hi, I'd like to schedule a pickup.\n\nName: John Doe\nEmail: john@example.com\nDate: 2026-02-15\nTime: 10:00 AM\nPhone: (555) 123-4567\nService: Standard Pickup\n\nPlease confirm my booking.\n\nThanks!",
-            })
-        
-        return base_data
-    
     def resume_from_approval(self, approval_id: UUID):
         """Resume execution after approval"""
         approval = self.db.query(Approval).filter(Approval.id == approval_id).first()
@@ -434,7 +394,6 @@ class WorkflowRunner:
             node_type=node["type"],
             parameters=node.get("parameters", {}),
             input_data=exec_node.input_data,
-            is_test=self.execution.is_test,
             connections=self.connections,
             user_id=str(self.workflow.user_id),
             db=self.db,
