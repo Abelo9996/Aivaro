@@ -73,7 +73,7 @@ class WorkflowRunner:
                 # No sourceHandles — check if this is a condition node
                 # For condition nodes, missing sourceHandles is a workflow definition bug
                 # Try label-based matching first, then stop (don't run both branches)
-                node_def = next((n for n in self.workflow_data.get("nodes", []) if n["id"] == node_id), None)
+                node_def = self.nodes.get(node_id)
                 node_type = node_def.get("type", "") if node_def else ""
                 if node_type == "condition":
                     print(f"[WorkflowRunner] WARNING: Condition node {node_id} has NO sourceHandle on edges. Branch='{branch}'. Stopping to prevent running both branches. Fix: add sourceHandle='yes'/'no' to edges from this condition.")
