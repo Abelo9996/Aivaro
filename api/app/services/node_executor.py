@@ -355,9 +355,31 @@ Generate a {tone} reply:"""
                 ai_response = response.choices[0].message.content.strip()
                 logs += f"  ✅ AI response generated ({len(ai_response)} chars)\n"
                 
+                # Try to parse JSON from the AI response and merge fields into output
+                # This allows condition nodes to check extracted fields like "is_appointment"
+                extracted = {}
+                try:
+                    import re as _re
+                    # Try full response as JSON first
+                    parsed = json.loads(ai_response)
+                    if isinstance(parsed, dict):
+                        extracted = parsed
+                        logs += f"  📋 Extracted {len(extracted)} fields from JSON response\n"
+                except (json.JSONDecodeError, ValueError):
+                    # Try to find JSON block within the response (before --- or other text)
+                    try:
+                        json_match = _re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_response)
+                        if json_match:
+                            parsed = json.loads(json_match.group())
+                            if isinstance(parsed, dict):
+                                extracted = parsed
+                                logs += f"  📋 Extracted {len(extracted)} fields from embedded JSON\n"
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                
                 return {
                     "success": True,
-                    "output": {**input_data, "ai_response": ai_response},
+                    "output": {**input_data, **extracted, "ai_response": ai_response},
                     "logs": logs
                 }
                 
