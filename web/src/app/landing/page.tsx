@@ -4,7 +4,7 @@ import VantaBackground from '@/components/VantaBackground';
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Zap, Shield, Clock, Check, Bot, Mail, DollarSign, Calendar, Bell, Menu, X, MessageSquare, ChevronDown, CreditCard, Phone, Users, FileText, ShieldCheck, Play, Link2, Brain, Workflow, FormInput } from 'lucide-react';
 
 const styles = {
@@ -368,22 +368,13 @@ function DemoShowcaseSection() {
 
   const demos = [
     {
-      id: 'connect',
-      title: 'Connect Your Tools',
-      description: 'One-click OAuth setup for Gmail, Stripe, Slack, and more. No API keys, no docs.',
-      icon: <Link2 size={18} />,
-      video: '/demos/Tool_Connection.mp4',
-      color: '#a78bfa',
-      bgColor: 'rgba(139, 92, 246, 0.12)',
-    },
-    {
-      id: 'knowledge',
-      title: 'AI Knowledge Base',
-      description: 'Teach Aivaro your business — pricing, policies, tone. Every response sounds like you.',
-      icon: <Brain size={18} />,
-      video: '/demos/Chat_Knowledge_Base.mp4',
-      color: '#6ee7b7',
-      bgColor: 'rgba(16, 185, 129, 0.12)',
+      id: 'forms',
+      title: 'Smart Form Collection',
+      description: 'Collect customer info through chat. Aivaro asks the right questions and fills in the workflow.',
+      icon: <FormInput size={18} />,
+      video: '/demos/Chat_Form_Input.mp4',
+      color: '#fb923c',
+      bgColor: 'rgba(251, 146, 60, 0.12)',
     },
     {
       id: 'workflow',
@@ -395,15 +386,6 @@ function DemoShowcaseSection() {
       bgColor: 'rgba(56, 189, 248, 0.12)',
     },
     {
-      id: 'forms',
-      title: 'Smart Form Collection',
-      description: 'Collect customer info through chat. Aivaro asks the right questions and fills in the workflow.',
-      icon: <FormInput size={18} />,
-      video: '/demos/Chat_Form_Input.mp4',
-      color: '#fb923c',
-      bgColor: 'rgba(251, 146, 60, 0.12)',
-    },
-    {
       id: 'visualizer',
       title: 'Visual Workflow Editor',
       description: 'See your workflows as visual flowcharts. Inspect, edit, and understand every step.',
@@ -412,7 +394,36 @@ function DemoShowcaseSection() {
       color: '#f472b6',
       bgColor: 'rgba(244, 114, 182, 0.12)',
     },
+    {
+      id: 'knowledge',
+      title: 'AI Knowledge Base',
+      description: 'Teach Aivaro your business — pricing, policies, tone. Every response sounds like you.',
+      icon: <Brain size={18} />,
+      video: '/demos/Chat_Knowledge_Base.mp4',
+      color: '#6ee7b7',
+      bgColor: 'rgba(16, 185, 129, 0.12)',
+    },
+    {
+      id: 'connect',
+      title: 'Connect Your Tools',
+      description: 'One-click OAuth setup for Gmail, Stripe, Slack, and more. No API keys, no docs.',
+      icon: <Link2 size={18} />,
+      video: '/demos/Tool_Connection.mp4',
+      color: '#a78bfa',
+      bgColor: 'rgba(139, 92, 246, 0.12)',
+    },
   ];
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const switchDemo = (index: number) => {
+    setActiveDemo(index);
+    // Reset auto-advance timer on manual click
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setActiveDemo((prev) => (prev + 1) % demos.length);
+    }, 8000);
+  };
 
   useEffect(() => {
     if (videoRef.current) {
@@ -423,10 +434,10 @@ function DemoShowcaseSection() {
 
   // Auto-advance every 8 seconds
   useEffect(() => {
-    const timer = setInterval(() => {
+    timerRef.current = setInterval(() => {
       setActiveDemo((prev) => (prev + 1) % demos.length);
     }, 8000);
-    return () => clearInterval(timer);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [demos.length]);
 
   const active = demos[activeDemo];
@@ -474,7 +485,7 @@ function DemoShowcaseSection() {
             {demos.map((demo, i) => (
               <motion.button
                 key={demo.id}
-                onClick={() => setActiveDemo(i)}
+                onClick={() => switchDemo(i)}
                 style={{
                   flex: isMobile ? 'none' : 1,
                   display: 'flex',
@@ -511,30 +522,34 @@ function DemoShowcaseSection() {
             <div style={{
               flex: isMobile ? 'none' : '1 1 65%',
               position: 'relative',
-              background: 'rgba(0,0,0,0.4)',
+              background: 'rgba(10, 10, 30, 1)',
               minHeight: isMobile ? 220 : 400,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              overflow: 'hidden',
             }}>
-              <motion.video
-                ref={videoRef}
-                key={active.video}
-                src={active.video}
-                autoPlay
-                loop
-                muted
-                playsInline
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  maxHeight: isMobile ? 260 : 450,
-                }}
-              />
+              <AnimatePresence mode="popLayout">
+                <motion.video
+                  ref={videoRef}
+                  key={active.video}
+                  src={active.video}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  initial={{ opacity: 0, scale: 1.02 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.5, ease: 'easeInOut' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    maxHeight: isMobile ? 260 : 450,
+                  }}
+                />
+              </AnimatePresence>
             </div>
 
             {/* Description sidebar */}
@@ -547,12 +562,14 @@ function DemoShowcaseSection() {
               borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)',
               borderTop: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none',
             }}>
-              <motion.div
-                key={activeDemo}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeDemo}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                >
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   padding: '6px 12px', borderRadius: 8,
@@ -576,7 +593,7 @@ function DemoShowcaseSection() {
                   {demos.map((_, i) => (
                     <motion.div
                       key={i}
-                      onClick={() => setActiveDemo(i)}
+                    onClick={() => switchDemo(i)}
                       style={{
                         width: i === activeDemo ? 24 : 8,
                         height: 8,
@@ -589,7 +606,8 @@ function DemoShowcaseSection() {
                     />
                   ))}
                 </div>
-              </motion.div>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </motion.div>
