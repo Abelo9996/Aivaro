@@ -229,11 +229,65 @@ class NodeExecutor:
         # Pre-interpolate ALL parameters so every executor gets resolved values
         resolved_params = _interpolate_params(parameters, input_data)
         
-        # Warn about unresolved {{variables}} — means expected data is missing
+        # Centralized connection check — fail fast if required service isn't connected
+        NODE_SERVICE_MAP = {
+            "send_slack": "slack", "slack_list_channels": "slack", "slack_read_history": "slack",
+            "slack_send_dm": "slack", "slack_list_users": "slack",
+            "stripe_create_invoice": "stripe", "stripe_send_invoice": "stripe",
+            "stripe_create_payment_link": "stripe", "stripe_get_customer": "stripe",
+            "stripe_check_payment": "stripe", "stripe_list_invoices": "stripe",
+            "google_calendar_create": "google", "google_calendar_list": "google",
+            "google_calendar_delete": "google", "google_drive_list": "google",
+            "gmail_list_messages": "google", "gmail_get_message": "google",
+            # send_email intentionally NOT here — it has SMTP fallback
+            "notion_create_page": "notion", "notion_update_page": "notion",
+            "notion_query_database": "notion", "notion_search": "notion",
+            "notion_get_page": "notion", "notion_list_databases": "notion",
+            "airtable_create_record": "airtable", "airtable_update_record": "airtable",
+            "airtable_list_records": "airtable", "airtable_find_record": "airtable",
+            "airtable_list_bases": "airtable",
+            "calendly_list_events": "calendly", "calendly_get_event": "calendly",
+            "calendly_cancel_event": "calendly", "calendly_create_link": "calendly",
+            "calendly_list_event_types": "calendly",
+            "mailchimp_add_subscriber": "mailchimp", "mailchimp_update_subscriber": "mailchimp",
+            "mailchimp_add_tags": "mailchimp", "mailchimp_send_campaign": "mailchimp",
+            "mailchimp_list_audiences": "mailchimp", "mailchimp_list_subscribers": "mailchimp",
+            "mailchimp_list_campaigns": "mailchimp",
+            "twilio_send_sms": "twilio", "twilio_send_whatsapp": "twilio",
+            "twilio_make_call": "twilio", "twilio_list_messages": "twilio",
+            "twilio_list_calls": "twilio",
+        }
+        required_service = NODE_SERVICE_MAP.get(node_type)
+        if required_service and required_service not in self.connections:
+            service_names = {
+                "google": "Google (Gmail/Calendar)", "slack": "Slack", "stripe": "Stripe",
+                "notion": "Notion", "airtable": "Airtable", "calendly": "Calendly",
+                "mailchimp": "Mailchimp", "twilio": "Twilio",
+            }
+            svc_name = service_names.get(required_service, required_service.title())
+            return {
+                "success": False,
+                "error": f"{svc_name} is not connected. Connect it at /app/connections to use this node.",
+                "output": input_data,
+                "logs": f"[{datetime.utcnow().isoformat()}] ❌ Missing connection: {required_service}\n"
+            }
+        
+        # Check for unresolved {{variables}} in critical params — fail fast on recipient fields
         import re as _re_check
+        unresolved_params = []
+        CRITICAL_PARAMS = {"to", "email", "url", "phone", "customer_email", "recipient", "channel"}
         for key, val in resolved_params.items():
             if isinstance(val, str) and _re_check.search(r'\{\{[^}]+\}\}', val):
-                print(f"[NodeExecutor] WARNING: Unresolved variable in param '{key}': {val}")
+                unresolved_params.append(f"{key}={val}")
+                if key in CRITICAL_PARAMS:
+                    return {
+                        "success": False,
+                        "error": f"Unresolved variable in '{key}': {val}. The workflow is missing data from a previous step. Check that earlier nodes produce the expected output fields.",
+                        "output": input_data,
+                        "logs": f"[{datetime.utcnow().isoformat()}] ❌ Unresolved variable: {key}={val}\n"
+                    }
+        if unresolved_params:
+            print(f"[NodeExecutor] WARNING: Unresolved variables in {node_type}: {', '.join(unresolved_params)}")
         
         return await executor(resolved_params, input_data)
     
