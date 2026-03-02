@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import Workflow, Execution, Connection
+from app.models import Workflow, Execution, Connection, User
 from app.services.integrations.google_service import GoogleService
 
 
@@ -74,6 +74,16 @@ class EmailTriggerService:
     ) -> list[dict]:
         """Check a single email trigger and execute workflow if matched."""
         results = []
+        
+        # Check plan limits before doing any work
+        from app.services.plan_limits import check_can_run_workflow
+        user = db.query(User).filter(User.id == workflow.user_id).first()
+        if user:
+            try:
+                check_can_run_workflow(user)
+            except Exception:
+                print(f"[Email Trigger] Skipping workflow {workflow.id} — plan limit reached for user {workflow.user_id}")
+                return results
         
         params = trigger.get("parameters", {})
         from_filter = params.get("from", "")

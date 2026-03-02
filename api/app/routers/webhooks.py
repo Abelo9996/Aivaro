@@ -101,6 +101,16 @@ async def trigger_workflow_webhook(
             detail="Workflow owner not found"
         )
     
+
+    # Check plan limits before running
+    from app.services.plan_limits import check_can_run_workflow
+    try:
+        check_can_run_workflow(owner)
+    except Exception as limit_err:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(getattr(limit_err, 'detail', {}).get('message', 'Plan limit reached'))
+        )
     # Run the workflow
     try:
         runner = WorkflowRunner(db, workflow, owner)
@@ -205,6 +215,16 @@ async def handle_external_webhook(
             detail="Workflow owner not found"
         )
     
+
+    # Check plan limits before running
+    from app.services.plan_limits import check_can_run_workflow
+    try:
+        check_can_run_workflow(owner)
+    except Exception as limit_err:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(getattr(limit_err, 'detail', {}).get('message', 'Plan limit reached'))
+        )
     # Run the workflow
     try:
         runner = WorkflowRunner(db, workflow, owner)

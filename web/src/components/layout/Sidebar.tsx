@@ -38,8 +38,10 @@ function TrialBanner() {
     fetchUsage();
     const interval = setInterval(fetchUsage, 60000);
     const onFocus = () => fetchUsage();
+    const onWorkflowRun = () => fetchUsage();
     window.addEventListener('focus', onFocus);
-    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };
+    window.addEventListener('workflow-run', onWorkflowRun);
+    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); window.removeEventListener('workflow-run', onWorkflowRun); };
   }, []);
 
   if (!usage || !usage.is_trial) return null;

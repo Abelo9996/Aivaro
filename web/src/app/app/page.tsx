@@ -602,6 +602,7 @@ export default function DashboardPage() {
               }]);
               loadSidebarData();
               loadConversations(); // Refresh conversation list
+              window.dispatchEvent(new Event('workflow-run')); // Refresh usage counter
             }
           } catch {}
         }

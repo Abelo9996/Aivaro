@@ -149,6 +149,14 @@ async def poll_schedule_triggers():
                 if not user:
                     continue
                 
+                # Check plan limits before creating execution
+                from app.services.plan_limits import check_can_run_workflow
+                try:
+                    check_can_run_workflow(user)
+                except Exception:
+                    print(f"[Schedule Trigger] Skipping workflow {workflow.id} — plan limit reached for user {workflow.user_id}")
+                    continue
+                
                 from app.services.workflow_runner import WorkflowRunner
                 from concurrent.futures import ThreadPoolExecutor
                 from app.database import SessionLocal as _SessionLocal
