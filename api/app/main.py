@@ -7,6 +7,7 @@ import logging
 
 from app.routers import auth, workflows, executions, approvals, connections, templates, ai, chat, webhooks, knowledge
 from app.routers import health
+from app.routers import admin as admin_router
 from app.database import engine, Base, SessionLocal
 from app.models import user, workflow, execution, approval, connection, template, knowledge as knowledge_model
 from app.config import settings
@@ -70,6 +71,11 @@ def _run_migrations():
             logger.info("[migration] Adding password reset columns to users")
             conn.execute(text("ALTER TABLE users ADD COLUMN password_reset_token VARCHAR"))
             conn.execute(text("ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP"))
+            conn.commit()
+
+        if "is_admin" not in user_columns2:
+            logger.info("[migration] Adding is_admin column to users")
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
             conn.commit()
 
 try:
@@ -194,6 +200,7 @@ app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge Base"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(admin_router.router, prefix="/api/admin", tags=["Admin"])
 
 
 @app.get("/")

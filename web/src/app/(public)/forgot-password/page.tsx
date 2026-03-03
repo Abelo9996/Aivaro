@@ -41,6 +41,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
+    <>
+    <style>{`
+      @media (max-width: 480px) {
+        .forgot-card { padding: 28px 20px !important; border-radius: 16px !important; }
+      }
+    `}</style>
     <div style={{
       minHeight: '100vh',
       background: 'transparent',
@@ -48,7 +54,7 @@ export default function ForgotPasswordPage() {
       flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: '24px',
+      padding: '24px 16px',
       position: 'relative',
     }}>      <Link href="/login" className="back-link" style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10,
           color: colors.textMuted, textDecoration: 'none', fontSize: '14px',
@@ -57,7 +63,7 @@ export default function ForgotPasswordPage() {
         <ArrowLeft size={18} /> Back to login
       </Link>
 
-      <div style={{
+      <div className="forgot-card" style={{
         width: '100%',
         maxWidth: '440px',
         background: 'rgba(15, 15, 35, 0.8)',
@@ -147,5 +153,6 @@ export default function ForgotPasswordPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

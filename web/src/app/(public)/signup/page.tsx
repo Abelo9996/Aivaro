@@ -80,16 +80,20 @@ export default function SignupPage() {
     <>
     <style>{`
       .signup-wrap *, .signup-wrap *::before, .signup-wrap *::after { box-sizing: border-box; }
+      @media (max-width: 480px) {
+        .signup-wrap .auth-card { padding: 20px 20px !important; border-radius: 16px !important; }
+        .signup-wrap h1 { font-size: 20px !important; }
+      }
     `}</style>
     <div className="signup-wrap" style={{
-      height: '100vh',
-      overflow: 'hidden',
+      minHeight: '100vh',
+      overflow: 'auto',
       background: 'transparent',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: '24px',
+      padding: '24px 16px',
       position: 'relative',
     }}>
       {/* Background Effects */}
@@ -116,7 +120,7 @@ export default function SignupPage() {
       </Link>
 
       {/* Main Card */}
-      <div style={{
+      <div className="auth-card" style={{
         width: '100%',
         maxWidth: '440px',
         

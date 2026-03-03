@@ -60,6 +60,12 @@ export default function LoginPage() {
   };
 
   return (
+    <>
+    <style>{`
+      @media (max-width: 480px) {
+        .login-card { padding: 24px 20px !important; border-radius: 12px !important; }
+      }
+    `}</style>
     <div style={{
       minHeight: '100vh',
       display: 'flex',
@@ -113,7 +119,7 @@ export default function LoginPage() {
           Sign in to continue building automations
         </p>
 
-        <div style={{
+        <div className="login-card" style={{
           backgroundColor: colors.inputBg,
           backdropFilter: 'blur(16px)',
           border: `1.5px solid rgba(139, 92, 246, 0.2)`,
@@ -427,5 +433,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
