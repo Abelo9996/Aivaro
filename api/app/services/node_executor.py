@@ -260,6 +260,9 @@ class NodeExecutor:
         
         # Pre-interpolate ALL parameters so every executor gets resolved values
         resolved_params = _interpolate_params(parameters, input_data)
+        
+        # Second pass: resolve any remaining unresolved variables using aliases
+        resolved_params = _resolve_aliases_in_params(resolved_params, input_data)
 
         # Tag params with node_type for MCP fallback
         resolved_params["__node_type"] = node_type
@@ -341,9 +344,12 @@ class NodeExecutor:
         body = params.get("body", "")
         personalize = params.get("personalize", False)
         
+        # Resolve common email variable aliases before checking for unresolved
+        to = _resolve_email_aliases(to, input_data)
+        
         # Check for unresolved variables in critical fields
         if _has_unresolved(to):
-            return {"success": False, "error": f"Email 'to' has unresolved variable: {to}. Check that previous workflow steps produce the expected output fields.", "output": input_data, "logs": ""}
+            return {"success": False, "error": f"Unresolved variable in 'to': {to}. The workflow is missing data from a previous step. Check that earlier nodes produce the expected output fields.", "output": input_data, "logs": ""}
         
         # Interpolate variables
         subject = _interpolate(subject, input_data)
@@ -2701,6 +2707,89 @@ def _has_unresolved(value: str) -> bool:
     """Check if a string still contains unresolved {{variable}} references."""
     import re
     return bool(re.search(r'\{\{[^}]+\}\}', value)) if value else False
+
+
+# Variable alias map: if {{X}} is unresolved, try these alternatives from input_data
+_VARIABLE_ALIASES = {
+    # Email recipient aliases — all ways to reference the sender's email
+    "sender_email": ["email", "from", "customer_email", "from_email", "recipient_email"],
+    "from": ["email", "sender_email", "customer_email"],
+    "customer_email": ["sender_email", "email", "from"],
+    "from_email": ["sender_email", "email", "from"],
+    "recipient_email": ["sender_email", "email", "from"],
+    # Name aliases
+    "sender_name": ["name", "customer_name", "from_name"],
+    "customer_name": ["sender_name", "name", "from_name"],
+    "from_name": ["sender_name", "name", "customer_name"],
+    # AI output aliases
+    "ai_response": ["ai_reply", "response", "reply", "message"],
+    "ai_reply": ["ai_response", "response", "reply"],
+    # Date/time aliases
+    "requested_date": ["date", "appointment_date", "event_date"],
+    "requested_time": ["time", "appointment_time", "event_time"],
+    "appointment_date": ["requested_date", "date"],
+    "appointment_time": ["requested_time", "time"],
+}
+
+
+def _resolve_aliases(template: str, data: dict) -> str:
+    """Resolve unresolved {{variables}} by trying known aliases from data."""
+    import re
+    if not template or "{{" not in template:
+        return template
+    
+    def replace_match(match):
+        var_name = match.group(1).strip()
+        # Already resolved?
+        if var_name in data and data[var_name]:
+            return str(data[var_name])
+        # Try aliases
+        for alias in _VARIABLE_ALIASES.get(var_name, []):
+            if alias in data and data[alias]:
+                val = data[alias]
+                # For email fields, extract email from "Name <email>" format
+                if "email" in var_name and "<" in str(val) and ">" in str(val):
+                    val = str(val)[str(val).index("<")+1:str(val).index(">")].strip()
+                return str(val)
+        # No alias found — return original
+        return match.group(0)
+    
+    return re.sub(r'\{\{([^}]+)\}\}', replace_match, template)
+
+
+def _resolve_aliases_in_params(params: dict, data: dict) -> dict:
+    """Recursively resolve variable aliases in all string values."""
+    resolved = {}
+    for key, value in params.items():
+        if isinstance(value, str):
+            resolved[key] = _resolve_aliases(value, data)
+        elif isinstance(value, list):
+            resolved[key] = [
+                _resolve_aliases(item, data) if isinstance(item, str)
+                else (_resolve_aliases_in_params(item, data) if isinstance(item, dict) else item)
+                for item in value
+            ]
+        elif isinstance(value, dict):
+            resolved[key] = _resolve_aliases_in_params(value, data)
+        else:
+            resolved[key] = value
+    return resolved
+
+
+def _resolve_email_aliases(to: str, data: dict) -> str:
+    """Resolve email 'to' field with alias fallbacks and From header parsing."""
+    resolved = _resolve_aliases(to, data)
+    # If still unresolved, try extracting email from 'from' header as last resort
+    if _has_unresolved(resolved) and "from" in data:
+        from_val = str(data["from"])
+        if "<" in from_val and ">" in from_val:
+            email = from_val[from_val.index("<")+1:from_val.index(">")].strip()
+        elif "@" in from_val:
+            email = from_val.strip()
+        else:
+            return resolved
+        resolved = re.sub(r'\{\{[^}]*email[^}]*\}\}', email, resolved, flags=re.IGNORECASE)
+    return resolved
 
 
 # Backward compatibility - sync wrapper
