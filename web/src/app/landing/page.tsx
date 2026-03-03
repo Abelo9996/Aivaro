@@ -324,35 +324,54 @@ function IntegrationLogosSection() {
     { name: 'Notion', src: '/icons/notion.svg' },
     { name: 'Calendly', src: '/icons/calendly.svg' },
     { name: 'Mailchimp', src: '/icons/mailchimp.svg' },
+    { name: 'HubSpot', src: '/icons/hubspot.svg' },
+    { name: 'Shopify', src: '/icons/shopify.svg' },
+    { name: 'Discord', src: '/icons/discord.svg' },
+    { name: 'Jira', src: '/icons/jira.svg' },
+    { name: 'GitHub', src: '/icons/github.svg' },
+    { name: 'Linear', src: '/icons/linear.svg' },
+    { name: 'Monday', src: '/icons/monday.svg' },
+    { name: 'SendGrid', src: '/icons/sendgrid.svg' },
+    { name: 'WhatsApp', src: '/icons/whatsapp.svg' },
+    { name: 'Brevo', src: '/icons/brevo.svg' },
   ];
+
+  // Duplicate for seamless infinite loop
+  const doubled = [...integrations, ...integrations];
+  const itemWidth = isMobile ? 72 : 100;
+  const gap = isMobile ? 16 : 28;
+  const totalWidth = integrations.length * (itemWidth + gap);
+  const duration = integrations.length * 2.5; // seconds for one full cycle
 
   return (
     <div style={{ padding: isMobile ? '32px 0 0' : '48px 0 0' }}>
-      <div style={{ maxWidth: 1800, margin: '0 auto', padding: isMobile ? '0 20px' : '0 80px', textAlign: 'center' }}>
-        <p style={{ fontSize: 13, color: styles.textMuted, marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
+      <div style={{ maxWidth: 1800, margin: '0 auto', textAlign: 'center' }}>
+        <p style={{ fontSize: 13, color: styles.textMuted, marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, padding: '0 20px' }}>
           Works with the tools you already use
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: isMobile ? 20 : 32, alignItems: 'center' }}>
-          {integrations.map((int, i) => (
-            <motion.div
-              key={int.name}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: 0.7 }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 0.7, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 + i * 0.05 }}
-              whileHover={{ opacity: 1, scale: 1.15, y: -4 }}
-            >
-              <img
-                src={int.src}
-                alt={int.name}
-                style={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36, objectFit: 'contain', filter: 'brightness(0) invert(1)', opacity: 0.8 }}
-              />
-              <span style={{ fontSize: 11, color: styles.textMuted }}>{int.name}</span>
-            </motion.div>
-          ))}
+        <div style={{ overflow: 'hidden', width: '100%', maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
+          <motion.div
+            style={{ display: 'flex', gap, width: 'max-content' }}
+            animate={{ x: [0, -totalWidth] }}
+            transition={{ x: { repeat: Infinity, repeatType: 'loop', duration, ease: 'linear' } }}
+          >
+            {doubled.map((int, i) => (
+              <div
+                key={`${int.name}-${i}`}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: itemWidth, flexShrink: 0, opacity: 0.75 }}
+              >
+                <img
+                  src={int.src}
+                  alt={int.name}
+                  style={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36, objectFit: 'contain', filter: 'brightness(0) invert(1)', opacity: 0.8 }}
+                />
+                <span style={{ fontSize: 11, color: styles.textMuted, whiteSpace: 'nowrap' }}>{int.name}</span>
+              </div>
+            ))}
+          </motion.div>
         </div>
-        <p style={{ fontSize: 12, color: styles.textMuted, marginTop: 16, opacity: 0.6 }}>
-          More integrations coming soon
+        <p style={{ fontSize: 12, color: styles.textMuted, marginTop: 16, opacity: 0.6, padding: '0 20px' }}>
+          19 integrations and counting
         </p>
       </div>
     </div>
