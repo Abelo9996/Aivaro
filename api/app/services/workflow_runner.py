@@ -201,7 +201,7 @@ class WorkflowRunner:
                 import json
                 google_conn = self.db.query(Connection).filter(
                     Connection.user_id == self.workflow.user_id,
-                    Connection.provider == "google"
+                    Connection.type == "google"
                 ).first()
                 if google_conn:
                     creds = google_conn.credentials
