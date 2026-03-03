@@ -15,8 +15,55 @@ class WorkflowRunner:
         self.workflow = self.execution.workflow
         self.nodes = {n["id"]: n for n in self.workflow.nodes}
         self.edges = self.workflow.edges
+        self._fix_condition_edges()  # Repair missing sourceHandle on condition edges
         self.connections = self._load_connections()
     
+    def _fix_condition_edges(self):
+        """Auto-repair edges from condition nodes that are missing sourceHandle.
+        
+        If a condition node has exactly 2 outgoing edges with no sourceHandle,
+        assign 'yes' to the first and 'no' to the second. This fixes workflows
+        created before the fix_condition_edges post-processor existed.
+        """
+        condition_ids = {nid for nid, n in self.nodes.items() if n.get("type") == "condition"}
+        if not condition_ids:
+            return
+        
+        for cid in condition_ids:
+            outgoing = [e for e in self.edges if e.get("source") == cid]
+            has_handles = any(e.get("sourceHandle") for e in outgoing)
+            if has_handles:
+                continue  # Already has sourceHandle, skip
+            
+            if len(outgoing) == 2:
+                # Assign yes/no based on position or order
+                # Try to match by target node labels if possible
+                for e in outgoing:
+                    target_node = self.nodes.get(e.get("target", ""), {})
+                    label = target_node.get("label", "").lower()
+                    # Heuristic: if label contains rejection/conflict/not/decline → "no" branch
+                    if any(kw in label for kw in ["reject", "conflict", "not ", "decline", "cancel", "fail", "no"]):
+                        e["sourceHandle"] = "no"
+                    elif any(kw in label for kw in ["confirm", "accept", "create", "book", "schedule", "yes", "send confirm"]):
+                        e["sourceHandle"] = "yes"
+                
+                # If heuristics didn't assign both, use order: first=yes, second=no
+                assigned = [e.get("sourceHandle") for e in outgoing]
+                if assigned[0] and not assigned[1]:
+                    outgoing[1]["sourceHandle"] = "no" if assigned[0] == "yes" else "yes"
+                elif assigned[1] and not assigned[0]:
+                    outgoing[0]["sourceHandle"] = "no" if assigned[1] == "yes" else "yes"
+                elif not assigned[0] and not assigned[1]:
+                    outgoing[0]["sourceHandle"] = "yes"
+                    outgoing[1]["sourceHandle"] = "no"
+                
+                print(f"[WorkflowRunner] Auto-fixed sourceHandle on condition node {cid}: {[(e.get('sourceHandle'), self.nodes.get(e.get('target','')).get('label','?')) for e in outgoing]}")
+            elif len(outgoing) == 1:
+                # Single edge from condition — always follow it regardless of branch
+                outgoing[0]["sourceHandle"] = "yes"
+                # Also add a synthetic "no" handle so it doesn't block
+                print(f"[WorkflowRunner] Condition node {cid} has only 1 outgoing edge. Assigned sourceHandle='yes'.")
+
     def _load_connections(self) -> dict:
         """Load user's connections for use in node execution."""
         user_id = self.workflow.user_id
