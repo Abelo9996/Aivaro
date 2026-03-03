@@ -203,6 +203,22 @@ class EmailTriggerService:
             if name in header_map:
                 result[header_map[name]] = value
         
+        # Parse "From" into sender_name and sender_email for easy template access
+        from_raw = result.get("from", "")
+        if "<" in from_raw and ">" in from_raw:
+            # Format: "John Rossie <john@example.com>"
+            sender_name = from_raw[:from_raw.index("<")].strip().strip('"')
+            sender_email = from_raw[from_raw.index("<")+1:from_raw.index(">")].strip()
+        else:
+            sender_name = from_raw.split("@")[0] if "@" in from_raw else from_raw
+            sender_email = from_raw.strip()
+        
+        result["sender_name"] = sender_name
+        result["sender_email"] = sender_email
+        # Also set name and email to sender info (overrides base_data owner info)
+        result["name"] = sender_name or result.get("name", "")
+        result["email"] = sender_email or result.get("email", "")
+        
         return result
     
     @staticmethod

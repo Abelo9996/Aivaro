@@ -432,7 +432,7 @@ Generate a workflow based on the user's description. Return a JSON object with:
 IMPORTANT: When the user mentions receiving emails, getting emails, or email triggers, they mean their connected Gmail account. The start_email trigger monitors their Gmail inbox automatically.
 
 Available ACTION node types:
-- send_email: Send an email. Parameters: {to: "{{from}}", subject: "Re: {{subject}}", body: "..."}
+- send_email: Send an email. Parameters: {to: "{{sender_email}}", subject: "Re: {{subject}}", body: "..."}
 - ai_reply: Generate an AI response to an email. IMPORTANT: This only GENERATES a reply — it does NOT send it. You MUST add a send_email step after ai_reply to actually deliver the response. Parameters: {context: "...", tone: "professional/friendly/casual"}. Output: {{ai_response}}
 - ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
 - append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", sheet_name: "Sheet1", columns: [{name: "...", value: "{{...}}"}]}
@@ -487,7 +487,7 @@ IMPORTANT RULES:
 2. For payment reminders → use delay + stripe_check_payment + condition
 3. When user says "when I receive an email", "when I get an email", "when an email comes in", "emails from X", etc. → ALWAYS use start_email trigger. This monitors their connected Gmail inbox.
 4. For auto-reply workflows → use ai_reply node to generate smart responses, then ALWAYS follow with a send_email node to actually send the reply. ai_reply generates the text, send_email delivers it. Never create an email reply workflow without a send_email step.
-5. COMPLETE EMAIL REPLY PATTERN: start_email → ai_reply → send_email (to={{from}}, subject="Re: {{subject}}", body="{{ai_response}}").
+5. COMPLETE EMAIL REPLY PATTERN: start_email → ai_reply → send_email (to={{sender_email}}, subject="Re: {{subject}}", body="{{ai_response}}").
 6. For Stripe invoices with auto_send=false → MUST add a stripe_send_invoice step after stripe_create_invoice.
 7. For Stripe invoices with auto_send=true → no additional send step needed, but tell the user the invoice will be auto-sent.
 8. mailchimp_send_campaign creates AND immediately sends — this is irreversible. ALWAYS set requiresApproval=true on this node.
@@ -497,7 +497,7 @@ IMPORTANT RULES:
 12. For marketing/newsletter workflows → use mailchimp_add_subscriber to add contacts
 13. For SMS notifications → use twilio_send_sms for text confirmations
 14. For scheduling links → use calendly_create_link to generate booking links
-15. Available template variables: {{from}}, {{to}}, {{subject}}, {{snippet}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}, {{ai_response}}
+15. Available template variables: {{sender_email}}, {{sender_name}}, {{from}}, {{to}}, {{subject}}, {{snippet}}, {{body}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}, {{ai_response}}, {{user_email}}
 16. Always connect nodes with edges
 17. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
 18. Default requiresApproval: true for: emails to external recipients, payment processing, campaign sends, phone calls. BUT if the user explicitly said "no approval", "auto-send", "don't ask me", or similar → set requiresApproval: false on ALL nodes. The user's explicit preference ALWAYS overrides the default.
@@ -524,7 +524,7 @@ The condition node checks: input_data[field] <operator> value. Available operato
    The system automatically provides user_email and name from the authenticated user's profile at runtime.
 25. NEVER use http_request as a substitute for built-in integrations. If we have a node type for it (calendly_list_events, google_calendar_list, etc.), use that — NOT http_request with a made-up URL. http_request is ONLY for external APIs we don't have built-in support for.
 26. When using ai_reply for field extraction, the AI MUST output a JSON object with fields that downstream condition nodes check. The context param MUST explicitly list the required output fields. Example context: "Extract these fields as JSON: sender_email, requested_date, requested_time, is_appointment (true/false)."
-27. The send_email node's "to" parameter should use {{from}} to reply to the original sender (the email's From header). Do NOT use {{sender_email}} unless a previous ai_reply step explicitly extracts it.
+27. The send_email node's "to" parameter should use {{sender_email}} to reply to the original sender. This is the parsed email address from the From header. {{from}} contains the full "Name <email>" string which may not work as a recipient. Available email trigger variables: {{sender_email}}, {{sender_name}}, {{from}}, {{subject}}, {{snippet}}, {{body}}, {{user_email}} (workflow owner).
 28. APPOINTMENT/BOOKING WORKFLOW PATTERN: start_email -> ai_reply (extract is_appointment, customer_name, customer_email, requested_date, requested_time) -> condition (is_appointment equals true) -> google_calendar_create (using extracted date/time) -> send_email confirmation. The ai_reply extraction step is CRITICAL -- without it, you have no structured data. NEVER skip it.
 29. When using calendly_list_events to check for conflicts, FILTER by the requested date using min_start_time and max_start_time parameters. Do NOT list ALL events -- that checks the wrong thing.
 
@@ -551,8 +551,8 @@ Example for condition branching (appointment with conflict check):
     {"id": "2", "type": "ai_reply", "label": "Extract appointment details", "position": {"x": 250, "y": 200}, "parameters": {"prompt": "Extract the following from this email in JSON format: {\"is_appointment\": true/false, \"customer_name\": \"...\", \"customer_email\": \"...\", \"requested_date\": \"YYYY-MM-DD\", \"requested_time\": \"HH:MM\", \"service_type\": \"...\"}. Email from {{name}} ({{from}}): Subject: {{subject}} Body: {{snippet}}", "context": "You are an email parser. Extract appointment details. If the email is not about an appointment, set is_appointment to false."}},
     {"id": "3", "type": "condition", "label": "Is this about an appointment?", "position": {"x": 250, "y": 350}, "parameters": {"field": "is_appointment", "operator": "equals", "value": "true"}},
     {"id": "4", "type": "google_calendar_create", "label": "Create calendar event", "position": {"x": 450, "y": 500}, "parameters": {"title": "Appointment with {{customer_name}}", "date": "{{requested_date}}", "time": "{{requested_time}}", "duration": 60, "description": "Service: {{service_type}}. Customer: {{customer_name}} ({{customer_email}})"}},
-    {"id": "5", "type": "send_email", "label": "Send confirmation email", "position": {"x": 450, "y": 650}, "parameters": {"to": "{{from}}", "subject": "Re: {{subject}}", "body": "Hi {{customer_name}},\\n\\nYour appointment on {{requested_date}} at {{requested_time}} has been confirmed.\\n\\nThank you!"}, "requiresApproval": true},
-    {"id": "6", "type": "send_email", "label": "Send not-an-appointment reply", "position": {"x": 50, "y": 500}, "parameters": {"to": "{{from}}", "subject": "Re: {{subject}}", "body": "{{ai_response}}"}, "requiresApproval": true}
+    {"id": "5", "type": "send_email", "label": "Send confirmation email", "position": {"x": 450, "y": 650}, "parameters": {"to": "{{sender_email}}", "subject": "Re: {{subject}}", "body": "Hi {{customer_name}},\\n\\nYour appointment on {{requested_date}} at {{requested_time}} has been confirmed.\\n\\nThank you!"}, "requiresApproval": true},
+    {"id": "6", "type": "send_email", "label": "Send not-an-appointment reply", "position": {"x": 50, "y": 500}, "parameters": {"to": "{{sender_email}}", "subject": "Re: {{subject}}", "body": "{{ai_response}}"}, "requiresApproval": true}
   ],
   "edges": [
     {"id": "e1", "source": "1", "target": "2"},
@@ -857,7 +857,7 @@ def _template_email_workflow(prompt: str = "") -> dict:
                 "label": "Send reply",
                 "position": {"x": 250, "y": 350},
                 "parameters": {
-                    "to": "{{from}}",
+                    "to": "{{sender_email}}",
                     "subject": "Re: {{subject}}",
                     "body": "{{ai_response}}"
                 },
