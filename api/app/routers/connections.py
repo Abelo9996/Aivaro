@@ -332,7 +332,11 @@ async def test_connection(
                 if resp.status_code == 200:
                     data = resp.json()
                     return {"success": True, "message": "Brevo API key is valid", "user": {"email": data.get("email", ""), "company": data.get("companyName", "")}}
-                return {"success": False, "message": f"Brevo API key invalid (HTTP {resp.status_code}). Key length: {len(key)}, prefix: {key[:12]}... Re-enter your key or get a new one at https://app.brevo.com/settings/keys/api"}
+                logging.getLogger("connections").warning(
+                    f"[Brevo test] FAILED: status={resp.status_code}, response={resp.text[:300]}, "
+                    f"request_headers={dict(resp.request.headers)}"
+                )
+                return {"success": False, "message": f"Brevo API key invalid (HTTP {resp.status_code}). Response: {resp.text[:200]}"}
 
             if ctype == "stripe" and creds.get("api_key"):
                 resp = await client.get(
