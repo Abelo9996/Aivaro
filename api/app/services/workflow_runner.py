@@ -190,18 +190,42 @@ class WorkflowRunner:
         # Get the user's actual info
         user_email = None
         user_name = None
+        owner_gmail = None
         if self.workflow and self.workflow.user:
             user_email = self.workflow.user.email
             user_name = self.workflow.user.full_name or self.workflow.user.email.split('@')[0]
+            
+            # Get the connected Google email (the actual Gmail they authenticated with)
+            try:
+                from app.models.connection import Connection
+                import json
+                google_conn = self.db.query(Connection).filter(
+                    Connection.user_id == self.workflow.user_id,
+                    Connection.provider == "google"
+                ).first()
+                if google_conn:
+                    creds = google_conn.credentials
+                    if isinstance(creds, str):
+                        creds = json.loads(creds)
+                    # Email might be in user_info (from OAuth) or top-level
+                    user_info = creds.get("user_info") or {}
+                    owner_gmail = user_info.get("email") or creds.get("email") or creds.get("user_email")
+            except Exception as e:
+                print(f"[WorkflowRunner] Could not get Google email: {e}")
         
         # Get timezone-aware current time (Pacific Time by default)
         local_now = now_local()
         
+        # Use connected Gmail as primary email if available
+        effective_email = owner_gmail or user_email or "user@example.com"
+        
         # Base data always includes user info and timestamps (in Pacific Time)
         base_data = {
             "name": user_name or "User",
-            "email": user_email or "user@example.com",
-            "user_email": user_email or "user@example.com",
+            "email": effective_email,
+            "user_email": effective_email,
+            "owner_email": effective_email,
+            "my_email": effective_email,
             "today": local_now.strftime("%Y-%m-%d"),
             "date": local_now.strftime("%Y-%m-%d"),
             "current_time": local_now.strftime("%H:%M"),
@@ -209,16 +233,26 @@ class WorkflowRunner:
             "timezone": "America/Los_Angeles",
         }
         
-        # If we have real trigger data, merge it (trigger data takes precedence)
+        # If we have real trigger data, merge it
+        # IMPORTANT: Protect owner fields from being overwritten by sender data
         if trigger_data and len(trigger_data) > 0:
             print(f"[WorkflowRunner] Using REAL trigger data with keys: {list(trigger_data.keys())}")
-            return {**base_data, **trigger_data}
+            merged = {**base_data, **trigger_data}
+            # Restore owner fields that sender data may have overwritten
+            merged["owner_email"] = base_data["owner_email"]
+            merged["my_email"] = base_data["my_email"]
+            merged["user_email"] = base_data["user_email"]
+            return merged
         
         # Fallback: check execution's stored trigger_data (set when execution was created)
         stored = self.execution.trigger_data if self.execution else None
         if stored and len(stored) > 0:
             print(f"[WorkflowRunner] Using STORED trigger data with keys: {list(stored.keys())}")
-            return {**base_data, **stored}
+            merged = {**base_data, **stored}
+            merged["owner_email"] = base_data["owner_email"]
+            merged["my_email"] = base_data["my_email"]
+            merged["user_email"] = base_data["user_email"]
+            return merged
         
         # No trigger data at all - manual run
         print(f"[WorkflowRunner] MANUAL RUN - no trigger data available, using base user data only")
