@@ -11,15 +11,26 @@ class CalendlyService:
     """Calendly API integration service."""
     
     BASE_URL = "https://api.calendly.com"
+    TOKEN_URL = "https://auth.calendly.com/oauth/token"
     
-    def __init__(self, access_token: str):
+    def __init__(self, access_token: str, refresh_token: str = None,
+                 client_id: str = None, client_secret: str = None,
+                 on_token_refresh=None):
         """
         Initialize Calendly service with OAuth access token.
         
         Args:
             access_token: OAuth access token from Calendly authorization
+            refresh_token: OAuth refresh token for auto-renewal
+            client_id: Calendly OAuth client ID
+            client_secret: Calendly OAuth client secret
+            on_token_refresh: Async callback(new_access_token, new_refresh_token) to persist refreshed tokens
         """
         self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.on_token_refresh = on_token_refresh
         self._client: Optional[httpx.AsyncClient] = None
         self._current_user: Optional[dict] = None
     
@@ -53,8 +64,9 @@ class CalendlyService:
         endpoint: str,
         json: Optional[dict] = None,
         params: Optional[dict] = None,
+        _retried: bool = False,
     ) -> dict:
-        """Make a request to Calendly API."""
+        """Make a request to Calendly API. Auto-refreshes token on 401."""
         client = await self._get_client()
         response = await client.request(
             method=method,
@@ -62,8 +74,42 @@ class CalendlyService:
             json=json,
             params=params,
         )
+        # Auto-refresh on 401 Unauthorized (or 403)
+        if response.status_code in (401, 403) and not _retried and self.refresh_token:
+            refreshed = await self._refresh_access_token()
+            if refreshed:
+                return await self._request(method, endpoint, json=json, params=params, _retried=True)
         response.raise_for_status()
         return response.json()
+
+    async def _refresh_access_token(self) -> bool:
+        """Refresh the OAuth access token using the refresh token."""
+        if not self.refresh_token or not self.client_id or not self.client_secret:
+            return False
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(self.TOKEN_URL, data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": self.refresh_token,
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                })
+                resp.raise_for_status()
+                data = resp.json()
+                self.access_token = data["access_token"]
+                if "refresh_token" in data:
+                    self.refresh_token = data["refresh_token"]
+                # Recreate HTTP client with new token
+                if self._client:
+                    await self._client.aclose()
+                    self._client = None
+                # Notify caller to persist the new tokens
+                if self.on_token_refresh:
+                    await self.on_token_refresh(self.access_token, self.refresh_token)
+                return True
+        except Exception as e:
+            print(f"Calendly token refresh failed: {e}")
+            return False
     
     # ========== User Operations ==========
     

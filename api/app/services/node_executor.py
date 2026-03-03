@@ -20,6 +20,31 @@ class NodeExecutor:
         self._google_service = None
         self._slack_service = None
     
+    def _make_token_refresh_callback(self, provider: str):
+        """Create a callback that persists refreshed OAuth tokens to the DB."""
+        async def _on_refresh(new_access_token: str, new_refresh_token: str):
+            if not self.db or not self.user_id:
+                return
+            try:
+                from app.models import Connection
+                conn = self.db.query(Connection).filter(
+                    Connection.user_id == self.user_id,
+                    Connection.type == provider,
+                ).first()
+                if conn and conn.credentials:
+                    conn.credentials = {
+                        **conn.credentials,
+                        "access_token": new_access_token,
+                        "refresh_token": new_refresh_token,
+                    }
+                    self.db.commit()
+                    # Also update in-memory connections
+                    self.connections[provider]["access_token"] = new_access_token
+                    self.connections[provider]["refresh_token"] = new_refresh_token
+            except Exception as e:
+                print(f"Failed to persist refreshed {provider} token: {e}")
+        return _on_refresh
+
     async def get_google_service(self):
         """Get or create Google service instance."""
         if self._google_service is None and "google" in self.connections:
@@ -79,15 +104,22 @@ class NodeExecutor:
         return self._airtable_service
     
     async def get_calendly_service(self):
-        """Get or create Calendly service instance."""
+        """Get or create Calendly service instance with auto-refresh."""
         if not hasattr(self, '_calendly_service'):
             self._calendly_service = None
         if self._calendly_service is None and "calendly" in self.connections:
             from app.services.integrations.calendly_service import CalendlyService
+            import os
             creds = self.connections["calendly"]
             access_token = creds.get("access_token")
             if access_token:
-                self._calendly_service = CalendlyService(access_token=access_token)
+                self._calendly_service = CalendlyService(
+                    access_token=access_token,
+                    refresh_token=creds.get("refresh_token"),
+                    client_id=os.getenv("CALENDLY_CLIENT_ID"),
+                    client_secret=os.getenv("CALENDLY_CLIENT_SECRET"),
+                    on_token_refresh=self._make_token_refresh_callback("calendly"),
+                )
         return self._calendly_service
     
     async def get_mailchimp_service(self):
