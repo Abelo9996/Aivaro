@@ -95,11 +95,16 @@ export default function OnboardingPage() {
     loadConnections();
   }, []);
 
+  // Re-fetch connections when entering step 3
+  useEffect(() => {
+    if (step === 3) loadConnections();
+  }, [step]);
+
   const loadConnections = async () => {
     try {
       const data = await api.getConnections();
       setConnections(data);
-      setConnectedTools(data.map((c: any) => c.service_type));
+      setConnectedTools(data.map((c: any) => c.type || c.service_type));
     } catch (err) {
       // Not connected yet, that's fine
     }
