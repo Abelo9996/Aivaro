@@ -27,13 +27,19 @@ const colors = {
 
 interface Stats {
   users: { total: number; today: number; this_week: number; this_month: number; verified: number; unverified: number; by_plan: Record<string, number> };
-  activity: { dau: number; wau: number };
+  activity: { dau: number; wau: number; mau: number };
   workflows: { total: number; active: number; this_week: number };
   executions: { total: number; today: number; this_week: number; by_status: Record<string, number> };
   chat: { conversations: number; messages: number; messages_today: number };
   connections: { total: number };
   knowledge: { total: number };
-  trends: { signups_30d: { date: string; count: number }[]; executions_30d: { date: string; count: number }[] };
+  trends: {
+    signups_30d: { date: string; count: number }[];
+    executions_30d: { date: string; count: number }[];
+    dau_30d: { date: string; count: number }[];
+    mau_12m: { date: string; count: number }[];
+    messages_30d: { date: string; count: number }[];
+  };
 }
 
 interface UserRow {
@@ -96,6 +102,74 @@ function MiniChart({ data, color, height = 60 }: { data: number[]; color: string
           minHeight: 3,
         }} title={`${v}`} />
       ))}
+    </div>
+  );
+}
+
+function AreaChart({ data, labels, color, height = 120 }: { data: number[]; labels?: string[]; color: string; height?: number }) {
+  if (!data.length) return null;
+  const max = Math.max(...data, 1);
+  const w = 400;
+  const h = height;
+  const pad = { top: 10, right: 10, bottom: 24, left: 40 };
+  const cw = w - pad.left - pad.right;
+  const ch = h - pad.top - pad.bottom;
+  const points = data.map((v, i) => ({
+    x: pad.left + (i / Math.max(data.length - 1, 1)) * cw,
+    y: pad.top + ch - (v / max) * ch,
+  }));
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const area = line + ` L${points[points.length - 1].x},${pad.top + ch} L${points[0].x},${pad.top + ch} Z`;
+  const yTicks = [0, Math.round(max / 2), max];
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height }} preserveAspectRatio="none">
+      {yTicks.map((tick, i) => {
+        const y = pad.top + ch - (tick / max) * ch;
+        return (
+          <g key={i}>
+            <line x1={pad.left} x2={w - pad.right} y1={y} y2={y} stroke="rgba(139,92,246,0.1)" strokeWidth={1} />
+            <text x={pad.left - 6} y={y + 4} fill="rgba(226,232,240,0.4)" fontSize={9} textAnchor="end">{tick}</text>
+          </g>
+        );
+      })}
+      <path d={area} fill={`${color}15`} />
+      <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((p, i) => data[i] > 0 ? (
+        <circle key={i} cx={p.x} cy={p.y} r={3} fill={color} stroke="#050510" strokeWidth={1.5} />
+      ) : null)}
+      {labels && labels.map((l, i) => {
+        const showEvery = Math.max(1, Math.floor(labels.length / 6));
+        if (i % showEvery !== 0 && i !== labels.length - 1) return null;
+        const x = pad.left + (i / Math.max(labels.length - 1, 1)) * cw;
+        return <text key={i} x={x} y={h - 4} fill="rgba(226,232,240,0.4)" fontSize={8} textAnchor="middle">{l}</text>;
+      })}
+    </svg>
+  );
+}
+
+function TrendCard({ title, data, labels, color, icon: Icon, currentValue, subtitle }: {
+  title: string; data: number[]; labels?: string[]; color: string;
+  icon: any; currentValue?: string | number; subtitle?: string;
+}) {
+  return (
+    <div style={{
+      background: colors.cardBg, backdropFilter: 'blur(20px)',
+      border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '24px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Icon size={14} color={color} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: colors.textSecondary }}>{title}</span>
+        </div>
+        {currentValue !== undefined && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: colors.textPrimary }}>{currentValue}</div>
+            {subtitle && <div style={{ fontSize: 11, color: colors.textMuted }}>{subtitle}</div>}
+          </div>
+        )}
+      </div>
+      <AreaChart data={data} labels={labels} color={color} />
     </div>
   );
 }
@@ -307,40 +381,57 @@ export default function AdminDashboard() {
                 }}>
                   <StatCard icon={Users} label="Total Users" value={stats.users.total} sub={`+${stats.users.this_week} this week`} />
                   <StatCard icon={Activity} label="DAU" value={stats.activity.dau} sub={`WAU: ${stats.activity.wau}`} color={colors.accent} />
+                  <StatCard icon={Users} label="MAU" value={stats.activity.mau} sub={`${stats.users.this_month} new this month`} color="#ec4899" />
                   <StatCard icon={Workflow} label="Workflows" value={stats.workflows.total} sub={`${stats.workflows.active} active`} color={colors.secondary} />
                   <StatCard icon={Play} label="Executions" value={stats.executions.total} sub={`${stats.executions.today} today`} color="#3b82f6" />
-                  <StatCard icon={MessageSquare} label="Chat Messages" value={stats.chat.messages} sub={`${stats.chat.messages_today} today`} color="#ec4899" />
+                  <StatCard icon={MessageSquare} label="Chat Messages" value={stats.chat.messages} sub={`${stats.chat.messages_today} today`} color="#f97316" />
                   <StatCard icon={Link2} label="Connections" value={stats.connections.total} color={colors.warning} />
                   <StatCard icon={Brain} label="Knowledge Entries" value={stats.knowledge.total} color={colors.accent} />
-                  <StatCard icon={Zap} label="Conversations" value={stats.chat.conversations} color="#f97316" />
                 </div>
 
-                {/* Charts row */}
+                {/* Trend charts - 2x3 grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <TrendCard
+                    title="Daily Active Users (30d)" icon={Activity} color={colors.accent}
+                    data={stats.trends.dau_30d.map(d => d.count)}
+                    labels={stats.trends.dau_30d.map(d => d.date.slice(5))}
+                    currentValue={stats.activity.dau} subtitle="today"
+                  />
+                  <TrendCard
+                    title="Monthly Active Users (12m)" icon={Users} color="#ec4899"
+                    data={stats.trends.mau_12m.map(d => d.count)}
+                    labels={stats.trends.mau_12m.map(d => d.date)}
+                    currentValue={stats.activity.mau} subtitle="this month"
+                  />
+                  <TrendCard
+                    title="Signups (30d)" icon={TrendingUp} color={colors.primary}
+                    data={stats.trends.signups_30d.map(d => d.count)}
+                    labels={stats.trends.signups_30d.map(d => d.date.slice(5))}
+                    currentValue={stats.users.this_month} subtitle="this month"
+                  />
+                  <TrendCard
+                    title="Workflow Executions (30d)" icon={Play} color="#3b82f6"
+                    data={stats.trends.executions_30d.map(d => d.count)}
+                    labels={stats.trends.executions_30d.map(d => d.date.slice(5))}
+                    currentValue={stats.executions.this_week} subtitle="this week"
+                  />
+                  <TrendCard
+                    title="Chat Messages (30d)" icon={MessageSquare} color="#f97316"
+                    data={stats.trends.messages_30d.map(d => d.count)}
+                    labels={stats.trends.messages_30d.map(d => d.date.slice(5))}
+                    currentValue={stats.chat.messages_today} subtitle="today"
+                  />
+                  {/* ARR placeholder */}
                   <div style={{
                     background: colors.cardBg, backdropFilter: 'blur(20px)',
                     border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '24px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: colors.textSecondary, marginBottom: 16 }}>
-                      <TrendingUp size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                      Signups (Last 30 Days)
-                    </div>
-                    <MiniChart data={stats.trends.signups_30d.map(d => d.count)} color={colors.primary} height={80} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: colors.textMuted }}>
-                      <span>30d ago</span><span>Today</span>
-                    </div>
-                  </div>
-                  <div style={{
-                    background: colors.cardBg, backdropFilter: 'blur(20px)',
-                    border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '24px',
-                  }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: colors.textSecondary, marginBottom: 16 }}>
-                      <Play size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                      Executions (Last 30 Days)
-                    </div>
-                    <MiniChart data={stats.trends.executions_30d.map(d => d.count)} color="#3b82f6" height={80} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: colors.textMuted }}>
-                      <span>30d ago</span><span>Today</span>
+                    <Database size={28} color={colors.textMuted} style={{ marginBottom: 12 }} />
+                    <div style={{ fontSize: 16, fontWeight: 600, color: colors.textSecondary, marginBottom: 4 }}>ARR</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: colors.textPrimary, marginBottom: 8 }}>$0</div>
+                    <div style={{ fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>
+                      Revenue tracking activates when Stripe payments are connected
                     </div>
                   </div>
                 </div>

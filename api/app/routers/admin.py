@@ -115,6 +115,55 @@ async def get_stats(
         ).scalar() or 0
         exec_trend.append({"date": day_start.strftime("%Y-%m-%d"), "count": count})
 
+    # --- DAU trend (last 30 days) ---
+    dau_trend = []
+    for i in range(30):
+        day_start = (now - timedelta(days=29 - i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        chat_users = db.query(func.count(distinct(ChatMessage.user_id))).filter(
+            ChatMessage.created_at >= day_start, ChatMessage.created_at < day_end
+        ).scalar() or 0
+        exec_users = db.query(func.count(distinct(Workflow.user_id))).join(
+            Execution, Execution.workflow_id == Workflow.id
+        ).filter(Execution.started_at >= day_start, Execution.started_at < day_end).scalar() or 0
+        dau_trend.append({"date": day_start.strftime("%Y-%m-%d"), "count": max(chat_users, exec_users)})
+
+    # --- MAU trend (last 12 months) ---
+    mau_trend = []
+    for i in range(12):
+        # Go back i months from current month
+        month_offset = 11 - i
+        year = now.year
+        month = now.month - month_offset
+        while month <= 0:
+            month += 12
+            year -= 1
+        month_start = datetime(year, month, 1)
+        if month == 12:
+            month_end = datetime(year + 1, 1, 1)
+        else:
+            month_end = datetime(year, month + 1, 1)
+        active_users = db.query(func.count(distinct(ChatMessage.user_id))).filter(
+            ChatMessage.created_at >= month_start, ChatMessage.created_at < month_end
+        ).scalar() or 0
+        mau_trend.append({"date": month_start.strftime("%Y-%m"), "count": active_users})
+
+    # --- MAU current ---
+    month_start_current = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    mau = db.query(func.count(distinct(ChatMessage.user_id))).filter(
+        ChatMessage.created_at >= month_start_current
+    ).scalar() or 0
+
+    # --- Messages trend (last 30 days) ---
+    messages_trend = []
+    for i in range(30):
+        day_start = (now - timedelta(days=29 - i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        count = db.query(func.count(ChatMessage.id)).filter(
+            ChatMessage.created_at >= day_start, ChatMessage.created_at < day_end
+        ).scalar() or 0
+        messages_trend.append({"date": day_start.strftime("%Y-%m-%d"), "count": count})
+
     return {
         "users": {
             "total": total_users,
@@ -128,6 +177,7 @@ async def get_stats(
         "activity": {
             "dau": max(dau_chat, dau_exec),
             "wau": wau_chat,
+            "mau": mau,
         },
         "workflows": {
             "total": total_workflows,
@@ -154,6 +204,9 @@ async def get_stats(
         "trends": {
             "signups_30d": signup_trend,
             "executions_30d": exec_trend,
+            "dau_30d": dau_trend,
+            "mau_12m": mau_trend,
+            "messages_30d": messages_trend,
         },
     }
 
