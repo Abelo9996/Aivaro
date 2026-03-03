@@ -267,6 +267,9 @@ class NodeExecutor:
         
         # Second pass: resolve any remaining unresolved variables using aliases
         resolved_params = _resolve_aliases_in_params(resolved_params, input_data)
+        
+        # Third pass: clean any remaining unresolved variables from string params
+        resolved_params = _clean_unresolved_variables(resolved_params)
 
         # Tag params with node_type for MCP fallback
         resolved_params["__node_type"] = node_type
@@ -2884,6 +2887,73 @@ def _resolve_aliases_in_params(params: dict, data: dict) -> dict:
         else:
             resolved[key] = value
     return resolved
+
+
+def _clean_unresolved_variables(params: dict) -> dict:
+    """Remove any remaining {{variable}} references from string params at runtime.
+    
+    After interpolation and alias resolution, any remaining {{...}} is unresolvable.
+    Instead of sending broken text to the user, clean it up:
+    - Remove sentences/lines containing unresolved variables
+    - For 'to' fields, leave them (will be caught by executor-specific validation)
+    """
+    import re
+    SKIP_KEYS = {"to", "phone", "to_number", "__node_type"}
+    
+    cleaned = {}
+    for key, value in params.items():
+        if isinstance(value, str) and "{{" in value and key not in SKIP_KEYS:
+            unresolved = re.findall(r'\{\{[^}]+\}\}', value)
+            if unresolved:
+                print(f"[NodeExecutor] Cleaning {len(unresolved)} unresolved variable(s) from '{key}': {unresolved}")
+                # Try splitting by both real newlines and escaped newlines
+                if "\n" in value:
+                    sep = "\n"
+                elif "\\n" in value:
+                    sep = "\\n"
+                else:
+                    sep = None
+                
+                if sep:
+                    lines = value.split(sep)
+                    new_lines = []
+                    for line in lines:
+                        if any(var in line for var in unresolved):
+                            stripped = line
+                            for var in unresolved:
+                                stripped = stripped.replace(var, "")
+                            stripped = stripped.strip().rstrip(".:,;!? ")
+                            # Drop lines that are about links/URLs (useless without the variable)
+                            link_keywords = ["link", "click", "confirm", "url", "schedule", "book", "use the following"]
+                            is_link_line = any(kw in stripped.lower() for kw in link_keywords)
+                            if len(stripped) > 20 and not is_link_line:
+                                for var in unresolved:
+                                    line = line.replace(var, "")
+                                new_lines.append(line)
+                        else:
+                            new_lines.append(line)
+                    value = sep.join(new_lines)
+                else:
+                    # Single line — just remove the variables
+                    for var in unresolved:
+                        value = value.replace(var, "")
+                
+                # Clean up multiple consecutive newlines
+                for s in ["\n\n\n", "\\n\\n\\n"]:
+                    while s in value:
+                        value = value.replace(s, s[:len(s)//3*2])
+                value = value.strip()
+            cleaned[key] = value
+        elif isinstance(value, dict):
+            cleaned[key] = _clean_unresolved_variables(value)
+        elif isinstance(value, list):
+            cleaned[key] = [
+                _clean_unresolved_variables(item) if isinstance(item, dict)
+                else item for item in value
+            ]
+        else:
+            cleaned[key] = value
+    return cleaned
 
 
 def _resolve_email_aliases(to: str, data: dict) -> str:
