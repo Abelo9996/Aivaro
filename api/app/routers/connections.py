@@ -266,4 +266,35 @@ async def test_connection(
         else:
             return {"success": False, "message": "Connection token may be expired"}
     
+    # For API key connections, verify the key works
+    if connection.credentials and connection.credentials.get("api_key"):
+        api_key = connection.credentials["api_key"]
+        try:
+            import httpx
+            if connection.type == "brevo":
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(
+                        "https://api.brevo.com/v3/account",
+                        headers={"api-key": api_key, "Accept": "application/json"}
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        return {"success": True, "message": "Brevo API key is valid", "user": {"email": data.get("email", ""), "company": data.get("companyName", "")}}
+                    else:
+                        return {"success": False, "message": f"Brevo API key invalid (HTTP {resp.status_code}). Check your key at https://app.brevo.com/settings/keys/api"}
+            elif connection.type == "sendgrid":
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(
+                        "https://api.sendgrid.com/v3/user/profile",
+                        headers={"Authorization": f"Bearer {api_key}"}
+                    )
+                    if resp.status_code == 200:
+                        return {"success": True, "message": "SendGrid API key is valid"}
+                    else:
+                        return {"success": False, "message": f"SendGrid API key invalid (HTTP {resp.status_code})"}
+            else:
+                return {"success": True, "message": "API key stored (not verified)"}
+        except Exception as e:
+            return {"success": False, "message": f"Verification failed: {str(e)}"}
+
     return {"success": True, "message": "Connection test successful"}

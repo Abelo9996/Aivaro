@@ -14,6 +14,11 @@ class BrevoMCPServer(BaseMCPServer):
     def __init__(self, credentials: dict):
         super().__init__()
         self.api_key = credentials.get("api_key", "")
+        if not self.api_key:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[Brevo] No api_key found in credentials. Keys present: {list(credentials.keys())}"
+            )
 
         # ===== Transactional Email =====
         self._register("brevo_send_transactional_email", "Send a transactional email via Brevo", {
