@@ -483,7 +483,7 @@ TWILIO node types (for SMS and calls):
 - twilio_make_call: Make a phone call with a message. Parameters: {to: "{{phone}}", message: "Hello, this is a reminder about..."}
 
 IMPORTANT RULES:
-1. For booking/appointment workflows with deposits → use google_calendar_create + stripe_create_payment_link
+1. For booking/appointment workflows → ALWAYS start with ai_reply to EXTRACT the requested date, time, customer name, and customer email from the email body. Then use google_calendar_create to book it. Do NOT use calendly_create_link unless the user specifically asks for a Calendly scheduling link.
 2. For payment reminders → use delay + stripe_check_payment + condition
 3. When user says "when I receive an email", "when I get an email", "when an email comes in", "emails from X", etc. → ALWAYS use start_email trigger. This monitors their connected Gmail inbox.
 4. For auto-reply workflows → use ai_reply node to generate smart responses, then ALWAYS follow with a send_email node to actually send the reply. ai_reply generates the text, send_email delivers it. Never create an email reply workflow without a send_email step.
@@ -525,6 +525,8 @@ The condition node checks: input_data[field] <operator> value. Available operato
 25. NEVER use http_request as a substitute for built-in integrations. If we have a node type for it (calendly_list_events, google_calendar_list, etc.), use that — NOT http_request with a made-up URL. http_request is ONLY for external APIs we don't have built-in support for.
 26. When using ai_reply for field extraction, the AI MUST output a JSON object with fields that downstream condition nodes check. The context param MUST explicitly list the required output fields. Example context: "Extract these fields as JSON: sender_email, requested_date, requested_time, is_appointment (true/false)."
 27. The send_email node's "to" parameter should use {{from}} to reply to the original sender (the email's From header). Do NOT use {{sender_email}} unless a previous ai_reply step explicitly extracts it.
+28. APPOINTMENT/BOOKING WORKFLOW PATTERN: start_email -> ai_reply (extract is_appointment, customer_name, customer_email, requested_date, requested_time) -> condition (is_appointment equals true) -> google_calendar_create (using extracted date/time) -> send_email confirmation. The ai_reply extraction step is CRITICAL -- without it, you have no structured data. NEVER skip it.
+29. When using calendly_list_events to check for conflicts, FILTER by the requested date using min_start_time and max_start_time parameters. Do NOT list ALL events -- that checks the wrong thing.
 
 Example for "booking automation with deposit":
 {
@@ -543,21 +545,21 @@ Example for "booking automation with deposit":
 Example for condition branching (appointment with conflict check):
 {
   "workflowName": "Appointment Workflow",
-  "summary": "Check for conflicts, then either deny or confirm the appointment.",
+  "summary": "When an appointment email arrives, extract the requested date/time, check for scheduling conflicts on that date, then confirm or deny.",
   "nodes": [
     {"id": "1", "type": "start_email", "label": "When appointment email received", "position": {"x": 250, "y": 50}, "parameters": {}},
-    {"id": "2", "type": "calendly_list_events", "label": "Check schedule", "position": {"x": 250, "y": 200}, "parameters": {"status": "active", "count": 20}},
-    {"id": "3", "type": "condition", "label": "Has conflict?", "position": {"x": 250, "y": 350}, "parameters": {"field": "calendly_count", "operator": "greater_than", "value": "0"}},
-    {"id": "4", "type": "send_email", "label": "Send denial email", "position": {"x": 50, "y": 500}, "parameters": {"to": "{{from}}", "subject": "Appointment Unavailable", "body": "Sorry, that time is not available."}, "requiresApproval": true},
-    {"id": "5", "type": "send_email", "label": "Send confirmation", "position": {"x": 450, "y": 500}, "parameters": {"to": "{{from}}", "subject": "Appointment Confirmed", "body": "Your appointment is confirmed!"}, "requiresApproval": true},
-    {"id": "6", "type": "slack_send_dm", "label": "Notify Abel", "position": {"x": 450, "y": 650}, "parameters": {"email": "{{user_email}}", "message": "New appointment from {{name}}"}}
+    {"id": "2", "type": "ai_reply", "label": "Extract appointment details", "position": {"x": 250, "y": 200}, "parameters": {"prompt": "Extract the following from this email in JSON format: {\"is_appointment\": true/false, \"customer_name\": \"...\", \"customer_email\": \"...\", \"requested_date\": \"YYYY-MM-DD\", \"requested_time\": \"HH:MM\", \"service_type\": \"...\"}. Email from {{name}} ({{from}}): Subject: {{subject}} Body: {{snippet}}", "context": "You are an email parser. Extract appointment details. If the email is not about an appointment, set is_appointment to false."}},
+    {"id": "3", "type": "condition", "label": "Is this about an appointment?", "position": {"x": 250, "y": 350}, "parameters": {"field": "is_appointment", "operator": "equals", "value": "true"}},
+    {"id": "4", "type": "google_calendar_create", "label": "Create calendar event", "position": {"x": 450, "y": 500}, "parameters": {"title": "Appointment with {{customer_name}}", "date": "{{requested_date}}", "time": "{{requested_time}}", "duration": 60, "description": "Service: {{service_type}}. Customer: {{customer_name}} ({{customer_email}})"}},
+    {"id": "5", "type": "send_email", "label": "Send confirmation email", "position": {"x": 450, "y": 650}, "parameters": {"to": "{{from}}", "subject": "Re: {{subject}}", "body": "Hi {{customer_name}},\\n\\nYour appointment on {{requested_date}} at {{requested_time}} has been confirmed.\\n\\nThank you!"}, "requiresApproval": true},
+    {"id": "6", "type": "send_email", "label": "Send not-an-appointment reply", "position": {"x": 50, "y": 500}, "parameters": {"to": "{{from}}", "subject": "Re: {{subject}}", "body": "{{ai_response}}"}, "requiresApproval": true}
   ],
   "edges": [
     {"id": "e1", "source": "1", "target": "2"},
     {"id": "e2", "source": "2", "target": "3"},
-    {"id": "e3", "source": "3", "target": "4", "sourceHandle": "yes", "label": "conflict"},
-    {"id": "e4", "source": "3", "target": "5", "sourceHandle": "no", "label": "no conflict"},
-    {"id": "e5", "source": "5", "target": "6"}
+    {"id": "e3", "source": "3", "target": "6", "sourceHandle": "no", "label": "not appointment"},
+    {"id": "e4", "source": "3", "target": "4", "sourceHandle": "yes", "label": "is appointment"},
+    {"id": "e5", "source": "4", "target": "5"}
   ]
 }
 
