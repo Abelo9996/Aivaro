@@ -274,6 +274,12 @@ class ApiClient {
     });
   }
 
+  async testConnection(id: string): Promise<{ success: boolean; message: string; user?: Record<string, string> }> {
+    return this.request(`/api/connections/${id}/test`, {
+      method: 'POST',
+    });
+  }
+
   async authorizeConnection(provider: string): Promise<{ authorization_url?: string; demo_mode?: boolean }> {
     return this.request<{ authorization_url?: string; demo_mode?: boolean }>(
       `/api/connections/${provider}/authorize`

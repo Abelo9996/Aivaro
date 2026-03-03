@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Key, X, Search, Filter } from 'lucide-react';
+import { Key, X, Search, Filter, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -158,6 +158,8 @@ export default function ConnectionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ type: string; success: boolean; message: string; user?: Record<string, string> } | null>(null);
   const searchParams = useSearchParams();
 
   // Filter connections based on search and category
@@ -268,11 +270,25 @@ export default function ConnectionsPage() {
     try {
       await api.deleteConnection(disconnectTarget);
       setMessage({ type: 'success', text: 'Connection removed successfully' });
+      setTestResult(null);
       loadConnections();
     } catch (err) {
       console.error('Failed to disconnect:', err);
     } finally {
       setDisconnectTarget(null);
+    }
+  };
+
+  const handleTestConnection = async (connectionId: string, serviceType: string) => {
+    setTesting(serviceType);
+    setTestResult(null);
+    try {
+      const result = await api.testConnection(connectionId);
+      setTestResult({ type: serviceType, ...result });
+    } catch (err: any) {
+      setTestResult({ type: serviceType, success: false, message: err.message || 'Test failed' });
+    } finally {
+      setTesting(null);
     }
   };
 
@@ -635,14 +651,41 @@ export default function ConnectionsPage() {
                     )}
                   </div>
                 </div>
-                <div>
+                <div className="flex flex-col items-end gap-2">
                   {connected ? (
-                    <button
-                      onClick={() => handleDisconnect(connected.id)}
-                      className="text-sm text-red-600 hover:text-red-700 font-medium"
-                    >
-                      Disconnect
-                    </button>
+                    <>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleTestConnection(connected.id, service.type)}
+                          disabled={testing === service.type}
+                          className="text-sm text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {testing === service.type ? (
+                            <><Loader2 className="w-3 h-3 animate-spin" /> Testing...</>
+                          ) : (
+                            'Test'
+                          )}
+                        </button>
+                        <span className="text-gray-300">|</span>
+                        <button
+                          onClick={() => handleDisconnect(connected.id)}
+                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                      {testResult && testResult.type === service.type && (
+                        <div className={`flex items-center gap-1 text-xs ${testResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                          {testResult.success ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                          <span className="max-w-[200px] truncate">{testResult.message}</span>
+                          {testResult.user && testResult.success && (
+                            <span className="text-gray-400 ml-1">
+                              ({Object.values(testResult.user).filter(Boolean).join(', ')})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <button
                       onClick={() => handleConnect(service.type)}
