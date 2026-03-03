@@ -321,8 +321,9 @@ async def test_connection(
                 key = creds["api_key"]
                 import logging
                 logging.getLogger("connections").info(
-                    f"[Brevo test] key length={len(key)}, prefix={key[:12]}..., "
-                    f"has_whitespace={key != key.strip()}, has_newline={chr(10) in key or chr(13) in key}"
+                    f"[Brevo test] key length={len(key)}, prefix={key[:20]}..., suffix=...{key[-10:]}, "
+                    f"has_whitespace={key != key.strip()}, has_newline={chr(10) in key or chr(13) in key}, "
+                    f"repr_start={repr(key[:25])}"
                 )
                 resp = await client.get(
                     "https://api.brevo.com/v3/account",
