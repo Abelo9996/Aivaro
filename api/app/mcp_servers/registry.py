@@ -61,6 +61,27 @@ def _mailchimp_factory(creds: dict) -> BaseMCPServer:
     return MailchimpMCPServer(access_token=creds.get("access_token", ""))
 
 
+def _hubspot_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.hubspot_server import HubSpotMCPServer
+    return HubSpotMCPServer(access_token=creds.get("access_token", ""))
+
+
+def _shopify_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.shopify_server import ShopifyMCPServer
+    return ShopifyMCPServer(
+        shop_domain=creds.get("shop_domain", ""),
+        access_token=creds.get("access_token", ""),
+    )
+
+
+def _discord_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.discord_server import DiscordMCPServer
+    return DiscordMCPServer(
+        bot_token=creds.get("bot_token", ""),
+        guild_id=creds.get("guild_id"),
+    )
+
+
 SERVER_FACTORIES = {
     "google": _google_factory,
     "slack": _slack_factory,
@@ -70,6 +91,9 @@ SERVER_FACTORIES = {
     "notion": _notion_factory,
     "calendly": _calendly_factory,
     "mailchimp": _mailchimp_factory,
+    "hubspot": _hubspot_factory,
+    "shopify": _shopify_factory,
+    "discord": _discord_factory,
 }
 
 
