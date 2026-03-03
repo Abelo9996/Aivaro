@@ -84,6 +84,13 @@ const availableConnections = [
     category: 'communication',
   },
   {
+    type: 'brevo',
+    name: 'Brevo',
+    description: 'Send transactional emails, SMS, WhatsApp messages, manage contacts and campaigns',
+    authType: 'api_key',
+    category: 'communication',
+  },
+  {
     type: 'airtable',
     name: 'Airtable',
     description: 'Create, update, list, and search records in Airtable bases',

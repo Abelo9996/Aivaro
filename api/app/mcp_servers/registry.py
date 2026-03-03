@@ -119,6 +119,11 @@ def _whatsapp_factory(creds: dict) -> BaseMCPServer:
     )
 
 
+def _brevo_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.brevo import BrevoMCPServer
+    return BrevoMCPServer(creds)
+
+
 SERVER_FACTORIES = {
     "google": _google_factory,
     "slack": _slack_factory,
@@ -137,6 +142,7 @@ SERVER_FACTORIES = {
     "monday": _monday_factory,
     "sendgrid": _sendgrid_factory,
     "whatsapp": _whatsapp_factory,
+    "brevo": _brevo_factory,
 }
 
 
