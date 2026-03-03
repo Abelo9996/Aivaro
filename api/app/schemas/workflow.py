@@ -17,6 +17,9 @@ class EdgeSchema(BaseModel):
     id: str
     source: str
     target: str
+    sourceHandle: Optional[str] = None
+    targetHandle: Optional[str] = None
+    label: Optional[str] = None
 
 
 class WorkflowCreate(BaseModel):
