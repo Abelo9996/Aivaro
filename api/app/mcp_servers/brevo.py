@@ -182,7 +182,7 @@ class BrevoMCPServer(BaseMCPServer):
         }
 
     # ===== Handlers =====
-    async def _send_email(self, params: dict) -> dict:
+    async def _send_email(self, **params) -> dict:
         to = [{"email": params["to_email"]}]
         if params.get("to_name"):
             to[0]["name"] = params["to_name"]
@@ -197,13 +197,13 @@ class BrevoMCPServer(BaseMCPServer):
             body["textContent"] = params["text_content"]
         return await self._post("/smtp/email", json=body)
 
-    async def _list_emails(self, params: dict) -> dict:
+    async def _list_emails(self, **params) -> dict:
         query = {"limit": int(params.get("limit", 50)), "offset": int(params.get("offset", 0))}
         if params.get("email"):
             query["email"] = params["email"]
         return await self._get("/smtp/emails", params=query)
 
-    async def _send_sms(self, params: dict) -> dict:
+    async def _send_sms(self, **params) -> dict:
         return await self._post("/transactionalSMS/sms", json={
             "sender": params["sender"],
             "recipient": params["recipient"],
@@ -211,13 +211,13 @@ class BrevoMCPServer(BaseMCPServer):
             "type": "transactional",
         })
 
-    async def _list_sms_events(self, params: dict) -> dict:
+    async def _list_sms_events(self, **params) -> dict:
         query = {"limit": int(params.get("limit", 50))}
         if params.get("phone_number"):
             query["phoneNumber"] = params["phone_number"]
         return await self._get("/transactionalSMS/statistics/events", params=query)
 
-    async def _send_whatsapp(self, params: dict) -> dict:
+    async def _send_whatsapp(self, **params) -> dict:
         return await self._post("/whatsapp/sendMessage", json={
             "senderNumber": params["sender_number"],
             "recipientNumber": params["recipient_number"],
@@ -225,7 +225,7 @@ class BrevoMCPServer(BaseMCPServer):
             "templateLanguage": params.get("template_language", "en"),
         })
 
-    async def _create_contact(self, params: dict) -> dict:
+    async def _create_contact(self, **params) -> dict:
         body: dict = {"email": params["email"], "attributes": {}}
         if params.get("first_name"):
             body["attributes"]["FIRSTNAME"] = params["first_name"]
@@ -237,7 +237,7 @@ class BrevoMCPServer(BaseMCPServer):
             body["listIds"] = [int(x.strip()) for x in str(params["list_ids"]).split(",")]
         return await self._post("/contacts", json=body)
 
-    async def _update_contact(self, params: dict) -> dict:
+    async def _update_contact(self, **params) -> dict:
         email = params["email"]
         body: dict = {"attributes": {}}
         if params.get("first_name"):
@@ -250,34 +250,34 @@ class BrevoMCPServer(BaseMCPServer):
             body["listIds"] = [int(x.strip()) for x in str(params["list_ids"]).split(",")]
         return await self._put(f"/contacts/{email}", json=body)
 
-    async def _get_contact(self, params: dict) -> dict:
+    async def _get_contact(self, **params) -> dict:
         return await self._get(f"/contacts/{params['email']}")
 
-    async def _list_contacts(self, params: dict) -> dict:
+    async def _list_contacts(self, **params) -> dict:
         return await self._get("/contacts", params={
             "limit": int(params.get("limit", 50)),
             "offset": int(params.get("offset", 0)),
         })
 
-    async def _delete_contact(self, params: dict) -> dict:
+    async def _delete_contact(self, **params) -> dict:
         return await self._delete(f"/contacts/{params['email']}")
 
-    async def _list_folders(self, params: dict) -> dict:
+    async def _list_folders(self, **params) -> dict:
         return await self._get("/contacts/folders", params={"limit": 50, "offset": 0})
 
-    async def _list_lists(self, params: dict) -> dict:
+    async def _list_lists(self, **params) -> dict:
         return await self._get("/contacts/lists", params={
             "limit": int(params.get("limit", 50)),
             "offset": int(params.get("offset", 0)),
         })
 
-    async def _create_list(self, params: dict) -> dict:
+    async def _create_list(self, **params) -> dict:
         return await self._post("/contacts/lists", json={
             "name": params["name"],
             "folderId": int(params["folder_id"]),
         })
 
-    async def _create_campaign(self, params: dict) -> dict:
+    async def _create_campaign(self, **params) -> dict:
         body = {
             "name": params["name"],
             "subject": params["subject"],
@@ -289,13 +289,13 @@ class BrevoMCPServer(BaseMCPServer):
             body["scheduledAt"] = params["scheduled_at"]
         return await self._post("/emailCampaigns", json=body)
 
-    async def _list_campaigns(self, params: dict) -> dict:
+    async def _list_campaigns(self, **params) -> dict:
         query = {"limit": int(params.get("limit", 50)), "offset": int(params.get("offset", 0))}
         if params.get("status"):
             query["status"] = params["status"]
         return await self._get("/emailCampaigns", params=query)
 
-    async def _send_campaign(self, params: dict) -> dict:
+    async def _send_campaign(self, **params) -> dict:
         return await self._post(f"/emailCampaigns/{params['campaign_id']}/sendNow")
 
     # ===== HTTP helpers =====
@@ -326,3 +326,4 @@ class BrevoMCPServer(BaseMCPServer):
             resp = await client.delete(f"{self.BASE_URL}{path}", headers=self.headers)
             resp.raise_for_status()
             return {"status": "deleted"}
+
