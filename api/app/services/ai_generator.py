@@ -335,6 +335,14 @@ def generate_workflow_from_prompt(prompt: str, connected_providers: list[str] = 
     if result and result.get("nodes") and result.get("edges"):
         result["edges"] = fix_condition_edges(result["nodes"], result["edges"])
     
+    # Prune unnecessary 'no' branch generic reply nodes
+    if result and result.get("nodes") and result.get("edges"):
+        result["nodes"], result["edges"] = prune_dead_no_branches(result["nodes"], result["edges"])
+    
+    # Validate and clean template variables
+    if result and result.get("nodes") and result.get("edges"):
+        result["nodes"] = validate_template_variables(result["nodes"], result["edges"])
+    
     return result
 
 
@@ -384,6 +392,233 @@ def fix_condition_edges(nodes: list, edges: list) -> list:
             print(f"[AI Generator] Auto-fixed sourceHandle on edges from condition node {cid}")
     
     return edges
+
+
+def prune_dead_no_branches(nodes: list, edges: list) -> tuple[list, list]:
+    """Remove unnecessary 'no' branch nodes that just send generic replies.
+    
+    When a condition's 'no' branch leads to a single outbound node (send_email, 
+    twilio_send_sms, etc.) with no further children, and the node's parameters
+    are generic (using {{ai_response}} or similar), remove it. The default for
+    non-matching conditions should be silence — not a random reply.
+    
+    Only keeps 'no' branches that:
+    - Lead to 2+ nodes (a real workflow path)
+    - Have specific, non-template content (explicit user-defined text)
+    - Are non-outbound types (e.g., append_row, send_notification)
+    """
+    OUTBOUND_TYPES = {
+        "send_email", "twilio_send_sms", "twilio_send_whatsapp", 
+        "twilio_make_call", "slack_send_dm", "mailchimp_send_campaign",
+        "send_slack", "discord_send_message", "sendgrid_send_email",
+        "whatsapp_send_text",
+    }
+    GENERIC_BODY_MARKERS = {
+        "{{ai_response}}", "{{ai_reply}}", "{{response}}", "{{reply}}",
+        "{{message}}", "{{body}}", "{{content}}",
+    }
+    
+    condition_ids = {n["id"] for n in nodes if n.get("type") == "condition"}
+    if not condition_ids:
+        return nodes, edges
+    
+    node_map = {n["id"]: n for n in nodes}
+    nodes_to_remove = set()
+    edges_to_remove = set()
+    
+    for cid in condition_ids:
+        # Find "no" branch edges
+        no_edges = [e for e in edges if e["source"] == cid and e.get("sourceHandle") == "no"]
+        if not no_edges:
+            continue
+        
+        for no_edge in no_edges:
+            target_id = no_edge["target"]
+            target_node = node_map.get(target_id)
+            if not target_node:
+                continue
+            
+            target_type = target_node.get("type", "")
+            
+            # Only prune outbound nodes
+            if target_type not in OUTBOUND_TYPES:
+                continue
+            
+            # Check if this node has children (a real path continues)
+            children = [e for e in edges if e["source"] == target_id]
+            if children:
+                continue  # Has downstream nodes — this is a real branch, keep it
+            
+            # Check if the body/message is generic (template-only)
+            params = target_node.get("parameters", {})
+            body = params.get("body", params.get("message", ""))
+            is_generic = any(marker in body for marker in GENERIC_BODY_MARKERS) or not body.strip()
+            
+            if is_generic:
+                nodes_to_remove.add(target_id)
+                edges_to_remove.add(no_edge["id"])
+                print(f"[AI Generator] Pruned generic 'no' branch: {target_node.get('label', target_id)} (type: {target_type})")
+    
+    if nodes_to_remove:
+        nodes = [n for n in nodes if n["id"] not in nodes_to_remove]
+        edges = [e for e in edges if e["id"] not in edges_to_remove and e["source"] not in nodes_to_remove and e["target"] not in nodes_to_remove]
+    
+    return nodes, edges
+
+
+def validate_template_variables(nodes: list, edges: list) -> list:
+    """Validate and clean {{variable}} references in node parameters.
+    
+    Builds the set of variables each node CAN access (from trigger inputs +
+    all upstream node outputs), then removes/replaces references to variables 
+    that no upstream node produces and aren't in the known base set.
+    """
+    import re
+    
+    # Base variables always available from trigger/system
+    BASE_VARIABLES = {
+        # Email trigger
+        "from", "to", "subject", "snippet", "body", "sender_email", "sender_name",
+        "message_id",
+        # Form trigger  
+        "name", "email", "phone", "message",
+        # System
+        "user_email", "today", "date", "current_time", "timestamp", "timezone",
+        # User info
+        "first_name", "last_name", "full_name", "company", "company_name",
+    }
+    
+    # Variables produced by specific node types
+    NODE_OUTPUT_VARIABLES = {
+        "ai_reply": {"ai_response", "response", "reply", "answer"},
+        "ai_extract": {"customer_name", "customer_email", "requested_date", "requested_time",
+                       "is_appointment", "service_type", "phone", "amount"},
+        "ai_summarize": {"summary", "ai_response"},
+        "condition": {"condition_result"},
+        "stripe_create_payment_link": {"payment_link_url", "payment_link_id"},
+        "stripe_create_invoice": {"invoice_id", "invoice_url"},
+        "google_calendar_create": {"event_id", "event_link"},
+        "calendly_create_link": {"calendly_link", "booking_url", "scheduling_url"},
+        "calendly_list_events": {"calendly_events", "event_count", "calendly_count"},
+        "airtable_create_record": {"record_id", "airtable_record_id"},
+        "airtable_find_record": {"record_id", "record"},
+        "notion_create_page": {"page_id", "notion_page_id", "page_url"},
+        "notion_search": {"results", "page_id"},
+        "append_row": {"row_number", "spreadsheet_url"},
+        "read_sheet": {"rows", "data"},
+    }
+    
+    # AI reply/extract can produce ANY variable the prompt asks for (dynamic)
+    AI_DYNAMIC_TYPES = {"ai_reply", "ai_extract"}
+    
+    # Build node order (topological-ish based on edges)
+    node_map = {n["id"]: n for n in nodes}
+    edge_map = {}  # target -> [source nodes]
+    for e in edges:
+        edge_map.setdefault(e["target"], []).append(e["source"])
+    
+    def get_upstream_ids(nid, visited=None):
+        if visited is None:
+            visited = set()
+        if nid in visited:
+            return visited
+        visited.add(nid)
+        for src in edge_map.get(nid, []):
+            get_upstream_ids(src, visited)
+        return visited
+    
+    # Check if any upstream node is an AI type (can produce arbitrary vars)
+    def has_upstream_ai(nid):
+        upstream = get_upstream_ids(nid) - {nid}
+        return any(node_map.get(uid, {}).get("type") in AI_DYNAMIC_TYPES for uid in upstream)
+    
+    def get_available_vars(nid):
+        """Get all variables available to a node."""
+        available = set(BASE_VARIABLES)
+        upstream = get_upstream_ids(nid) - {nid}
+        for uid in upstream:
+            utype = node_map.get(uid, {}).get("type", "")
+            if utype in NODE_OUTPUT_VARIABLES:
+                available.update(NODE_OUTPUT_VARIABLES[utype])
+        return available
+    
+    # Patterns that are clearly fake/hallucinated
+    FAKE_PATTERNS = re.compile(
+        r'calendly_event_link|booking_link|confirmation_link|'
+        r'payment_url|invoice_link|scheduling_link|'
+        r'calendar_link|event_url|meeting_link|'
+        r'zoom_link|zoom_url|google_meet_link',
+        re.IGNORECASE
+    )
+    
+    modified = False
+    for node in nodes:
+        params = node.get("parameters", {})
+        if not params:
+            continue
+        
+        nid = node["id"]
+        available = get_available_vars(nid)
+        upstream_has_ai = has_upstream_ai(nid)
+        
+        for key, value in list(params.items()):
+            if not isinstance(value, str) or "{{" not in value:
+                continue
+            
+            vars_in_value = re.findall(r'\{\{([^}]+)\}\}', value)
+            for var in vars_in_value:
+                var_clean = var.strip()
+                
+                # Always remove clearly fake link variables
+                if FAKE_PATTERNS.match(var_clean):
+                    old = "{{" + var + "}}"
+                    # Remove lines that are primarily about the fake link
+                    lines = value.split("\\n")
+                    new_lines = []
+                    for l in lines:
+                        if old in l:
+                            # Remove the fake variable
+                            cleaned = l.replace(old, "").strip()
+                            # If the line still has meaningful content, keep it
+                            if cleaned and not cleaned.rstrip(".:!?, ") == "":
+                                # Check if it's just a link intro ("Please use this link:", "Click here:")
+                                link_intros = ["link", "click", "confirm", "use this", "booking", "schedule"]
+                                is_link_intro = any(kw in cleaned.lower() for kw in link_intros) and len(cleaned) < 80
+                                if not is_link_intro:
+                                    new_lines.append(cleaned)
+                        else:
+                            new_lines.append(l)
+                    params[key] = "\\n".join(new_lines)
+                    value = params[key]
+                    modified = True
+                    print(f"[AI Generator] Removed fake variable {{{{{var_clean}}}}} from node {node.get('label', nid)}")
+                    continue
+                
+                # If upstream has AI nodes, those can produce any variable — skip validation
+                if upstream_has_ai:
+                    continue
+                
+                # Check if variable is known
+                if var_clean not in available:
+                    # Unknown variable with no AI upstream — remove it
+                    old = "{{" + var + "}}"
+                    params[key] = value.replace(old, "")
+                    value = params[key]
+                    modified = True
+                    print(f"[AI Generator] Removed unknown variable {{{{{var_clean}}}}} from node {node.get('label', nid)} (not produced by any upstream node)")
+    
+    if modified:
+        # Clean up empty lines from removals
+        for node in nodes:
+            params = node.get("parameters", {})
+            for key, value in params.items():
+                if isinstance(value, str):
+                    # Remove double newlines and trailing whitespace
+                    while "\\n\\n\\n" in value:
+                        value = value.replace("\\n\\n\\n", "\\n\\n")
+                    params[key] = value.strip()
+    
+    return nodes
 
 
 def apply_approval_defaults(nodes: list) -> list:
