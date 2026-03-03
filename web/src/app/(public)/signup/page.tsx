@@ -1,6 +1,4 @@
 'use client';
-import VantaBackground from '@/components/VantaBackground';
-import PageTransition from '@/components/PageTransition';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -79,7 +77,7 @@ export default function SignupPage() {
   const { strength, label } = passwordStrength();
 
   return (
-    <PageTransition>
+    <>
     <style>{`
       .signup-wrap *, .signup-wrap *::before, .signup-wrap *::after { box-sizing: border-box; }
     `}</style>
@@ -95,8 +93,6 @@ export default function SignupPage() {
       position: 'relative',
     }}>
       {/* Background Effects */}
-      <VantaBackground />
-
       {/* Back to Landing */}
       <Link
         href="/landing"
@@ -704,6 +700,6 @@ export default function SignupPage() {
         )}
       </div>
     </div>
-    </PageTransition>
+    </>
   );
 }

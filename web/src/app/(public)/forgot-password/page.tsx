@@ -1,6 +1,4 @@
 'use client';
-import VantaBackground from '@/components/VantaBackground';
-import PageTransition from '@/components/PageTransition';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -43,7 +41,6 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <PageTransition>
     <div style={{
       minHeight: '100vh',
       background: colors.darkBg,
@@ -53,9 +50,7 @@ export default function ForgotPasswordPage() {
       alignItems: 'center',
       padding: '24px',
       position: 'relative',
-    }}>
-      <VantaBackground />
-      <Link href="/login" className="back-link" style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10,
+    }}>      <Link href="/login" className="back-link" style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10,
           color: colors.textMuted, textDecoration: 'none', fontSize: '14px',
         }}
       >
@@ -152,6 +147,5 @@ export default function ForgotPasswordPage() {
         )}
       </div>
     </div>
-    </PageTransition>
   );
 }

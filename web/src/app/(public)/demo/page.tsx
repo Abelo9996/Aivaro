@@ -1,6 +1,4 @@
 'use client';
-import VantaBackground from '@/components/VantaBackground';
-import PageTransition from '@/components/PageTransition';
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -14,7 +12,6 @@ const styles = {
 
 export default function DemoPage() {
   return (
-    <PageTransition>
     <div style={{ 
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", 
       minHeight: '100vh',
@@ -24,8 +21,6 @@ export default function DemoPage() {
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <VantaBackground />
-
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 10, maxWidth: 640, width: '100%', margin: '0 auto', padding: '40px 24px', textAlign: 'center' }}>
         <motion.div
@@ -75,6 +70,5 @@ export default function DemoPage() {
         </motion.div>
       </div>
     </div>
-    </PageTransition>
   );
 }

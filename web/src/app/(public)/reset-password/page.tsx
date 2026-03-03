@@ -1,6 +1,4 @@
 'use client';
-import VantaBackground from '@/components/VantaBackground';
-import PageTransition from '@/components/PageTransition';
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -107,9 +105,7 @@ function ResetPasswordContent() {
       padding: '24px',
       position: 'relative',
       overflow: 'hidden',
-    }}>
-      <VantaBackground />
-      <Link href="/login" className="back-link" style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10,
+    }}>      <Link href="/login" className="back-link" style={{ position: 'absolute', top: '24px', left: '24px', zIndex: 10,
           color: colors.textMuted, textDecoration: 'none', fontSize: '14px',
         }}
       >
@@ -241,10 +237,8 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <PageTransition>
     <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 size={32} className="animate-spin" style={{ color: '#666' }} /></div>}>
       <ResetPasswordContent />
     </Suspense>
-    </PageTransition>
   );
 }

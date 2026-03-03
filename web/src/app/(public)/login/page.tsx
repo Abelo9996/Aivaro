@@ -1,6 +1,4 @@
 'use client';
-import VantaBackground from '@/components/VantaBackground';
-import PageTransition from '@/components/PageTransition';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -62,7 +60,6 @@ export default function LoginPage() {
   };
 
   return (
-    <PageTransition>
     <div style={{
       minHeight: '100vh',
       display: 'flex',
@@ -74,8 +71,6 @@ export default function LoginPage() {
       overflow: 'hidden',
     }}>
       {/* Tech Background with Glows and Patterns */}
-      <VantaBackground />
-
       <div style={{
         width: '100%',
         maxWidth: '448px',
@@ -432,6 +427,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-    </PageTransition>
   );
 }

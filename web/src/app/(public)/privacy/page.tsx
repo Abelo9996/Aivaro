@@ -1,6 +1,4 @@
 'use client';
-import VantaBackground from '@/components/VantaBackground';
-import PageTransition from '@/components/PageTransition';
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -16,15 +14,12 @@ const colors = {
 
 export default function PrivacyPage() {
   return (
-    <PageTransition>
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       minHeight: '100vh',
       background: colors.darkBg,
       position: 'relative',
-    }}>
-      <VantaBackground />
-      <div style={{ position: 'relative', zIndex: 10 }}>
+    }}>      <div style={{ position: 'relative', zIndex: 10 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 80px' }}>
         <Link href="/landing" className="back-link" style={{  color: colors.textMuted, textDecoration: 'none', fontSize: 14, marginBottom: 24 }}>
           <ArrowLeft size={18} /> Back to Home
@@ -119,7 +114,6 @@ export default function PrivacyPage() {
       </div>
       </div>
     </div>
-    </PageTransition>
   );
 }
 
