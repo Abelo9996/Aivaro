@@ -82,6 +82,43 @@ def _discord_factory(creds: dict) -> BaseMCPServer:
     )
 
 
+def _jira_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.jira_server import JiraMCPServer
+    return JiraMCPServer(
+        domain=creds.get("domain", ""),
+        email=creds.get("email", ""),
+        api_token=creds.get("api_token", ""),
+    )
+
+
+def _github_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.github_server import GitHubMCPServer
+    return GitHubMCPServer(access_token=creds.get("access_token", ""))
+
+
+def _linear_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.linear_server import LinearMCPServer
+    return LinearMCPServer(api_key=creds.get("api_key", ""))
+
+
+def _monday_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.monday_server import MondayMCPServer
+    return MondayMCPServer(api_key=creds.get("api_key", ""))
+
+
+def _sendgrid_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.sendgrid_server import SendGridMCPServer
+    return SendGridMCPServer(api_key=creds.get("api_key", ""))
+
+
+def _whatsapp_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.whatsapp_server import WhatsAppMCPServer
+    return WhatsAppMCPServer(
+        access_token=creds.get("access_token", ""),
+        phone_number_id=creds.get("phone_number_id", ""),
+    )
+
+
 SERVER_FACTORIES = {
     "google": _google_factory,
     "slack": _slack_factory,
@@ -94,6 +131,12 @@ SERVER_FACTORIES = {
     "hubspot": _hubspot_factory,
     "shopify": _shopify_factory,
     "discord": _discord_factory,
+    "jira": _jira_factory,
+    "github": _github_factory,
+    "linear": _linear_factory,
+    "monday": _monday_factory,
+    "sendgrid": _sendgrid_factory,
+    "whatsapp": _whatsapp_factory,
 }
 
 
