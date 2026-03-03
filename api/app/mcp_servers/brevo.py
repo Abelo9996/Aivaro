@@ -13,7 +13,7 @@ class BrevoMCPServer(BaseMCPServer):
 
     def __init__(self, credentials: dict):
         super().__init__()
-        self.api_key = credentials.get("api_key", "")
+        self.api_key = (credentials.get("api_key") or "").strip()
         if not self.api_key:
             import logging
             logging.getLogger(__name__).warning(

@@ -181,6 +181,12 @@ async def create_connection(
     db: Session = Depends(get_db)
 ):
     """Create a connection (for demo mode or API key-based integrations)."""
+    # Strip whitespace from all credential values on save
+    creds = connection_data.credentials
+    if creds and isinstance(creds, dict):
+        creds = {k: v.strip() if isinstance(v, str) else v for k, v in creds.items()}
+        connection_data.credentials = creds
+    
     # Check if connection already exists
     existing = db.query(Connection).filter(
         Connection.user_id == current_user.id,
@@ -312,14 +318,20 @@ async def test_connection(
 
             # === API key providers ===
             if ctype == "brevo" and creds.get("api_key"):
+                key = creds["api_key"]
+                import logging
+                logging.getLogger("connections").info(
+                    f"[Brevo test] key length={len(key)}, prefix={key[:12]}..., "
+                    f"has_whitespace={key != key.strip()}, has_newline={chr(10) in key or chr(13) in key}"
+                )
                 resp = await client.get(
                     "https://api.brevo.com/v3/account",
-                    headers={"api-key": creds["api_key"], "Accept": "application/json"}
+                    headers={"api-key": key.strip(), "Accept": "application/json"}
                 )
                 if resp.status_code == 200:
                     data = resp.json()
                     return {"success": True, "message": "Brevo API key is valid", "user": {"email": data.get("email", ""), "company": data.get("companyName", "")}}
-                return {"success": False, "message": f"Brevo API key invalid (HTTP {resp.status_code}). Get a new key at https://app.brevo.com/settings/keys/api"}
+                return {"success": False, "message": f"Brevo API key invalid (HTTP {resp.status_code}). Key length: {len(key)}, prefix: {key[:12]}... Re-enter your key or get a new one at https://app.brevo.com/settings/keys/api"}
 
             if ctype == "stripe" and creds.get("api_key"):
                 resp = await client.get(
