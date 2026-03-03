@@ -2890,23 +2890,35 @@ def _resolve_aliases_in_params(params: dict, data: dict) -> dict:
 
 
 def _clean_unresolved_variables(params: dict) -> dict:
-    """Remove any remaining {{variable}} references from string params at runtime.
+    """Remove only FAKE link variables from text params at runtime.
     
-    After interpolation and alias resolution, any remaining {{...}} is unresolvable.
-    Instead of sending broken text to the user, clean it up:
-    - Remove sentences/lines containing unresolved variables
-    - For 'to' fields, leave them (will be caught by executor-specific validation)
+    After interpolation and alias resolution, some {{...}} may remain.
+    We only aggressively remove KNOWN FAKE variables (hallucinated links like
+    calendly_event_link, booking_link, etc.) — other unresolved variables
+    are left as-is or stripped inline, since they might just be missing data
+    that shouldn't cause the whole line to disappear.
     """
     import re
     SKIP_KEYS = {"to", "phone", "to_number", "__node_type"}
     
+    # Only these patterns are known hallucinations that should be removed
+    FAKE_LINK_PATTERN = re.compile(
+        r'\{\{(calendly_event_link|booking_link|booking_url|meeting_link|meeting_url|'
+        r'payment_link|payment_url|confirmation_link|confirmation_url|'
+        r'schedule_link|schedule_url|invite_link|invite_url|'
+        r'calendar_link|calendar_url|event_link|event_url|'
+        r'reschedule_link|cancel_link|cancel_url)\}\}',
+        re.IGNORECASE
+    )
+    
     cleaned = {}
     for key, value in params.items():
         if isinstance(value, str) and "{{" in value and key not in SKIP_KEYS:
-            unresolved = re.findall(r'\{\{[^}]+\}\}', value)
-            if unresolved:
-                print(f"[NodeExecutor] Cleaning {len(unresolved)} unresolved variable(s) from '{key}': {unresolved}")
-                # Try splitting by both real newlines and escaped newlines
+            fake_vars = FAKE_LINK_PATTERN.findall(value)
+            if fake_vars:
+                print(f"[NodeExecutor] Removing {len(fake_vars)} fake link variable(s) from '{key}': {fake_vars}")
+                
+                # Determine line separator
                 if "\n" in value:
                     sep = "\n"
                 elif "\\n" in value:
@@ -2918,25 +2930,21 @@ def _clean_unresolved_variables(params: dict) -> dict:
                     lines = value.split(sep)
                     new_lines = []
                     for line in lines:
-                        if any(var in line for var in unresolved):
-                            stripped = line
-                            for var in unresolved:
-                                stripped = stripped.replace(var, "")
-                            stripped = stripped.strip().rstrip(".:,;!? ")
-                            # Drop lines that are about links/URLs (useless without the variable)
+                        if FAKE_LINK_PATTERN.search(line):
+                            # Remove the fake variable
+                            cleaned_line = FAKE_LINK_PATTERN.sub("", line).strip()
+                            # Drop the line if it's just a link intro
+                            stripped = cleaned_line.rstrip(".:,;!? ")
                             link_keywords = ["link", "click", "confirm", "url", "schedule", "book", "use the following"]
-                            is_link_line = any(kw in stripped.lower() for kw in link_keywords)
-                            if len(stripped) > 20 and not is_link_line:
-                                for var in unresolved:
-                                    line = line.replace(var, "")
-                                new_lines.append(line)
+                            is_link_line = any(kw in stripped.lower() for kw in link_keywords) and len(stripped) < 80
+                            if stripped and not is_link_line:
+                                new_lines.append(cleaned_line)
+                            # else: drop the whole line
                         else:
                             new_lines.append(line)
                     value = sep.join(new_lines)
                 else:
-                    # Single line — just remove the variables
-                    for var in unresolved:
-                        value = value.replace(var, "")
+                    value = FAKE_LINK_PATTERN.sub("", value).strip()
                 
                 # Clean up multiple consecutive newlines
                 for s in ["\n\n\n", "\\n\\n\\n"]:
