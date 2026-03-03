@@ -8,10 +8,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
 
   return (
-    <AnimatePresence mode="wait">
-      <PageTransition key={pathname}>
-        {children}
-      </PageTransition>
-    </AnimatePresence>
+    <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
+      <AnimatePresence mode="wait">
+        <PageTransition key={pathname}>
+          {children}
+        </PageTransition>
+      </AnimatePresence>
+    </div>
   );
 }
