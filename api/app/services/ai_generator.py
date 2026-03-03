@@ -527,6 +527,8 @@ The condition node checks: input_data[field] <operator> value. Available operato
 27. The send_email node's "to" parameter should use {{sender_email}} to reply to the original sender. This is the parsed email address from the From header. {{from}} contains the full "Name <email>" string which may not work as a recipient. Available email trigger variables: {{sender_email}}, {{sender_name}}, {{from}}, {{subject}}, {{snippet}}, {{body}}, {{user_email}} (workflow owner).
 28. APPOINTMENT/BOOKING WORKFLOW PATTERN: start_email -> ai_reply (extract is_appointment, customer_name, customer_email, requested_date, requested_time) -> condition (is_appointment equals true) -> google_calendar_create (using extracted date/time) -> send_email confirmation. The ai_reply extraction step is CRITICAL -- without it, you have no structured data. NEVER skip it.
 29. When using calendly_list_events to check for conflicts, FILTER by the requested date using min_start_time and max_start_time parameters. Do NOT list ALL events -- that checks the wrong thing.
+30. NON-MATCHING CONDITION BRANCHES: When the "no" branch of a condition means "this email is irrelevant" (e.g., not an appointment), do NOT send any email or notification. Just let the workflow end silently. Only create a "no" branch action when the user explicitly asks for one (e.g., "send a rejection email"). Ignoring irrelevant emails is the correct default behavior.
+31. NEVER reference {{calendly_event_link}}, {{calendly_link}}, {{booking_link}}, or any link variable unless a previous workflow step actually CREATES that link. google_calendar_create does NOT produce a link. If you need to send a confirmation, just confirm the date/time — do NOT include a fake link variable.
 
 Example for "booking automation with deposit":
 {
@@ -545,19 +547,17 @@ Example for "booking automation with deposit":
 Example for condition branching (appointment with conflict check):
 {
   "workflowName": "Appointment Workflow",
-  "summary": "When an appointment email arrives, extract the requested date/time, check for scheduling conflicts on that date, then confirm or deny.",
+  "summary": "When an appointment email arrives, extract the requested date/time, create a calendar event and confirm. Non-appointment emails are ignored.",
   "nodes": [
     {"id": "1", "type": "start_email", "label": "When appointment email received", "position": {"x": 250, "y": 50}, "parameters": {}},
-    {"id": "2", "type": "ai_reply", "label": "Extract appointment details", "position": {"x": 250, "y": 200}, "parameters": {"prompt": "Extract the following from this email in JSON format: {\"is_appointment\": true/false, \"customer_name\": \"...\", \"customer_email\": \"...\", \"requested_date\": \"YYYY-MM-DD\", \"requested_time\": \"HH:MM\", \"service_type\": \"...\"}. Email from {{name}} ({{from}}): Subject: {{subject}} Body: {{snippet}}", "context": "You are an email parser. Extract appointment details. If the email is not about an appointment, set is_appointment to false."}},
+    {"id": "2", "type": "ai_reply", "label": "Extract appointment details", "position": {"x": 250, "y": 200}, "parameters": {"prompt": "Extract the following from this email in JSON format: {\"is_appointment\": true/false, \"customer_name\": \"...\", \"customer_email\": \"...\", \"requested_date\": \"YYYY-MM-DD\", \"requested_time\": \"HH:MM\", \"service_type\": \"...\"}. Email from {{name}} ({{sender_email}}): Subject: {{subject}} Body: {{snippet}}", "context": "You are an email parser. Extract appointment details. If the email is not about an appointment, set is_appointment to false."}},
     {"id": "3", "type": "condition", "label": "Is this about an appointment?", "position": {"x": 250, "y": 350}, "parameters": {"field": "is_appointment", "operator": "equals", "value": "true"}},
-    {"id": "4", "type": "google_calendar_create", "label": "Create calendar event", "position": {"x": 450, "y": 500}, "parameters": {"title": "Appointment with {{customer_name}}", "date": "{{requested_date}}", "time": "{{requested_time}}", "duration": 60, "description": "Service: {{service_type}}. Customer: {{customer_name}} ({{customer_email}})"}},
-    {"id": "5", "type": "send_email", "label": "Send confirmation email", "position": {"x": 450, "y": 650}, "parameters": {"to": "{{sender_email}}", "subject": "Re: {{subject}}", "body": "Hi {{customer_name}},\\n\\nYour appointment on {{requested_date}} at {{requested_time}} has been confirmed.\\n\\nThank you!"}, "requiresApproval": true},
-    {"id": "6", "type": "send_email", "label": "Send not-an-appointment reply", "position": {"x": 50, "y": 500}, "parameters": {"to": "{{sender_email}}", "subject": "Re: {{subject}}", "body": "{{ai_response}}"}, "requiresApproval": true}
+    {"id": "4", "type": "google_calendar_create", "label": "Create calendar event", "position": {"x": 250, "y": 500}, "parameters": {"title": "Appointment with {{customer_name}}", "date": "{{requested_date}}", "time": "{{requested_time}}", "duration": 60, "description": "Service: {{service_type}}. Customer: {{customer_name}} ({{customer_email}})"}},
+    {"id": "5", "type": "send_email", "label": "Send confirmation email", "position": {"x": 250, "y": 650}, "parameters": {"to": "{{sender_email}}", "subject": "Re: {{subject}}", "body": "Hi {{customer_name}},\\n\\nYour appointment on {{requested_date}} at {{requested_time}} has been confirmed.\\n\\nThank you!"}, "requiresApproval": true}
   ],
   "edges": [
     {"id": "e1", "source": "1", "target": "2"},
     {"id": "e2", "source": "2", "target": "3"},
-    {"id": "e3", "source": "3", "target": "6", "sourceHandle": "no", "label": "not appointment"},
     {"id": "e4", "source": "3", "target": "4", "sourceHandle": "yes", "label": "is appointment"},
     {"id": "e5", "source": "4", "target": "5"}
   ]

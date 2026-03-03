@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Execution } from '@/types';
@@ -10,12 +10,10 @@ import type { Execution } from '@/types';
 export default function ExecutionsPage() {
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadExecutions();
-  }, []);
-
-  const loadExecutions = async () => {
+  const loadExecutions = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
     try {
       const data = await api.getExecutions();
       setExecutions(data);
@@ -23,36 +21,39 @@ export default function ExecutionsPage() {
       console.error('Failed to load executions:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadExecutions();
+  }, [loadExecutions]);
+
+  // Auto-refresh every 15s when there are running executions
+  useEffect(() => {
+    const hasRunning = executions.some((e) => e.status === 'running' || e.status === 'pending_approval');
+    if (!hasRunning) return;
+    const interval = setInterval(() => loadExecutions(), 15000);
+    return () => clearInterval(interval);
+  }, [executions, loadExecutions]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-700';
-      case 'failed':
-        return 'bg-red-100 text-red-700';
-      case 'running':
-        return 'bg-blue-100 text-blue-700';
-      case 'pending_approval':
-        return 'bg-amber-100 text-amber-700';
-      default:
-        return 'bg-gray-100 text-gray-600';
+      case 'completed': return 'bg-green-100 text-green-700';
+      case 'failed': return 'bg-red-100 text-red-700';
+      case 'running': return 'bg-blue-100 text-blue-700';
+      case 'pending_approval': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-gray-100 text-gray-600';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-        return '✅';
-      case 'failed':
-        return '❌';
-      case 'running':
-        return '⏳';
-      case 'pending_approval':
-        return '⏸️';
-      default:
-        return '⚪';
+      case 'completed': return '✅';
+      case 'failed': return '❌';
+      case 'running': return '⏳';
+      case 'pending_approval': return '⏸️';
+      default: return '⚪';
     }
   };
 
@@ -66,9 +67,19 @@ export default function ExecutionsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Run History</h1>
-        <p className="text-gray-500">See what your workflows have been doing</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Run History</h1>
+          <p className="text-gray-500">See what your workflows have been doing</p>
+        </div>
+        <button
+          onClick={() => loadExecutions(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
       {executions.length === 0 ? (
@@ -81,7 +92,7 @@ export default function ExecutionsPage() {
           </div>
           <h3 className="text-lg font-semibold mb-2">No runs yet</h3>
           <p className="text-gray-500 mb-6">
-            Once your workflows start running, you'll see them here.
+            Once your workflows start running, you&apos;ll see them here.
           </p>
           <Link
             href="/app/workflows"
@@ -103,7 +114,7 @@ export default function ExecutionsPage() {
                   <span className="text-2xl">{getStatusIcon(execution.status)}</span>
                   <div>
                     <div className="font-medium">
-                      {execution.workflow_id}
+                      {(execution as any).workflow_name || (execution as any).workflow?.name || 'Workflow'}
                     </div>
                     <div className="text-sm text-gray-500">
                       Started {formatDate(execution.started_at)}
@@ -111,11 +122,12 @@ export default function ExecutionsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span
-                    className={`px-3 py-1 text-xs rounded-full ${getStatusColor(
-                      execution.status
-                    )}`}
-                  >
+                  {execution.is_test && (
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">
+                      Test
+                    </span>
+                  )}
+                  <span className={`px-3 py-1 text-xs rounded-full ${getStatusColor(execution.status)}`}>
                     {execution.status.replace('_', ' ')}
                   </span>
                   <span className="text-gray-400">→</span>

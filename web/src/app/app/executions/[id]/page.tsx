@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Bot, AlertCircle, Package } from 'lucide-react';
+import { Bot, AlertCircle, Package, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Execution } from '@/types';
@@ -13,18 +13,13 @@ export default function ExecutionDetailPage() {
   const params = useParams();
   const [execution, setExecution] = useState<Execution | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
-  useEffect(() => {
-    if (params.id) {
-      loadExecution(params.id as string);
-    }
-  }, [params.id]);
-
-  const loadExecution = async (id: string) => {
+  const loadExecution = useCallback(async (id: string, showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
     try {
       const data = await api.getExecution(id);
-      // Map API response to frontend types
       const execution = {
         ...data,
         node_executions: (data.execution_nodes || data.node_executions || []).map((n: any) => ({
@@ -34,7 +29,6 @@ export default function ExecutionDetailPage() {
         })),
       };
       setExecution(execution);
-      // Auto-show chat if execution is completed with output
       if (execution.status === 'completed' && execution.node_executions?.some((n: any) => n.output)) {
         setShowChat(true);
       }
@@ -42,8 +36,22 @@ export default function ExecutionDetailPage() {
       console.error('Failed to load execution:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (params.id) loadExecution(params.id as string);
+  }, [params.id, loadExecution]);
+
+  // Auto-refresh while running
+  useEffect(() => {
+    if (!execution || (execution.status !== 'running' && execution.status !== 'pending_approval')) return;
+    const interval = setInterval(() => {
+      if (params.id) loadExecution(params.id as string);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [execution?.status, params.id, loadExecution]);
 
   const handleChatMessage = async (message: string, history: Array<{role: string, content: string}>) => {
     if (!execution) throw new Error('No execution loaded');
@@ -53,16 +61,11 @@ export default function ExecutionDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'failed':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'running':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'skipped':
-        return 'bg-gray-100 text-gray-600 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-600 border-gray-200';
+      case 'completed': return 'bg-green-100 text-green-700 border-green-200';
+      case 'failed': return 'bg-red-100 text-red-700 border-red-200';
+      case 'running': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'skipped': return 'bg-gray-100 text-gray-600 border-gray-200';
+      default: return 'bg-gray-100 text-gray-600 border-gray-200';
     }
   };
 
@@ -87,13 +90,18 @@ export default function ExecutionDetailPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link
-          href="/app/executions"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
+      <div className="mb-6 flex items-center justify-between">
+        <Link href="/app/executions" className="text-sm text-gray-500 hover:text-gray-700">
           ← Back to Run History
         </Link>
+        <button
+          onClick={() => loadExecution(params.id as string, true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
@@ -108,26 +116,23 @@ export default function ExecutionDetailPage() {
                 🧪 Test Run
               </span>
             )}
-            <span
-              className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(
-                execution.status
-              )}`}
-            >
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(execution.status)}`}>
+              {execution.status === 'running' && (
+                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-2" />
+              )}
               {execution.status.replace('_', ' ')}
             </span>
           </div>
         </div>
         {execution.is_test && (
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-            ⚠️ <strong>Test Mode:</strong> No real actions were performed. Emails were not sent, sheets were not accessed, and AI responses were simulated.
+            ⚠️ <strong>Test Mode:</strong> No real actions were performed.
           </div>
         )}
         {execution.error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <div>
-              <strong>Error:</strong> {execution.error}
-            </div>
+            <div><strong>Error:</strong> {execution.error}</div>
           </div>
         )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -145,7 +150,6 @@ export default function ExecutionDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Timeline */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold mb-6">Step Timeline</h2>
           <div className="space-y-4">
@@ -154,27 +158,17 @@ export default function ExecutionDetailPage() {
                 <div
                   key={node.id}
                   className={`relative pl-8 pb-4 ${
-                    index !== execution.node_executions!.length - 1
-                      ? 'border-l-2 border-gray-200'
-                      : ''
+                    index !== execution.node_executions!.length - 1 ? 'border-l-2 border-gray-200' : ''
                   }`}
                 >
-                  <div
-                    className={`absolute left-0 -translate-x-1/2 w-4 h-4 rounded-full border-2 ${getStatusColor(
-                      node.status
-                    )}`}
-                  />
+                  <div className={`absolute left-0 -translate-x-1/2 w-4 h-4 rounded-full border-2 ${getStatusColor(node.status)}`} />
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <div className="font-medium">{node.node_label || node.node_type}</div>
                         <div className="text-xs text-gray-400">{node.node_type}</div>
                       </div>
-                      <span
-                        className={`px-2 py-0.5 text-xs rounded ${getStatusColor(
-                          node.status
-                        )}`}
-                      >
+                      <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(node.status)}`}>
                         {node.status}
                       </span>
                     </div>
@@ -184,15 +178,11 @@ export default function ExecutionDetailPage() {
                         {node.duration_ms && ` • ${node.duration_ms}ms`}
                       </div>
                     )}
-                    
-                    {/* Logs - Always show if present */}
                     {node.logs && (
                       <div className="mt-3 p-3 bg-gray-800 text-gray-100 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto">
                         {node.logs}
                       </div>
                     )}
-                    
-                    {/* Output - Collapsible */}
                     {node.output && Object.keys(node.output).length > 0 && (
                       <details className="mt-2">
                         <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800 flex items-center gap-1">
@@ -203,8 +193,6 @@ export default function ExecutionDetailPage() {
                         </pre>
                       </details>
                     )}
-                    
-                    {/* Error */}
                     {node.error && (
                       <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" /> {node.error}
@@ -219,7 +207,6 @@ export default function ExecutionDetailPage() {
           </div>
         </div>
 
-        {/* AI Chat Panel */}
         <div className="lg:col-span-1">
           {showChat ? (
             <ChatPanel
@@ -235,9 +222,7 @@ export default function ExecutionDetailPage() {
                   <Bot className="w-6 h-6 text-primary-600" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">AI Assistant</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  Ask questions about this workflow run and its results
-                </p>
+                <p className="text-sm text-gray-500 mb-4">Ask questions about this workflow run</p>
                 <button
                   onClick={() => setShowChat(true)}
                   className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm"

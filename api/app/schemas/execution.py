@@ -29,6 +29,7 @@ class ExecutionNodeResponse(BaseModel):
 class ExecutionResponse(BaseModel):
     id: str
     workflow_id: str
+    workflow_name: Optional[str] = None
     status: str
     error: Optional[str] = None
     is_test: bool
@@ -40,3 +41,11 @@ class ExecutionResponse(BaseModel):
     
     class Config:
         from_attributes = True
+    
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        # Inject workflow_name from the relationship
+        data = super().model_validate(obj, **kwargs)
+        if hasattr(obj, 'workflow') and obj.workflow:
+            data.workflow_name = obj.workflow.name
+        return data

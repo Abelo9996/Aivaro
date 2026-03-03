@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ReactFlow,
@@ -16,6 +16,7 @@ import {
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import dagre from 'dagre';
 import { api } from '@/lib/api';
 import { useModeStore } from '@/stores/modeStore';
 import NodePalette from '@/components/workflow/NodePalette';
@@ -35,7 +36,6 @@ const nodeTypes = {
   approval: ApprovalNode,
 };
 
-// Step type for execution progress
 interface ExecutionStep {
   node_id: string;
   node_label: string;
@@ -44,6 +44,39 @@ interface ExecutionStep {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FlowNode = Node<any>;
+
+// Auto-layout using dagre
+function autoLayout(nodes: FlowNode[], edges: Edge[]): FlowNode[] {
+  if (nodes.length === 0) return nodes;
+  
+  const g = new dagre.graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 120, marginx: 50, marginy: 50 });
+  
+  nodes.forEach((node) => {
+    g.setNode(node.id, { width: 240, height: 80 });
+  });
+  edges.forEach((edge) => {
+    g.setEdge(edge.source, edge.target);
+  });
+  
+  dagre.layout(g);
+  
+  return nodes.map((node) => {
+    const pos = g.node(node.id);
+    return {
+      ...node,
+      position: { x: pos.x - 120, y: pos.y - 40 },
+    };
+  });
+}
+
+const getNodeCategory = (nodeType: string): string => {
+  if (nodeType.startsWith('start_') || nodeType.includes('trigger') || nodeType === 'webhook') return 'trigger';
+  if (nodeType === 'condition' || nodeType === 'filter' || nodeType === 'branch') return 'condition';
+  if (nodeType === 'approval' || nodeType === 'human_review') return 'approval';
+  return 'action';
+};
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -55,13 +88,12 @@ export default function WorkflowEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showPalette, setShowPalette] = useState(false);
   const [workflowName, setWorkflowName] = useState('New Workflow');
   const [isActive, setIsActive] = useState(false);
   const [activating, setActivating] = useState(false);
   
-  // Execution progress state
   const [showProgress, setShowProgress] = useState(false);
   const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([]);
   const [executionStatus, setExecutionStatus] = useState<'running' | 'completed' | 'failed'>('running');
@@ -73,30 +105,17 @@ export default function WorkflowEditorPage() {
   const workflowId = params.id as string;
   const isNew = workflowId === 'new';
 
-  // Helper function to map node types to React Flow node categories
-  const getNodeCategory = (nodeType: string): string => {
-    // Trigger/Start nodes
-    if (nodeType.startsWith('start_') || nodeType.includes('trigger') || nodeType === 'webhook') {
-      return 'trigger';
-    }
-    // Condition nodes
-    if (nodeType === 'condition' || nodeType === 'filter' || nodeType === 'branch') {
-      return 'condition';
-    }
-    // Approval nodes
-    if (nodeType === 'approval' || nodeType === 'human_review') {
-      return 'approval';
-    }
-    // Everything else is an action
-    return 'action';
-  };
+  // Derive selectedNode from current nodes state so it's always fresh
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) || null : null),
+    [selectedNodeId, nodes]
+  );
 
   useEffect(() => {
     const loadData = async () => {
       setError(null);
       
       if (isNew) {
-        // Create a new workflow with default trigger
         const defaultNodes: Node[] = [
           {
             id: 'trigger-1',
@@ -125,24 +144,9 @@ export default function WorkflowEditorPage() {
           setWorkflowName(workflow.name || 'Untitled Workflow');
           setIsActive(workflow.is_active || false);
           
-          // Helper function to map node types
-          const mapNodeType = (nodeType: string): string => {
-            if (nodeType.startsWith('start_') || nodeType.includes('trigger') || nodeType === 'webhook') {
-              return 'trigger';
-            }
-            if (nodeType === 'condition' || nodeType === 'filter' || nodeType === 'branch') {
-              return 'condition';
-            }
-            if (nodeType === 'approval' || nodeType === 'human_review') {
-              return 'approval';
-            }
-            return 'action';
-          };
-          
-          // Convert workflow nodes to React Flow nodes
           const flowNodes: Node[] = (workflow.nodes || []).map((node: WorkflowNode, index: number) => ({
             id: node.id,
-            type: mapNodeType(node.type),
+            type: getNodeCategory(node.type),
             position: node.position || { x: 250, y: 100 + index * 150 },
             data: {
               label: node.label || node.type,
@@ -152,18 +156,23 @@ export default function WorkflowEditorPage() {
             },
           }));
           
-          // Convert workflow edges
           const flowEdges: Edge[] = (workflow.edges || []).map((edge: any) => ({
             id: edge.id || `${edge.source}-${edge.target}`,
             source: edge.source,
             target: edge.target,
             sourceHandle: edge.sourceHandle,
             targetHandle: edge.targetHandle,
+            label: edge.label || (edge.sourceHandle === 'yes' ? 'Yes' : edge.sourceHandle === 'no' ? 'No' : undefined),
             animated: true,
             style: { stroke: '#6366f1' },
+            labelStyle: { fontSize: 12, fontWeight: 600 },
+            labelBgStyle: { fill: '#f3f4f6', fillOpacity: 0.9 },
           }));
           
-          setNodes(flowNodes);
+          // Auto-layout nodes for clean visualization
+          const layoutNodes = autoLayout(flowNodes, flowEdges);
+          
+          setNodes(layoutNodes);
           setEdges(flowEdges);
         } catch (err: any) {
           console.error('Failed to load workflow:', err);
@@ -179,18 +188,43 @@ export default function WorkflowEditorPage() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+      setEdges((eds) => addEdge({ ...connection, animated: true, style: { stroke: '#6366f1' } }, eds));
     },
     [setEdges]
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNode(node);
+    setSelectedNodeId(node.id);
   }, []);
 
   const onPaneClick = useCallback(() => {
-    setSelectedNode(null);
+    setSelectedNodeId(null);
   }, []);
+
+  // Issue 5: Handle edge click to select/delete
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setSelectedEdgeId(edge.id);
+  }, []);
+
+  const handleDeleteEdge = useCallback(() => {
+    if (selectedEdgeId) {
+      setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId));
+      setSelectedEdgeId(null);
+    }
+  }, [selectedEdgeId, setEdges]);
+
+  // Keyboard shortcut for deleting edges
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdgeId && !selectedNodeId) {
+        handleDeleteEdge();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEdgeId, selectedNodeId, handleDeleteEdge]);
 
   const handleAddNode = (type: string, nodeType: string, label: string) => {
     const newNode: Node = {
@@ -218,7 +252,13 @@ export default function WorkflowEditorPage() {
   const handleDeleteNode = (nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    setSelectedNode(null);
+    setSelectedNodeId(null);
+  };
+
+  // Issue 6: Auto-layout button
+  const handleAutoLayout = () => {
+    const layoutNodes = autoLayout(nodes, edges);
+    setNodes(layoutNodes);
   };
 
   const handleSave = async () => {
@@ -240,6 +280,7 @@ export default function WorkflowEditorPage() {
           target: e.target,
           sourceHandle: e.sourceHandle,
           targetHandle: e.targetHandle,
+          label: e.label,
         })),
       };
 
@@ -258,7 +299,6 @@ export default function WorkflowEditorPage() {
 
   const handleToggleActive = async () => {
     if (isNew) return;
-    
     setActivating(true);
     try {
       await api.updateWorkflow(workflowId, { is_active: !isActive });
@@ -271,14 +311,12 @@ export default function WorkflowEditorPage() {
   };
 
   const handleTestRun = async () => {
-    // Initialize progress UI
     setShowProgress(true);
     setExecutionStatus('running');
     setCompletedSteps(0);
     setCurrentStep(undefined);
     setExecutionId(undefined);
     
-    // Build initial steps from workflow nodes
     const initialSteps: ExecutionStep[] = nodes.map(n => ({
       node_id: n.id,
       node_label: n.data.label || n.data.nodeType || 'Step',
@@ -288,21 +326,14 @@ export default function WorkflowEditorPage() {
     
     try {
       const { promise } = api.runWorkflowWithProgress(
-        workflowId,
-        true, // isTest = true
-        undefined,
+        workflowId, true, undefined,
         (data) => {
-          if (data.type === 'start') {
-            setExecutionId(data.execution_id);
-          } else if (data.type === 'step') {
+          if (data.type === 'start') setExecutionId(data.execution_id);
+          else if (data.type === 'step') {
             setCompletedSteps(data.completed || 0);
             setCurrentStep(data.node_label);
-            
-            // Update step status
             setExecutionSteps(prev => prev.map(step => 
-              step.node_id === data.node_id 
-                ? { ...step, status: data.status as 'completed' | 'failed' }
-                : step
+              step.node_id === data.node_id ? { ...step, status: data.status as 'completed' | 'failed' } : step
             ));
           } else if (data.type === 'complete') {
             setExecutionStatus(data.status === 'completed' ? 'completed' : 'failed');
@@ -310,7 +341,6 @@ export default function WorkflowEditorPage() {
           }
         }
       );
-      
       await promise;
     } catch (err) {
       console.error('Failed to run test:', err);
@@ -320,15 +350,12 @@ export default function WorkflowEditorPage() {
 
   const handleRealRun = async () => {
     setShowRunConfirm(false);
-    
-    // Initialize progress UI
     setShowProgress(true);
     setExecutionStatus('running');
     setCompletedSteps(0);
     setCurrentStep(undefined);
     setExecutionId(undefined);
     
-    // Build initial steps from workflow nodes
     const initialSteps: ExecutionStep[] = nodes.map(n => ({
       node_id: n.id,
       node_label: n.data.label || n.data.nodeType || 'Step',
@@ -338,21 +365,14 @@ export default function WorkflowEditorPage() {
     
     try {
       const { promise } = api.runWorkflowWithProgress(
-        workflowId,
-        false, // isTest = false - REAL RUN
-        undefined,
+        workflowId, false, undefined,
         (data) => {
-          if (data.type === 'start') {
-            setExecutionId(data.execution_id);
-          } else if (data.type === 'step') {
+          if (data.type === 'start') setExecutionId(data.execution_id);
+          else if (data.type === 'step') {
             setCompletedSteps(data.completed || 0);
             setCurrentStep(data.node_label);
-            
-            // Update step status
             setExecutionSteps(prev => prev.map(step => 
-              step.node_id === data.node_id 
-                ? { ...step, status: data.status as 'completed' | 'failed' }
-                : step
+              step.node_id === data.node_id ? { ...step, status: data.status as 'completed' | 'failed' } : step
             ));
           } else if (data.type === 'complete') {
             setExecutionStatus(data.status === 'completed' ? 'completed' : 'failed');
@@ -360,13 +380,25 @@ export default function WorkflowEditorPage() {
           }
         }
       );
-      
       await promise;
     } catch (err) {
       console.error('Failed to run workflow:', err);
       setExecutionStatus('failed');
     }
   };
+
+  // Highlight selected edge
+  const styledEdges = useMemo(() => 
+    edges.map((e) => ({
+      ...e,
+      style: {
+        ...e.style,
+        stroke: e.id === selectedEdgeId ? '#ef4444' : '#6366f1',
+        strokeWidth: e.id === selectedEdgeId ? 3 : 2,
+      },
+    })),
+    [edges, selectedEdgeId]
+  );
 
   if (loading) {
     return (
@@ -389,10 +421,7 @@ export default function WorkflowEditorPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/app/workflows')}
-            className="text-gray-500 hover:text-gray-700"
-          >
+          <button onClick={() => router.push('/app/workflows')} className="text-gray-500 hover:text-gray-700">
             ←
           </button>
           <input
@@ -409,23 +438,15 @@ export default function WorkflowEditorPage() {
                 onClick={handleToggleActive}
                 disabled={activating}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 {activating ? '...' : isActive ? '✓ Active' : '○ Inactive'}
               </button>
-              <button
-                onClick={handleTestRun}
-                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
+              <button onClick={handleTestRun} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
                 🧪 Test
               </button>
-              <button
-                onClick={() => setShowRunConfirm(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
-              >
+              <button onClick={() => setShowRunConfirm(true)} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
                 ▶ Run Now
               </button>
             </>
@@ -445,13 +466,15 @@ export default function WorkflowEditorPage() {
         <div className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={styledEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
+            onEdgeClick={onEdgeClick}
+            onPaneClick={() => { onPaneClick(); setSelectedEdgeId(null); }}
             nodeTypes={nodeTypes}
+            deleteKeyCode="Delete"
             fitView
             className="bg-gray-50"
           >
@@ -459,16 +482,32 @@ export default function WorkflowEditorPage() {
             <Controls />
             <MiniMap />
             <Panel position="top-left">
-              <button
-                onClick={() => setShowPalette(!showPalette)}
-                className="bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg font-medium hover:bg-gray-50"
-              >
-                + Add Step
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPalette(!showPalette)}
+                  className="bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg font-medium hover:bg-gray-50"
+                >
+                  + Add Step
+                </button>
+                <button
+                  onClick={handleAutoLayout}
+                  className="bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-lg font-medium hover:bg-gray-50"
+                  title="Auto-arrange nodes"
+                >
+                  🔀 Auto Layout
+                </button>
+                {selectedEdgeId && (
+                  <button
+                    onClick={handleDeleteEdge}
+                    className="bg-red-50 border border-red-200 shadow-sm px-4 py-2 rounded-lg font-medium text-red-600 hover:bg-red-100"
+                  >
+                    🗑 Delete Edge
+                  </button>
+                )}
+              </div>
             </Panel>
           </ReactFlow>
 
-          {/* Node Palette */}
           {showPalette && (
             <NodePalette
               onClose={() => setShowPalette(false)}
@@ -478,20 +517,18 @@ export default function WorkflowEditorPage() {
           )}
         </div>
 
-        {/* Node Inspector */}
         {selectedNode && (
           <NodeInspector
             node={selectedNode}
             onUpdate={handleUpdateNode}
             onDelete={handleDeleteNode}
-            onClose={() => setSelectedNode(null)}
+            onClose={() => setSelectedNodeId(null)}
             isAdvancedMode={isAdvancedMode}
             workflowId={params.id as string}
           />
         )}
       </div>
 
-      {/* Execution Progress Modal */}
       <ExecutionProgress
         isOpen={showProgress}
         workflowName={workflowName}
@@ -504,9 +541,7 @@ export default function WorkflowEditorPage() {
         onClose={() => setShowProgress(false)}
         onViewExecution={() => {
           setShowProgress(false);
-          if (executionId) {
-            router.push(`/app/executions/${executionId}`);
-          }
+          if (executionId) router.push(`/app/executions/${executionId}`);
         }}
       />
 

@@ -26,7 +26,13 @@ async def list_executions(
         query = query.filter(Execution.workflow_id == workflow_id)
     
     executions = query.order_by(Execution.started_at.desc()).all()
-    return [ExecutionResponse.model_validate(e) for e in executions]
+    
+    # Ensure workflow relationship is loaded for workflow_name
+    results = []
+    for e in executions:
+        resp = ExecutionResponse.model_validate(e)
+        results.append(resp)
+    return results
 
 
 @router.post("/", response_model=ExecutionResponse)
