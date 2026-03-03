@@ -29,6 +29,9 @@ const iconMap: Record<string, { src: string; color?: string }> = {
   intercom: { src: '/icons/intercom.svg' },
   linear: { src: '/icons/linear.svg' },
   jira: { src: '/icons/jira.svg' },
+  monday: { src: '/icons/monday.svg' },
+  sendgrid: { src: '/icons/sendgrid.svg' },
+  whatsapp: { src: '/icons/whatsapp.svg' },
   // SMS Marketing
   textedly: { src: '/icons/textedly.svg' },
   // Website & Domain Providers

@@ -35,6 +35,13 @@ const availableConnections = [
     category: 'core',
   },
   {
+    type: 'shopify',
+    name: 'Shopify',
+    description: 'Manage products, orders, customers, inventory, and fulfillments',
+    authType: 'api_key',
+    category: 'core',
+  },
+  {
     type: 'twilio',
     name: 'Twilio',
     description: 'Send SMS messages, send WhatsApp messages, make voice calls with text-to-speech',
@@ -44,8 +51,36 @@ const availableConnections = [
   {
     type: 'slack',
     name: 'Slack',
-    description: 'Send messages to channels, post notifications to your team',
+    description: 'Send messages to channels, DM users, manage reactions and threads',
     authType: 'oauth',
+    category: 'communication',
+  },
+  {
+    type: 'discord',
+    name: 'Discord',
+    description: 'Send messages, manage channels, members, and roles in your server',
+    authType: 'api_key',
+    category: 'communication',
+  },
+  {
+    type: 'whatsapp',
+    name: 'WhatsApp Business',
+    description: 'Send text, template, and media messages via Meta Cloud API',
+    authType: 'api_key',
+    category: 'communication',
+  },
+  {
+    type: 'sendgrid',
+    name: 'SendGrid',
+    description: 'Send transactional emails, use dynamic templates, manage contacts',
+    authType: 'api_key',
+    category: 'communication',
+  },
+  {
+    type: 'mailchimp',
+    name: 'Mailchimp',
+    description: 'Add and update subscribers, tag contacts, send email campaigns',
+    authType: 'api_key',
     category: 'communication',
   },
   {
@@ -70,11 +105,39 @@ const availableConnections = [
     category: 'productivity',
   },
   {
-    type: 'mailchimp',
-    name: 'Mailchimp',
-    description: 'Add and update subscribers, tag contacts, send email campaigns',
+    type: 'hubspot',
+    name: 'HubSpot',
+    description: 'Manage contacts, companies, deals, tickets, and pipelines in your CRM',
     authType: 'api_key',
-    category: 'communication',
+    category: 'core',
+  },
+  {
+    type: 'jira',
+    name: 'Jira',
+    description: 'Create and manage issues, search with JQL, track projects and transitions',
+    authType: 'api_key',
+    category: 'productivity',
+  },
+  {
+    type: 'github',
+    name: 'GitHub',
+    description: 'Manage issues, pull requests, branches, repos, and comments',
+    authType: 'api_key',
+    category: 'productivity',
+  },
+  {
+    type: 'linear',
+    name: 'Linear',
+    description: 'Create and track issues, manage projects, teams, and workflow states',
+    authType: 'api_key',
+    category: 'productivity',
+  },
+  {
+    type: 'monday',
+    name: 'Monday.com',
+    description: 'Manage boards, items, groups, and column values for project tracking',
+    authType: 'api_key',
+    category: 'productivity',
   },
 ];
 
@@ -213,10 +276,60 @@ export default function ConnectionsPage() {
     setMessage(null);
     
     try {
+      // Parse credentials based on provider type
+      let credentials: Record<string, string> = {};
+      const raw = apiKey.trim();
+      
+      switch (apiKeyModal.type) {
+        case 'twilio': {
+          const parts = raw.split(',').map(s => s.trim());
+          credentials = { account_sid: parts[0] || '', auth_token: parts[1] || '' };
+          break;
+        }
+        case 'shopify': {
+          const parts = raw.split(',').map(s => s.trim());
+          credentials = { shop_domain: parts[0] || '', access_token: parts[1] || '' };
+          break;
+        }
+        case 'discord': {
+          const parts = raw.split(',').map(s => s.trim());
+          credentials = { bot_token: parts[0] || '' };
+          if (parts[1]) credentials.guild_id = parts[1];
+          break;
+        }
+        case 'jira': {
+          const parts = raw.split(',').map(s => s.trim());
+          credentials = { domain: parts[0] || '', email: parts[1] || '', api_token: parts[2] || '' };
+          break;
+        }
+        case 'whatsapp': {
+          const parts = raw.split(',').map(s => s.trim());
+          credentials = { access_token: parts[0] || '', phone_number_id: parts[1] || '' };
+          break;
+        }
+        case 'github':
+          credentials = { access_token: raw };
+          break;
+        case 'hubspot':
+          credentials = { access_token: raw };
+          break;
+        case 'linear':
+          credentials = { api_key: raw };
+          break;
+        case 'monday':
+          credentials = { api_key: raw };
+          break;
+        case 'sendgrid':
+          credentials = { api_key: raw };
+          break;
+        default:
+          credentials = { api_key: raw };
+      }
+      
       await api.createConnection({
         name: apiKeyModal.name,
         type: apiKeyModal.type,
-        credentials: { api_key: apiKey.trim() },
+        credentials,
       });
       setMessage({ 
         type: 'success', 
@@ -243,6 +356,24 @@ export default function ConnectionsPage() {
         return 'Your Mailchimp API key (e.g. abc123-us21)';
       case 'twilio':
         return 'Account SID and Auth Token (comma-separated)';
+      case 'hubspot':
+        return 'pat-... (Private App access token)';
+      case 'shopify':
+        return 'your-store.myshopify.com,shpat_... (domain,token)';
+      case 'discord':
+        return 'Bot token (from Discord Developer Portal)';
+      case 'jira':
+        return 'domain,email,api_token (comma-separated)';
+      case 'github':
+        return 'ghp_... (Personal access token)';
+      case 'linear':
+        return 'lin_api_... (API key from Settings)';
+      case 'monday':
+        return 'Your Monday.com API key';
+      case 'sendgrid':
+        return 'SG.... (SendGrid API key)';
+      case 'whatsapp':
+        return 'access_token,phone_number_id (comma-separated)';
       default:
         return 'Enter your API key';
     }
@@ -284,6 +415,81 @@ export default function ConnectionsPage() {
             <a href="https://console.twilio.com/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Twilio Console → Account Info
             </a>. Enter as: ACCOUNT_SID,AUTH_TOKEN
+          </p>
+        );
+      case 'hubspot':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Create a Private App at{' '}
+            <a href="https://app.hubspot.com/private-apps/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              HubSpot → Settings → Integrations → Private Apps
+            </a>. Copy the access token (starts with pat-).
+          </p>
+        );
+      case 'shopify':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Create a custom app at your-store.myshopify.com/admin/settings/apps. Enter as: your-store.myshopify.com,shpat_xxxxx
+          </p>
+        );
+      case 'discord':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Create a bot at{' '}
+            <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Discord Developer Portal
+            </a>. Copy the Bot Token. Optionally add guild_id: TOKEN,GUILD_ID
+          </p>
+        );
+      case 'jira':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Create an API token at{' '}
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Atlassian Account → Security → API Tokens
+            </a>. Enter as: your-domain.atlassian.net,email@example.com,api_token
+          </p>
+        );
+      case 'github':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Generate a token at{' '}
+            <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              GitHub → Settings → Developer settings → Personal access tokens
+            </a>.
+          </p>
+        );
+      case 'linear':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Find your API key at{' '}
+            <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Linear → Settings → API → Personal API keys
+            </a>.
+          </p>
+        );
+      case 'monday':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Find your API key at Monday.com → Avatar → Developers → My access tokens.
+          </p>
+        );
+      case 'sendgrid':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Create an API key at{' '}
+            <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              SendGrid → Settings → API Keys
+            </a>. Use Full Access or restrict to Mail Send.
+          </p>
+        );
+      case 'whatsapp':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Get your access token and phone number ID from{' '}
+            <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Meta Developer Portal → WhatsApp → API Setup
+            </a>. Enter as: ACCESS_TOKEN,PHONE_NUMBER_ID
           </p>
         );
       default:
