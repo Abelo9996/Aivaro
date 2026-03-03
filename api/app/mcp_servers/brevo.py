@@ -188,6 +188,11 @@ class BrevoMCPServer(BaseMCPServer):
 
     # ===== Handlers =====
     async def _send_email(self, **params) -> dict:
+        import logging
+        logging.getLogger(__name__).info(
+            f"[Brevo] Sending email, api_key length={len(self.api_key)}, "
+            f"prefix={self.api_key[:12] if self.api_key else 'EMPTY'}..."
+        )
         to = [{"email": params["to_email"]}]
         if params.get("to_name"):
             to[0]["name"] = params["to_name"]
