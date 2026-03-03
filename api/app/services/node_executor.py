@@ -54,8 +54,8 @@ class NodeExecutor:
             self._google_service = GoogleService(
                 access_token=creds.get("access_token"),
                 refresh_token=creds.get("refresh_token"),
-                client_id=settings.google_client_id if hasattr(settings, 'google_client_id') else os.environ.get("GOOGLE_CLIENT_ID"),
-                client_secret=settings.google_client_secret if hasattr(settings, 'google_client_secret') else os.environ.get("GOOGLE_CLIENT_SECRET"),
+                client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+                client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
                 on_token_refresh=self._make_token_refresh_callback("google"),
             )
         return self._google_service
