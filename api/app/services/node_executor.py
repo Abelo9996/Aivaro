@@ -2710,48 +2710,154 @@ def _has_unresolved(value: str) -> bool:
 
 
 # Variable alias map: if {{X}} is unresolved, try these alternatives from input_data
+# This is the SYSTEMIC fix for variable resolution across ALL node types and integrations.
+# When the AI generates a workflow using {{sender_email}} but the data has "email",
+# or uses {{phone_number}} but the data has "phone", aliases resolve it automatically.
 _VARIABLE_ALIASES = {
-    # Email recipient aliases — all ways to reference the sender's email
-    "sender_email": ["email", "from", "customer_email", "from_email", "recipient_email"],
-    "from": ["email", "sender_email", "customer_email"],
-    "customer_email": ["sender_email", "email", "from"],
+    # ===== EMAIL / CONTACT =====
+    "sender_email": ["email", "from", "customer_email", "from_email", "recipient_email", "contact_email"],
+    "from": ["email", "sender_email", "customer_email", "contact_email"],
+    "customer_email": ["sender_email", "email", "from", "contact_email"],
     "from_email": ["sender_email", "email", "from"],
-    "recipient_email": ["sender_email", "email", "from"],
-    # Name aliases
-    "sender_name": ["name", "customer_name", "from_name"],
-    "customer_name": ["sender_name", "name", "from_name"],
+    "recipient_email": ["sender_email", "email", "from", "to"],
+    "contact_email": ["sender_email", "email", "customer_email", "from"],
+    "email": ["sender_email", "from", "customer_email", "contact_email"],
+    "to": ["sender_email", "email", "customer_email", "from", "recipient_email", "phone"],
+    
+    # ===== NAMES =====
+    "sender_name": ["name", "customer_name", "from_name", "contact_name", "full_name"],
+    "customer_name": ["sender_name", "name", "from_name", "contact_name", "full_name"],
     "from_name": ["sender_name", "name", "customer_name"],
-    # AI output aliases
-    "ai_response": ["ai_reply", "response", "reply", "message"],
-    "ai_reply": ["ai_response", "response", "reply"],
-    # Date/time aliases
-    "requested_date": ["date", "appointment_date", "event_date"],
-    "requested_time": ["time", "appointment_time", "event_time"],
-    "appointment_date": ["requested_date", "date"],
-    "appointment_time": ["requested_time", "time"],
+    "contact_name": ["sender_name", "name", "customer_name", "full_name"],
+    "full_name": ["name", "sender_name", "customer_name", "contact_name"],
+    "name": ["sender_name", "customer_name", "contact_name", "full_name", "from_name"],
+    "first_name": ["name", "sender_name", "customer_name"],
+    "last_name": ["name", "sender_name", "customer_name"],
+    
+    # ===== PHONE =====
+    "phone": ["phone_number", "to", "mobile", "cell", "telephone"],
+    "phone_number": ["phone", "to", "mobile", "cell"],
+    "to_number": ["phone", "phone_number", "to", "mobile"],
+    "from_number": ["phone", "phone_number"],
+    "mobile": ["phone", "phone_number"],
+    
+    # ===== AI OUTPUTS =====
+    "ai_response": ["ai_reply", "response", "reply", "message", "answer", "result", "output"],
+    "ai_reply": ["ai_response", "response", "reply", "message"],
+    "response": ["ai_response", "ai_reply", "reply", "message", "answer"],
+    "reply": ["ai_response", "ai_reply", "response", "message"],
+    "message": ["ai_response", "body", "text", "content", "reply"],
+    "answer": ["ai_response", "response", "reply"],
+    
+    # ===== EMAIL CONTENT =====
+    "subject": ["email_subject", "title", "topic"],
+    "email_subject": ["subject", "title"],
+    "body": ["message", "content", "text", "email_body", "snippet", "description"],
+    "email_body": ["body", "message", "content", "text"],
+    "snippet": ["body", "message", "text", "content", "description"],
+    "content": ["body", "message", "text", "description", "snippet"],
+    "text": ["body", "message", "content", "snippet"],
+    
+    # ===== DATE / TIME =====
+    "requested_date": ["date", "appointment_date", "event_date", "start_date", "booking_date", "today"],
+    "requested_time": ["time", "appointment_time", "event_time", "start_time", "booking_time", "current_time"],
+    "appointment_date": ["requested_date", "date", "event_date", "start_date", "today"],
+    "appointment_time": ["requested_time", "time", "event_time", "start_time", "current_time"],
+    "event_date": ["date", "requested_date", "appointment_date", "start_date", "today"],
+    "event_time": ["time", "requested_time", "appointment_time", "start_time", "current_time"],
+    "start_date": ["date", "requested_date", "appointment_date", "event_date"],
+    "start_time": ["time", "requested_time", "appointment_time", "event_time"],
+    "booking_date": ["date", "requested_date", "appointment_date", "today"],
+    "booking_time": ["time", "requested_time", "appointment_time", "current_time"],
+    "date": ["requested_date", "appointment_date", "event_date", "start_date", "today", "booking_date"],
+    "time": ["requested_time", "appointment_time", "event_time", "start_time", "current_time", "booking_time"],
+    "duration": ["length", "minutes", "duration_minutes"],
+    
+    # ===== TITLE / DESCRIPTION =====
+    "title": ["subject", "name", "summary", "heading", "label"],
+    "description": ["body", "content", "text", "message", "notes", "details", "snippet"],
+    "summary": ["description", "body", "content", "snippet", "title"],
+    "notes": ["description", "body", "content", "details"],
+    "details": ["description", "body", "content", "notes"],
+    "label": ["title", "name", "subject"],
+    
+    # ===== PAYMENT / AMOUNT =====
+    "amount": ["price", "total", "payment_amount", "cost", "fee", "invoice_amount"],
+    "price": ["amount", "total", "cost", "payment_amount"],
+    "total": ["amount", "price", "cost"],
+    "payment_amount": ["amount", "price", "total"],
+    "invoice_amount": ["amount", "price", "total"],
+    "currency": ["currency_code"],
+    
+    # ===== URLS / LINKS =====
+    "url": ["link", "website", "page_url", "booking_url", "payment_link_url", "calendly_link"],
+    "link": ["url", "website", "page_url", "booking_url", "payment_link_url"],
+    "booking_url": ["calendly_link", "url", "link", "payment_link_url"],
+    "calendly_link": ["booking_url", "url", "link"],
+    "payment_link_url": ["url", "link", "booking_url", "stripe_url"],
+    "website": ["url", "link"],
+    
+    # ===== IDS =====
+    "customer_id": ["contact_id", "user_id", "subscriber_id", "member_id"],
+    "contact_id": ["customer_id", "user_id", "subscriber_id"],
+    "record_id": ["id", "item_id", "entry_id", "row_id"],
+    "item_id": ["record_id", "id", "entry_id"],
+    
+    # ===== LOCATION =====
+    "location": ["address", "venue", "place"],
+    "address": ["location", "venue", "place"],
+    
+    # ===== CHANNEL / MESSAGING =====
+    "channel": ["channel_name", "channel_id", "slack_channel"],
+    "channel_name": ["channel", "slack_channel"],
+    
+    # ===== SERVICE TYPE =====
+    "service_type": ["service", "type", "category", "product_name"],
+    "service": ["service_type", "type", "category"],
+    "product_name": ["service_type", "service", "name", "title", "item_name"],
+    "item_name": ["product_name", "name", "title"],
+    
+    # ===== COMPANY / ORG =====
+    "company": ["company_name", "organization", "business_name"],
+    "company_name": ["company", "organization", "business_name"],
+    "organization": ["company", "company_name", "business_name"],
 }
 
 
 def _resolve_aliases(template: str, data: dict) -> str:
-    """Resolve unresolved {{variables}} by trying known aliases from data."""
+    """Resolve unresolved {{variables}} by trying known aliases, then fuzzy matching."""
     import re
     if not template or "{{" not in template:
         return template
     
     def replace_match(match):
         var_name = match.group(1).strip()
-        # Already resolved?
-        if var_name in data and data[var_name]:
+        # Already in data?
+        if var_name in data and data[var_name] is not None and str(data[var_name]):
             return str(data[var_name])
+        
         # Try aliases
         for alias in _VARIABLE_ALIASES.get(var_name, []):
-            if alias in data and data[alias]:
+            if alias in data and data[alias] is not None and str(data[alias]):
                 val = data[alias]
                 # For email fields, extract email from "Name <email>" format
                 if "email" in var_name and "<" in str(val) and ">" in str(val):
                     val = str(val)[str(val).index("<")+1:str(val).index(">")].strip()
                 return str(val)
-        # No alias found — return original
+        
+        # Fuzzy match: try case-insensitive, underscore/hyphen normalization
+        var_normalized = var_name.lower().replace("-", "_").replace(" ", "_")
+        for key in data:
+            key_normalized = key.lower().replace("-", "_").replace(" ", "_")
+            if key_normalized == var_normalized and data[key] is not None and str(data[key]):
+                return str(data[key])
+        
+        # Partial match: if var_name is a substring of a data key or vice versa
+        for key in data:
+            if (var_normalized in key.lower() or key.lower() in var_normalized) and data[key] is not None and str(data[key]) and key not in ("__knowledge_context",):
+                return str(data[key])
+        
+        # No match found — return original
         return match.group(0)
     
     return re.sub(r'\{\{([^}]+)\}\}', replace_match, template)
