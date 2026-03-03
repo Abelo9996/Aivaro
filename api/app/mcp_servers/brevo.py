@@ -8,11 +8,170 @@ from .base import BaseMCPServer
 
 
 class BrevoMCPServer(BaseMCPServer):
+    provider = "brevo"
     BASE_URL = "https://api.brevo.com/v3"
 
     def __init__(self, credentials: dict):
         super().__init__()
         self.api_key = credentials.get("api_key", "")
+
+        # ===== Transactional Email =====
+        self._register("brevo_send_transactional_email", "Send a transactional email via Brevo", {
+            "type": "object",
+            "properties": {
+                "sender_email": {"type": "string", "description": "Sender email address"},
+                "sender_name": {"type": "string", "description": "Sender name"},
+                "to_email": {"type": "string", "description": "Recipient email address"},
+                "to_name": {"type": "string", "description": "Recipient name (optional)"},
+                "subject": {"type": "string", "description": "Email subject"},
+                "html_content": {"type": "string", "description": "HTML body (optional)"},
+                "text_content": {"type": "string", "description": "Plain text body (optional)"},
+            },
+            "required": ["sender_email", "to_email", "subject"],
+        }, self._send_email)
+
+        self._register("brevo_list_transactional_emails", "Get list of transactional emails with filters", {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "description": "Filter by recipient email (optional)"},
+                "limit": {"type": "integer", "description": "Number of results (default 50, max 500)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default 0)"},
+            },
+        }, self._list_emails)
+
+        # ===== SMS =====
+        self._register("brevo_send_sms", "Send a transactional SMS via Brevo", {
+            "type": "object",
+            "properties": {
+                "sender": {"type": "string", "description": "Sender name (max 11 chars) or phone number"},
+                "recipient": {"type": "string", "description": "Recipient phone number (with country code)"},
+                "content": {"type": "string", "description": "SMS content"},
+            },
+            "required": ["sender", "recipient", "content"],
+        }, self._send_sms)
+
+        self._register("brevo_list_sms_events", "Get SMS activity events", {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of results (default 50)"},
+                "phone_number": {"type": "string", "description": "Filter by phone number (optional)"},
+            },
+        }, self._list_sms_events)
+
+        # ===== WhatsApp =====
+        self._register("brevo_send_whatsapp", "Send a WhatsApp message via Brevo", {
+            "type": "object",
+            "properties": {
+                "sender_number": {"type": "string", "description": "WhatsApp sender number"},
+                "recipient_number": {"type": "string", "description": "Recipient WhatsApp number (with country code)"},
+                "template_name": {"type": "string", "description": "Approved WhatsApp template name"},
+                "template_language": {"type": "string", "description": "Template language (e.g. en)"},
+            },
+            "required": ["sender_number", "recipient_number", "template_name"],
+        }, self._send_whatsapp)
+
+        # ===== Contacts =====
+        self._register("brevo_create_contact", "Create a new contact in Brevo", {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "description": "Contact email address"},
+                "first_name": {"type": "string", "description": "First name (optional)"},
+                "last_name": {"type": "string", "description": "Last name (optional)"},
+                "phone": {"type": "string", "description": "Phone number (optional)"},
+                "list_ids": {"type": "string", "description": "Comma-separated list IDs to add contact to (optional)"},
+            },
+            "required": ["email"],
+        }, self._create_contact)
+
+        self._register("brevo_update_contact", "Update an existing contact in Brevo", {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "description": "Contact email to update"},
+                "first_name": {"type": "string", "description": "Updated first name (optional)"},
+                "last_name": {"type": "string", "description": "Updated last name (optional)"},
+                "phone": {"type": "string", "description": "Updated phone (optional)"},
+                "list_ids": {"type": "string", "description": "Comma-separated list IDs (optional)"},
+            },
+            "required": ["email"],
+        }, self._update_contact)
+
+        self._register("brevo_get_contact", "Get contact details by email", {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "description": "Contact email address"},
+            },
+            "required": ["email"],
+        }, self._get_contact)
+
+        self._register("brevo_list_contacts", "Get all contacts with pagination", {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of results (default 50, max 1000)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default 0)"},
+            },
+        }, self._list_contacts)
+
+        self._register("brevo_delete_contact", "Delete a contact by email", {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string", "description": "Contact email to delete"},
+            },
+            "required": ["email"],
+        }, self._delete_contact)
+
+        # ===== Contact Lists =====
+        self._register("brevo_list_folders", "Get all contact list folders", {
+            "type": "object", "properties": {},
+        }, self._list_folders)
+
+        self._register("brevo_list_lists", "Get all contact lists", {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "Number of results (default 50)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default 0)"},
+            },
+        }, self._list_lists)
+
+        self._register("brevo_create_list", "Create a new contact list", {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "List name"},
+                "folder_id": {"type": "string", "description": "Folder ID to put the list in"},
+            },
+            "required": ["name", "folder_id"],
+        }, self._create_list)
+
+        # ===== Email Campaigns =====
+        self._register("brevo_create_email_campaign", "Create an email campaign in Brevo", {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Campaign name"},
+                "subject": {"type": "string", "description": "Email subject"},
+                "sender_email": {"type": "string", "description": "Sender email"},
+                "sender_name": {"type": "string", "description": "Sender name"},
+                "html_content": {"type": "string", "description": "HTML body content"},
+                "list_ids": {"type": "string", "description": "Comma-separated list IDs to send to"},
+                "scheduled_at": {"type": "string", "description": "ISO datetime to schedule (optional)"},
+            },
+            "required": ["name", "subject", "sender_email", "html_content", "list_ids"],
+        }, self._create_campaign)
+
+        self._register("brevo_list_email_campaigns", "Get all email campaigns", {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string", "description": "Filter by status: draft, sent, queued, etc. (optional)"},
+                "limit": {"type": "integer", "description": "Number of results (default 50)"},
+                "offset": {"type": "integer", "description": "Pagination offset (default 0)"},
+            },
+        }, self._list_campaigns)
+
+        self._register("brevo_send_campaign_now", "Send an existing draft campaign immediately", {
+            "type": "object",
+            "properties": {
+                "campaign_id": {"type": "string", "description": "Campaign ID to send"},
+            },
+            "required": ["campaign_id"],
+        }, self._send_campaign)
 
     @property
     def headers(self) -> dict:
@@ -22,183 +181,7 @@ class BrevoMCPServer(BaseMCPServer):
             "Accept": "application/json",
         }
 
-    def get_tools(self) -> list[dict]:
-        return [
-            # ===== Transactional Email =====
-            {
-                "name": "brevo_send_transactional_email",
-                "description": "Send a transactional email via Brevo",
-                "parameters": {
-                    "sender_email": "Sender email address",
-                    "sender_name": "Sender name",
-                    "to_email": "Recipient email address",
-                    "to_name": "Recipient name (optional)",
-                    "subject": "Email subject",
-                    "html_content": "HTML body (optional)",
-                    "text_content": "Plain text body (optional)",
-                },
-            },
-            {
-                "name": "brevo_list_transactional_emails",
-                "description": "Get list of transactional emails with filters",
-                "parameters": {
-                    "email": "Filter by recipient email (optional)",
-                    "limit": "Number of results (default 50, max 500)",
-                    "offset": "Pagination offset (default 0)",
-                },
-            },
-            # ===== SMS =====
-            {
-                "name": "brevo_send_sms",
-                "description": "Send a transactional SMS via Brevo",
-                "parameters": {
-                    "sender": "Sender name (max 11 chars) or phone number",
-                    "recipient": "Recipient phone number (with country code, e.g. +1234567890)",
-                    "content": "SMS content",
-                },
-            },
-            {
-                "name": "brevo_list_sms_events",
-                "description": "Get SMS activity events",
-                "parameters": {
-                    "limit": "Number of results (default 50)",
-                    "phone_number": "Filter by phone number (optional)",
-                },
-            },
-            # ===== WhatsApp =====
-            {
-                "name": "brevo_send_whatsapp",
-                "description": "Send a WhatsApp message via Brevo",
-                "parameters": {
-                    "sender_number": "WhatsApp sender number",
-                    "recipient_number": "Recipient WhatsApp number (with country code)",
-                    "template_name": "Approved WhatsApp template name",
-                    "template_language": "Template language (e.g. en)",
-                },
-            },
-            # ===== Contacts =====
-            {
-                "name": "brevo_create_contact",
-                "description": "Create a new contact in Brevo",
-                "parameters": {
-                    "email": "Contact email address",
-                    "first_name": "First name (optional)",
-                    "last_name": "Last name (optional)",
-                    "phone": "Phone number (optional)",
-                    "list_ids": "Comma-separated list IDs to add contact to (optional)",
-                },
-            },
-            {
-                "name": "brevo_update_contact",
-                "description": "Update an existing contact in Brevo",
-                "parameters": {
-                    "email": "Contact email to update",
-                    "first_name": "Updated first name (optional)",
-                    "last_name": "Updated last name (optional)",
-                    "phone": "Updated phone (optional)",
-                    "list_ids": "Comma-separated list IDs (optional)",
-                },
-            },
-            {
-                "name": "brevo_get_contact",
-                "description": "Get contact details by email",
-                "parameters": {
-                    "email": "Contact email address",
-                },
-            },
-            {
-                "name": "brevo_list_contacts",
-                "description": "Get all contacts with pagination",
-                "parameters": {
-                    "limit": "Number of results (default 50, max 1000)",
-                    "offset": "Pagination offset (default 0)",
-                },
-            },
-            {
-                "name": "brevo_delete_contact",
-                "description": "Delete a contact by email",
-                "parameters": {
-                    "email": "Contact email to delete",
-                },
-            },
-            # ===== Contact Lists =====
-            {
-                "name": "brevo_list_folders",
-                "description": "Get all contact list folders",
-                "parameters": {},
-            },
-            {
-                "name": "brevo_list_lists",
-                "description": "Get all contact lists",
-                "parameters": {
-                    "limit": "Number of results (default 50)",
-                    "offset": "Pagination offset (default 0)",
-                },
-            },
-            {
-                "name": "brevo_create_list",
-                "description": "Create a new contact list",
-                "parameters": {
-                    "name": "List name",
-                    "folder_id": "Folder ID to put the list in",
-                },
-            },
-            # ===== Email Campaigns =====
-            {
-                "name": "brevo_create_email_campaign",
-                "description": "Create an email campaign in Brevo",
-                "parameters": {
-                    "name": "Campaign name",
-                    "subject": "Email subject",
-                    "sender_email": "Sender email",
-                    "sender_name": "Sender name",
-                    "html_content": "HTML body content",
-                    "list_ids": "Comma-separated list IDs to send to",
-                    "scheduled_at": "ISO datetime to schedule (optional, sends immediately if omitted)",
-                },
-            },
-            {
-                "name": "brevo_list_email_campaigns",
-                "description": "Get all email campaigns",
-                "parameters": {
-                    "status": "Filter by status: draft, sent, queued, etc. (optional)",
-                    "limit": "Number of results (default 50)",
-                    "offset": "Pagination offset (default 0)",
-                },
-            },
-            {
-                "name": "brevo_send_campaign_now",
-                "description": "Send an existing draft campaign immediately",
-                "parameters": {
-                    "campaign_id": "Campaign ID to send",
-                },
-            },
-        ]
-
-    async def call_tool(self, tool_name: str, params: dict) -> Any:
-        method_map = {
-            "brevo_send_transactional_email": self._send_email,
-            "brevo_list_transactional_emails": self._list_emails,
-            "brevo_send_sms": self._send_sms,
-            "brevo_list_sms_events": self._list_sms_events,
-            "brevo_send_whatsapp": self._send_whatsapp,
-            "brevo_create_contact": self._create_contact,
-            "brevo_update_contact": self._update_contact,
-            "brevo_get_contact": self._get_contact,
-            "brevo_list_contacts": self._list_contacts,
-            "brevo_delete_contact": self._delete_contact,
-            "brevo_list_folders": self._list_folders,
-            "brevo_list_lists": self._list_lists,
-            "brevo_create_list": self._create_list,
-            "brevo_create_email_campaign": self._create_campaign,
-            "brevo_list_email_campaigns": self._list_campaigns,
-            "brevo_send_campaign_now": self._send_campaign,
-        }
-        handler = method_map.get(tool_name)
-        if not handler:
-            raise ValueError(f"Unknown tool: {tool_name}")
-        return await handler(params)
-
+    # ===== Handlers =====
     async def _send_email(self, params: dict) -> dict:
         to = [{"email": params["to_email"]}]
         if params.get("to_name"):

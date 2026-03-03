@@ -1,9 +1,78 @@
 import json
+import logging
 from typing import Optional, List, Dict, Any
 
 from app.config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+
+def _get_mcp_tool_docs(connected_providers: list[str] = None) -> str:
+    """Generate documentation for MCP tools that aren't hardcoded in the system prompt.
+    
+    Only includes tools from connected providers. Returns a string block to append to the prompt.
+    """
+    # Providers already fully documented in the hardcoded prompt
+    HARDCODED_PROVIDERS = {"google", "slack", "stripe", "twilio", "airtable", "notion", "calendly", "mailchimp"}
+    
+    from app.mcp_servers.registry import SERVER_FACTORIES
+    
+    # Determine which new providers to document
+    if connected_providers:
+        new_providers = [p for p in connected_providers if p not in HARDCODED_PROVIDERS and p in SERVER_FACTORIES]
+    else:
+        # If no connected_providers info, include all non-hardcoded
+        new_providers = [p for p in SERVER_FACTORIES if p not in HARDCODED_PROVIDERS]
+    
+    if not new_providers:
+        return ""
+    
+    # Fake creds to instantiate servers (just for schema — no API calls)
+    fake_creds = {
+        "access_token": "x", "api_key": "x", "account_sid": "x", "auth_token": "x",
+        "phone_number": "x", "shop_domain": "x", "bot_token": "x", "guild_id": "x",
+        "domain": "x", "email": "x", "api_token": "x", "phone_number_id": "x",
+        "refresh_token": "x",
+    }
+    
+    sections = []
+    for provider in sorted(new_providers):
+        factory = SERVER_FACTORIES.get(provider)
+        if not factory:
+            continue
+        try:
+            server = factory(fake_creds)
+            tools = server.list_tools()
+            if not tools:
+                continue
+            
+            lines = [f"\n{provider.upper()} node types (user has {provider} connected):"]
+            for t in tools:
+                func_def = t.get("function", t)
+                name = func_def.get("name", "")
+                desc = func_def.get("description", "")
+                params = func_def.get("parameters", {})
+                props = params.get("properties", {})
+                required = params.get("required", [])
+                
+                param_parts = []
+                for pname, pdef in props.items():
+                    pdesc = pdef.get("description", "")
+                    req_marker = " (required)" if pname in required else ""
+                    param_parts.append(f'{pname}: "{pdesc}"{req_marker}')
+                
+                param_str = ", ".join(param_parts) if param_parts else "no parameters"
+                lines.append(f"- {name}: {desc}. Parameters: {{{param_str}}}")
+            
+            sections.append("\n".join(lines))
+        except Exception as e:
+            logger.warning(f"[ai_generator] Failed to get MCP tool docs for {provider}: {e}")
+    
+    if not sections:
+        return ""
+    
+    return "\n\nADDITIONAL INTEGRATION NODE TYPES (from MCP):\n" + "\n".join(sections) + "\n"
 
 
 # ============================================================
@@ -357,6 +426,18 @@ APPROVAL_DEFAULT_NODES = {
     "twilio_make_call",
     "mailchimp_send_campaign",
     "approval",
+    # MCP tools that send external communications
+    "brevo_send_transactional_email",
+    "brevo_send_sms",
+    "brevo_send_whatsapp",
+    "brevo_send_campaign_now",
+    "brevo_create_email_campaign",
+    "sendgrid_send_email",
+    "sendgrid_send_template",
+    "whatsapp_send_message",
+    "whatsapp_send_template",
+    "discord_send_message",
+    "shopify_cancel_order",
 }
 
 # Node types that should never require approval
@@ -737,7 +818,7 @@ IMPORTANT RULES:
 17. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
 18. Default requiresApproval: true for: emails to external recipients, payment processing, campaign sends, phone calls. BUT if the user explicitly said "no approval", "auto-send", "don't ask me", or similar → set requiresApproval: false on ALL nodes. The user's explicit preference ALWAYS overrides the default.
 19. The start_email trigger monitors the user's connected Gmail account - do NOT ask them to set up webhooks or external services
-20. NEVER use node types not listed above. Only use the exact types defined here.
+20. Only use node types listed in this prompt (hardcoded types above + any MCP integration types listed below). If a user requests a service not available, explain what services ARE available and suggest the closest alternative.
 21. CONDITION BRANCHING: When using condition nodes, create TWO separate paths with edges that have sourceHandle="yes" and sourceHandle="no". The true branch runs when the condition is met, false when not met. Example: condition checks "calendly_count greater_than 0" → true branch = conflict exists (deny), false branch = no conflict (proceed). NEVER run both branches sequentially.
 
 IMPORTANT — CONDITION NODES CAN ONLY DO SIMPLE FIELD COMPARISONS:
@@ -764,6 +845,12 @@ The condition node checks: input_data[field] <operator> value. Available operato
 29. When using calendly_list_events to check for conflicts, FILTER by the requested date using min_start_time and max_start_time parameters. Do NOT list ALL events -- that checks the wrong thing.
 30. NON-MATCHING CONDITION BRANCHES: When the "no" branch of a condition means "this email is irrelevant" (e.g., not an appointment), do NOT send any email or notification. Just let the workflow end silently. Only create a "no" branch action when the user explicitly asks for one (e.g., "send a rejection email"). Ignoring irrelevant emails is the correct default behavior.
 31. NEVER reference {{calendly_event_link}}, {{calendly_link}}, {{booking_link}}, or any link variable unless a previous workflow step actually CREATES that link. google_calendar_create does NOT produce a link. If you need to send a confirmation, just confirm the date/time — do NOT include a fake link variable.
+32. SERVICE DISAMBIGUATION: When the user's request could be fulfilled by MULTIPLE connected services (e.g., sending email via Gmail send_email vs Brevo brevo_send_transactional_email vs SendGrid sendgrid_send_email), use the SPECIFIC service they mentioned. If they didn't specify, prefer the service that best fits the use case:
+   - Transactional/bulk email to customers → Brevo or SendGrid (if connected)
+   - Personal email replies → Gmail (send_email)
+   - Marketing campaigns → Mailchimp or Brevo campaigns
+   - SMS → Twilio or Brevo SMS (whichever is connected)
+   If ambiguous AND multiple services are connected, note in the summary which service is being used and why.
 
 Example for "booking automation with deposit":
 {
@@ -799,6 +886,11 @@ Example for condition branching (appointment with conflict check):
 }
 
 Return ONLY valid JSON, no markdown code blocks or explanation."""
+
+        # Inject MCP tool documentation for non-hardcoded providers
+        mcp_docs = _get_mcp_tool_docs(connected_providers)
+        if mcp_docs:
+            system_prompt += mcp_docs
 
         response = client.chat.completions.create(
             model="gpt-4o",
