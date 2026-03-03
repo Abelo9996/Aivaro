@@ -1,6 +1,7 @@
 """
 Email Trigger Service - Polls Gmail for new emails and triggers matching workflows.
 """
+import os
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
@@ -100,10 +101,38 @@ class EmailTriggerService:
         
         gmail_query = " ".join(query_parts)
         
-        # Initialize Google service
+        # Initialize Google service with auto-refresh
+        def _on_token_refresh(new_access_token, new_refresh_token):
+            """Persist refreshed tokens back to DB."""
+            try:
+                from app.database import SessionLocal
+                from app.models.connection import Connection
+                db_inner = SessionLocal()
+                try:
+                    conn = db_inner.query(Connection).filter(
+                        Connection.user_id == workflow.user_id,
+                        Connection.provider == "google"
+                    ).first()
+                    if conn:
+                        import json
+                        creds = json.loads(conn.credentials) if isinstance(conn.credentials, str) else conn.credentials
+                        creds["access_token"] = new_access_token
+                        if new_refresh_token:
+                            creds["refresh_token"] = new_refresh_token
+                        conn.credentials = json.dumps(creds) if isinstance(conn.credentials, str) else creds
+                        db_inner.commit()
+                        print(f"[EmailTrigger] Persisted refreshed Google token for user {workflow.user_id}")
+                finally:
+                    db_inner.close()
+            except Exception as e:
+                print(f"[EmailTrigger] Failed to persist refreshed token: {e}")
+        
         google = GoogleService(
             access_token=credentials.get("access_token"),
-            refresh_token=credentials.get("refresh_token")
+            refresh_token=credentials.get("refresh_token"),
+            client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+            client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+            on_token_refresh=_on_token_refresh,
         )
         
         try:

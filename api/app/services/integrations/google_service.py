@@ -13,11 +13,18 @@ class GoogleService:
     BASE_SHEETS_URL = "https://sheets.googleapis.com/v4/spreadsheets"
     BASE_GMAIL_URL = "https://gmail.googleapis.com/gmail/v1/users/me"
     BASE_CALENDAR_URL = "https://www.googleapis.com/calendar/v3"
+    TOKEN_URL = "https://oauth2.googleapis.com/token"
     
-    def __init__(self, access_token: str, refresh_token: Optional[str] = None):
+    def __init__(self, access_token: str, refresh_token: Optional[str] = None,
+                 client_id: Optional[str] = None, client_secret: Optional[str] = None,
+                 on_token_refresh: Optional[Any] = None):
         self.access_token = access_token
         self.refresh_token = refresh_token
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.on_token_refresh = on_token_refresh  # callback(new_access_token, new_refresh_token)
         self._client = None
+        self._refreshing = False
     
     @property
     def headers(self) -> dict:
@@ -30,6 +37,68 @@ class GoogleService:
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=30.0)
         return self._client
+    
+    async def _refresh_access_token(self):
+        """Refresh the access token using the refresh token."""
+        if not self.refresh_token or not self.client_id or not self.client_secret:
+            print("[GoogleService] Cannot refresh: missing refresh_token, client_id, or client_secret")
+            return False
+        
+        if self._refreshing:
+            return False
+        self._refreshing = True
+        
+        try:
+            client = await self._get_client()
+            resp = await client.post(self.TOKEN_URL, data={
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "refresh_token": self.refresh_token,
+                "grant_type": "refresh_token",
+            })
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                self.access_token = data["access_token"]
+                # Google doesn't always return a new refresh token
+                new_refresh = data.get("refresh_token", self.refresh_token)
+                if new_refresh:
+                    self.refresh_token = new_refresh
+                
+                print(f"[GoogleService] Token refreshed successfully")
+                
+                # Persist new tokens via callback
+                if self.on_token_refresh:
+                    try:
+                        self.on_token_refresh(self.access_token, new_refresh)
+                    except Exception as e:
+                        print(f"[GoogleService] Token persist callback failed: {e}")
+                
+                return True
+            else:
+                print(f"[GoogleService] Token refresh failed: {resp.status_code} {resp.text}")
+                return False
+        except Exception as e:
+            print(f"[GoogleService] Token refresh error: {e}")
+            return False
+        finally:
+            self._refreshing = False
+    
+    async def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        """Make an HTTP request with automatic token refresh on 401."""
+        client = await self._get_client()
+        kwargs.setdefault("headers", self.headers)
+        
+        resp = await client.request(method, url, **kwargs)
+        
+        # If unauthorized, try refreshing the token and retry
+        if resp.status_code == 401 and self.refresh_token:
+            refreshed = await self._refresh_access_token()
+            if refreshed:
+                kwargs["headers"] = self.headers  # Update with new token
+                resp = await client.request(method, url, **kwargs)
+        
+        return resp
     
     async def close(self):
         if self._client:
@@ -95,8 +164,7 @@ class GoogleService:
     
     async def list_spreadsheets(self) -> List[dict]:
         """List user's spreadsheets via Google Drive API."""
-        client = await self._get_client()
-        response = await client.get(
+        response = await self._request("GET",
             "https://www.googleapis.com/drive/v3/files",
             params={
                 "q": "mimeType='application/vnd.google-apps.spreadsheet'",
@@ -104,7 +172,6 @@ class GoogleService:
                 "orderBy": "modifiedTime desc",
                 "pageSize": 50,
             },
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -115,16 +182,14 @@ class GoogleService:
     
     async def find_spreadsheet_by_name(self, name: str) -> Optional[str]:
         """Find a spreadsheet by name and return its ID."""
-        client = await self._get_client()
         # Search for spreadsheet by name
-        response = await client.get(
+        response = await self._request("GET",
             "https://www.googleapis.com/drive/v3/files",
             params={
                 "q": f"mimeType='application/vnd.google-apps.spreadsheet' and name contains '{name}'",
                 "fields": "files(id,name)",
                 "pageSize": 10,
             },
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -143,10 +208,8 @@ class GoogleService:
 
     async def get_spreadsheet(self, spreadsheet_id: str) -> dict:
         """Get spreadsheet metadata."""
-        client = await self._get_client()
-        response = await client.get(
+        response = await self._request("GET",
             f"{self.BASE_SHEETS_URL}/{spreadsheet_id}",
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -160,10 +223,8 @@ class GoogleService:
         range_name: str = "Sheet1"
     ) -> List[List[Any]]:
         """Get values from a spreadsheet range."""
-        client = await self._get_client()
-        response = await client.get(
+        response = await self._request("GET",
             f"{self.BASE_SHEETS_URL}/{spreadsheet_id}/values/{range_name}",
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -194,18 +255,16 @@ class GoogleService:
         sheet_name: str = "Sheet1"
     ) -> dict:
         """Append a row to a spreadsheet."""
-        client = await self._get_client()
         
         # Ensure all values are strings to prevent Google Sheets from converting dates to serial numbers
         string_values = [str(v) if v is not None else "" for v in values]
         
-        response = await client.post(
+        response = await self._request("POST",
             f"{self.BASE_SHEETS_URL}/{spreadsheet_id}/values/{sheet_name}:append",
             params={
                 "valueInputOption": "RAW",  # Use RAW to prevent date/number auto-conversion
                 "insertDataOption": "INSERT_ROWS",
             },
-            headers=self.headers,
             json={
                 "values": [string_values]
             },
@@ -312,10 +371,8 @@ class GoogleService:
     
     async def create_spreadsheet(self, title: str) -> dict:
         """Create a new spreadsheet."""
-        client = await self._get_client()
-        response = await client.post(
+        response = await self._request("POST",
             self.BASE_SHEETS_URL,
-            headers=self.headers,
             json={
                 "properties": {"title": title}
             },
@@ -366,10 +423,8 @@ class GoogleService:
         # Encode message
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
         
-        client = await self._get_client()
-        response = await client.post(
+        response = await self._request("POST",
             f"{self.BASE_GMAIL_URL}/messages/send",
-            headers=self.headers,
             json={"raw": raw},
         )
         
@@ -384,15 +439,13 @@ class GoogleService:
         max_results: int = 10
     ) -> List[dict]:
         """List Gmail messages."""
-        client = await self._get_client()
         params = {"maxResults": max_results}
         if query:
             params["q"] = query
         
-        response = await client.get(
+        response = await self._request("GET",
             f"{self.BASE_GMAIL_URL}/messages",
             params=params,
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -403,11 +456,9 @@ class GoogleService:
     
     async def get_message(self, message_id: str) -> dict:
         """Get a specific Gmail message."""
-        client = await self._get_client()
-        response = await client.get(
+        response = await self._request("GET",
             f"{self.BASE_GMAIL_URL}/messages/{message_id}",
             params={"format": "full"},
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -419,10 +470,8 @@ class GoogleService:
     
     async def list_calendars(self) -> List[dict]:
         """List user's calendars."""
-        client = await self._get_client()
-        response = await client.get(
+        response = await self._request("GET",
             f"{self.BASE_CALENDAR_URL}/users/me/calendarList",
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -439,7 +488,6 @@ class GoogleService:
         max_results: int = 10
     ) -> List[dict]:
         """List calendar events."""
-        client = await self._get_client()
         params = {
             "maxResults": max_results,
             "singleEvents": True,
@@ -454,10 +502,9 @@ class GoogleService:
         if time_max:
             params["timeMax"] = time_max
         
-        response = await client.get(
+        response = await self._request("GET",
             f"{self.BASE_CALENDAR_URL}/calendars/{calendar_id}/events",
             params=params,
-            headers=self.headers,
         )
         
         if response.status_code == 200:
@@ -476,7 +523,6 @@ class GoogleService:
         attendees: Optional[List[str]] = None
     ) -> dict:
         """Create a calendar event."""
-        client = await self._get_client()
         
         event_data = {
             "summary": summary,
@@ -488,9 +534,8 @@ class GoogleService:
         if attendees:
             event_data["attendees"] = [{"email": email} for email in attendees]
         
-        response = await client.post(
+        response = await self._request("POST",
             f"{self.BASE_CALENDAR_URL}/calendars/{calendar_id}/events",
-            headers=self.headers,
             json=event_data,
         )
         
