@@ -731,7 +731,7 @@ IMPORTANT RULES:
 11. For CRM/database workflows → prefer airtable_create_record or notion_create_page for storing customer data
 12. For marketing/newsletter workflows → use mailchimp_add_subscriber to add contacts
 13. For SMS notifications → use twilio_send_sms for text confirmations
-14. For scheduling links → use calendly_create_link to generate booking links
+14. For booking/appointment scheduling → use google_calendar_create (NOT calendly_create_link which requires paid Calendly plan)
 15. Available template variables: {{sender_email}}, {{sender_name}}, {{from}}, {{to}}, {{subject}}, {{snippet}}, {{body}}, {{email}}, {{name}}, {{date}}, {{time}}, {{amount}}, {{payment_link_url}}, {{phone}}, {{ai_response}}, {{user_email}}
 16. Always connect nodes with edges
 17. Position nodes vertically, starting at y=50, spaced 150px apart, x=250
