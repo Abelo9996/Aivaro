@@ -17,7 +17,7 @@ export default function PrivacyPage() {
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       minHeight: '100vh',
-      background: colors.darkBg,
+      background: 'transparent',
       position: 'relative',
     }}>      <div style={{ position: 'relative', zIndex: 10 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 80px' }}>

@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
-const VANTA_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/demo', '/terms', '/privacy', '/verify'];
+const VANTA_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/demo', '/terms', '/privacy', '/verify', '/landing'];
 
 export default function GlobalVanta() {
   const pathname = usePathname();

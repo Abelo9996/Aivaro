@@ -66,7 +66,7 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '48px 16px',
-      backgroundColor: colors.darkBg,
+      backgroundColor: 'transparent',
       position: 'relative',
       overflow: 'hidden',
     }}>

@@ -69,7 +69,7 @@ function ResetPasswordContent() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: colors.darkBg,
+        background: 'transparent',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -97,7 +97,7 @@ function ResetPasswordContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: colors.darkBg,
+      background: 'transparent',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',

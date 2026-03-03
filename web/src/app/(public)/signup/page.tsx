@@ -84,7 +84,7 @@ export default function SignupPage() {
     <div className="signup-wrap" style={{
       height: '100vh',
       overflow: 'hidden',
-      background: `linear-gradient(135deg, ${colors.darkerBg} 0%, ${colors.darkBg} 50%, ${colors.darkerBg} 100%)`,
+      background: 'transparent',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',

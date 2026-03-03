@@ -1,6 +1,5 @@
 'use client';
 import PageTransition from '@/components/PageTransition';
-import VantaBackground from '@/components/VantaBackground';
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
@@ -1342,8 +1341,6 @@ export default function LandingPage() {
           50% { opacity: 0.5; transform: scale(0.85); }
         }
       `}</style>
-      {/* Vanta Background */}
-      <VantaBackground />
 
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 10 }}>
