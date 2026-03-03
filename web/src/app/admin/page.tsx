@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { api } from '@/lib/api';
@@ -106,12 +106,30 @@ function MiniChart({ data, color, height = 60 }: { data: number[]; color: string
   );
 }
 
-function AreaChart({ data, labels, color, height = 120 }: { data: number[]; labels?: string[]; color: string; height?: number }) {
-  if (!data.length) return null;
+function AreaChart({ data, labels, color, height = 160 }: { data: number[]; labels?: string[]; color: string; height?: number }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      for (const entry of entries) setContainerWidth(entry.contentRect.width);
+    });
+    obs.observe(el);
+    setContainerWidth(el.getBoundingClientRect().width);
+    return () => obs.disconnect();
+  }, []);
+
+  if (!data.length || !containerWidth) {
+    return <div ref={containerRef} style={{ width: '100%', height }} />;
+  }
+
   const max = Math.max(...data, 1);
-  const w = 400;
+  const w = containerWidth;
   const h = height;
-  const pad = { top: 10, right: 10, bottom: 24, left: 40 };
+  const pad = { top: 12, right: 12, bottom: 28, left: 36 };
   const cw = w - pad.left - pad.right;
   const ch = h - pad.top - pad.bottom;
   const points = data.map((v, i) => ({
@@ -122,29 +140,93 @@ function AreaChart({ data, labels, color, height = 120 }: { data: number[]; labe
   const area = line + ` L${points[points.length - 1].x},${pad.top + ch} L${points[0].x},${pad.top + ch} Z`;
   const yTicks = [0, Math.round(max / 2), max];
 
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    // Find closest data point
+    let closest = 0;
+    let closestDist = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const dist = Math.abs(points[i].x - mouseX);
+      if (dist < closestDist) { closestDist = dist; closest = i; }
+    }
+    setHoverIdx(closest);
+  };
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height }} preserveAspectRatio="none">
-      {yTicks.map((tick, i) => {
-        const y = pad.top + ch - (tick / max) * ch;
-        return (
-          <g key={i}>
-            <line x1={pad.left} x2={w - pad.right} y1={y} y2={y} stroke="rgba(139,92,246,0.1)" strokeWidth={1} />
-            <text x={pad.left - 6} y={y + 4} fill="rgba(226,232,240,0.4)" fontSize={9} textAnchor="end">{tick}</text>
-          </g>
-        );
-      })}
-      <path d={area} fill={`${color}15`} />
-      <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((p, i) => data[i] > 0 ? (
-        <circle key={i} cx={p.x} cy={p.y} r={3} fill={color} stroke="#050510" strokeWidth={1.5} />
-      ) : null)}
-      {labels && labels.map((l, i) => {
-        const showEvery = Math.max(1, Math.floor(labels.length / 6));
-        if (i % showEvery !== 0 && i !== labels.length - 1) return null;
-        const x = pad.left + (i / Math.max(labels.length - 1, 1)) * cw;
-        return <text key={i} x={x} y={h - 4} fill="rgba(226,232,240,0.4)" fontSize={8} textAnchor="middle">{l}</text>;
-      })}
-    </svg>
+    <div ref={containerRef} style={{ width: '100%', position: 'relative' }}>
+      <svg
+        width={w} height={h}
+        style={{ display: 'block', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        {/* Grid lines */}
+        {yTicks.map((tick, i) => {
+          const y = pad.top + ch - (tick / max) * ch;
+          return (
+            <g key={i}>
+              <line x1={pad.left} x2={w - pad.right} y1={y} y2={y} stroke="rgba(139,92,246,0.08)" strokeWidth={1} />
+              <text x={pad.left - 8} y={y + 3} fill="rgba(226,232,240,0.35)" fontSize={10} textAnchor="end">{tick}</text>
+            </g>
+          );
+        })}
+        {/* Gradient definition */}
+        <defs>
+          <linearGradient id={`grad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        {/* Area fill */}
+        <path d={area} fill={`url(#grad-${color.replace('#','')})`} />
+        {/* Line */}
+        <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Hover vertical line */}
+        {hoverIdx !== null && (
+          <line
+            x1={points[hoverIdx].x} x2={points[hoverIdx].x}
+            y1={pad.top} y2={pad.top + ch}
+            stroke={color} strokeWidth={1} strokeDasharray="4 3" opacity={0.5}
+          />
+        )}
+        {/* Data points */}
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r={hoverIdx === i ? 5 : (data[i] > 0 ? 2.5 : 0)}
+            fill={hoverIdx === i ? color : color} stroke="#0a0a1a" strokeWidth={hoverIdx === i ? 2 : 1}
+            style={{ transition: 'r 0.15s ease' }}
+          />
+        ))}
+        {/* X labels */}
+        {labels && labels.map((l, i) => {
+          const showEvery = Math.max(1, Math.floor(labels.length / 6));
+          if (i % showEvery !== 0 && i !== labels.length - 1) return null;
+          const x = pad.left + (i / Math.max(labels.length - 1, 1)) * cw;
+          return <text key={i} x={x} y={h - 6} fill="rgba(226,232,240,0.35)" fontSize={10} textAnchor="middle">{l}</text>;
+        })}
+      </svg>
+      {/* Tooltip */}
+      {hoverIdx !== null && (
+        <div style={{
+          position: 'absolute',
+          left: Math.min(Math.max(points[hoverIdx].x - 40, 0), w - 90),
+          top: Math.max(points[hoverIdx].y - 44, 0),
+          background: 'rgba(15,15,35,0.95)',
+          border: `1px solid ${color}50`,
+          borderRadius: '8px',
+          padding: '6px 12px',
+          pointerEvents: 'none',
+          zIndex: 10,
+          backdropFilter: 'blur(8px)',
+          boxShadow: `0 4px 12px rgba(0,0,0,0.4)`,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary }}>{data[hoverIdx]}</div>
+          {labels && labels[hoverIdx] && (
+            <div style={{ fontSize: 11, color: colors.textMuted }}>{labels[hoverIdx]}</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
