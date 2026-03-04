@@ -15,7 +15,8 @@ class BrevoMCPServer(BaseMCPServer):
         super().__init__()
         raw_key = credentials.get("api_key") or credentials.get("access_token") or ""
         self.api_key = raw_key.strip()
-        print(f"[Brevo.__init__] cred_keys={list(credentials.keys())} api_key_len={len(self.api_key)} prefix={self.api_key[:12] if self.api_key else 'EMPTY'}")
+        self.default_sender_email = (credentials.get("sender_email") or "").strip()
+        print(f"[Brevo.__init__] cred_keys={list(credentials.keys())} api_key_len={len(self.api_key)} prefix={self.api_key[:12] if self.api_key else 'EMPTY'} sender={self.default_sender_email or 'NOT SET'}")
         if not self.api_key:
             import logging
             logging.getLogger(__name__).warning(
@@ -26,7 +27,7 @@ class BrevoMCPServer(BaseMCPServer):
         self._register("brevo_send_transactional_email", "Send a transactional email via Brevo", {
             "type": "object",
             "properties": {
-                "sender_email": {"type": "string", "description": "Sender email address"},
+                "sender_email": {"type": "string", "description": "Sender email address (uses verified sender from connection if not set)"},
                 "sender_name": {"type": "string", "description": "Sender name"},
                 "to_email": {"type": "string", "description": "Recipient email address"},
                 "to_name": {"type": "string", "description": "Recipient name (optional)"},
@@ -34,7 +35,7 @@ class BrevoMCPServer(BaseMCPServer):
                 "html_content": {"type": "string", "description": "HTML body (optional)"},
                 "text_content": {"type": "string", "description": "Plain text body (optional)"},
             },
-            "required": ["sender_email", "to_email", "subject"],
+            "required": ["to_email", "subject"],
         }, self._send_email)
 
         self._register("brevo_list_transactional_emails", "Get list of transactional emails with filters", {
@@ -195,11 +196,18 @@ class BrevoMCPServer(BaseMCPServer):
             f"[Brevo] Sending email, api_key length={len(self.api_key)}, "
             f"prefix={self.api_key[:12] if self.api_key else 'EMPTY'}..."
         )
+        # Use default sender from connection if not specified or using user's email
+        sender_email = params.get("sender_email", "").strip()
+        if not sender_email or (self.default_sender_email and sender_email != self.default_sender_email):
+            if self.default_sender_email:
+                print(f"[Brevo] Using verified sender: {self.default_sender_email} (was: {sender_email or 'empty'})")
+                sender_email = self.default_sender_email
+        
         to = [{"email": params["to_email"]}]
         if params.get("to_name"):
             to[0]["name"] = params["to_name"]
         body = {
-            "sender": {"email": params["sender_email"], "name": params.get("sender_name", params["sender_email"])},
+            "sender": {"email": sender_email, "name": params.get("sender_name", sender_email)},
             "to": to,
             "subject": params["subject"],
         }

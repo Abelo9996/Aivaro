@@ -2971,6 +2971,7 @@ _PARAM_AUTOFILL_MAP = {
     "phone": ["phone", "phone_number", "Phone", "to_phone"],
     "to_number": ["phone", "phone_number", "Phone", "to_phone", "to_number"],
     # General
+    "sender_email": ["sender_email", "my_email", "owner_email", "user_email", "from_email"],
     "name": ["name", "Name", "first_name", "full_name", "contact_name"],
     "recipient_name": ["name", "Name", "first_name", "full_name"],
 }

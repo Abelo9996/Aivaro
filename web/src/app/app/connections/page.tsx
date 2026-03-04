@@ -314,6 +314,12 @@ export default function ConnectionsPage() {
           credentials = { shop_domain: parts[0] || '', access_token: parts[1] || '' };
           break;
         }
+        case 'brevo': {
+          const parts = raw.split(',').map(s => s.trim());
+          credentials = { api_key: parts[0] || '' };
+          if (parts[1]) credentials.sender_email = parts[1];
+          break;
+        }
         case 'discord': {
           const parts = raw.split(',').map(s => s.trim());
           credentials = { bot_token: parts[0] || '' };
@@ -383,6 +389,8 @@ export default function ConnectionsPage() {
         return 'pat-... (Private App access token)';
       case 'shopify':
         return 'your-store.myshopify.com,shpat_... (domain,token)';
+      case 'brevo':
+        return 'xkeysib-...,sender@yourdomain.com (API key, sender email)';
       case 'discord':
         return 'Bot token (from Discord Developer Portal)';
       case 'jira':
@@ -429,6 +437,15 @@ export default function ConnectionsPage() {
             <a href="https://us1.admin.mailchimp.com/account/api/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Mailchimp → Account → Extras → API keys
             </a>. The key includes your data center (e.g. -us21).
+          </p>
+        );
+      case 'brevo':
+        return (
+          <p className="text-sm text-gray-500 mt-2">
+            Find your API key at{' '}
+            <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              Brevo → Settings → SMTP & API → API Keys
+            </a>. Add your verified sender email after a comma (e.g. xkeysib-...,noreply@yourdomain.com).
           </p>
         );
       case 'twilio':
