@@ -152,6 +152,7 @@ def increment_run_count(user: User, db: Session):
 
 def get_usage_summary(user: User, db: Session) -> dict:
     """Get current usage vs limits."""
+    unlimited = _is_unlimited(user)
     limits = user.limits
     active_wf = db.query(Workflow).filter(
         Workflow.user_id == user.id,
@@ -161,10 +162,11 @@ def get_usage_summary(user: User, db: Session) -> dict:
     knowledge_count = db.query(KnowledgeEntry).filter(KnowledgeEntry.user_id == user.id).count()
 
     return {
-        "plan": user.plan,
-        "is_trial": user.is_trial,
-        "trial_expired": user.trial_expired,
-        "trial_days_left": user.trial_days_left,
+        "plan": "admin" if unlimited else user.plan,
+        "is_trial": False if unlimited else user.is_trial,
+        "trial_expired": False if unlimited else user.trial_expired,
+        "trial_days_left": 0 if unlimited else user.trial_days_left,
+        "is_unlimited": unlimited,
         "usage": {
             "active_workflows": {"used": active_wf, "limit": limits["max_active_workflows"]},
             "total_runs": {"used": user.total_runs_used or 0, "limit": limits["max_total_runs"]},

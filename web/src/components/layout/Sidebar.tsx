@@ -17,7 +17,8 @@ import {
   LogOut,
   MessageSquare,
   BookOpen,
-  Sparkles
+  Sparkles,
+  Settings
 } from 'lucide-react';
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/app/approvals', label: 'Approvals', Icon: CheckCircle2, walkthrough: 'nav-approvals' },
   { href: '/app/knowledge', label: 'Knowledge Base', Icon: BookOpen, walkthrough: 'nav-knowledge' },
   { href: '/app/connections', label: 'Connections', Icon: Link2, walkthrough: 'nav-connections' },
+  { href: '/app/settings', label: 'Settings', Icon: Settings, walkthrough: 'nav-settings' },
 ];
 
 function TrialBanner() {

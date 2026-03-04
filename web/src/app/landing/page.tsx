@@ -210,7 +210,7 @@ function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Describe what you need in plain English. Aivaro builds the workflow, connects your tools, and runs it 24/7 — asking permission before anything sensitive.
+            Describe what you need in plain English. Aivaro builds the workflow, connects your tools, and runs it 24/7 - asking permission before anything sensitive.
           </motion.p>
 
           <motion.div
@@ -415,7 +415,7 @@ function DemoShowcaseSection() {
     {
       id: 'knowledge',
       title: 'AI Knowledge Base',
-      description: 'Teach Aivaro your business — pricing, policies, tone. Every response sounds like you.',
+      description: 'Teach Aivaro your business - pricing, policies, tone. Every response sounds like you.',
       icon: <Brain size={18} />,
       video: '/demos/Chat_Knowledge_Base.mp4',
       color: '#6ee7b7',
@@ -670,7 +670,7 @@ function TemplateGallerySection() {
     {
       icon: <FileText size={20} />,
       name: 'Weekly Business Report',
-      description: 'Get a summary of your week — new bookings, revenue, and follow-ups — delivered every Monday.',
+      description: 'Get a summary of your week - new bookings, revenue, and follow-ups - delivered every Monday.',
       integrations: ['Gmail', 'Airtable', 'Stripe'],
       timeSaved: '1 hr/week',
       color: 'rgba(56, 189, 248, 0.15)',
@@ -785,7 +785,7 @@ function ApprovalFeatureSection() {
               AI that asks before it acts
             </h2>
             <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted, lineHeight: 1.7, marginBottom: 24 }}>
-              Payments, external emails, and SMS messages automatically require your approval. You stay in control — Aivaro never sends money or contacts customers without your OK.
+              Payments, external emails, and SMS messages automatically require your approval. You stay in control - Aivaro never sends money or contacts customers without your OK.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
@@ -872,7 +872,7 @@ function HowItWorksSection() {
   const { isMobile, isTablet } = useResponsive();
 
   const steps = [
-    { number: '1', title: 'Connect your tools', description: 'Gmail, Calendar, Stripe, Slack, Twilio, Airtable, Notion, Calendly, Mailchimp — one-click setup.', icon: <Zap size={20} /> },
+    { number: '1', title: 'Connect your tools', description: 'Gmail, Calendar, Stripe, Slack, Twilio, Airtable, Notion, Calendly, Mailchimp - one-click setup.', icon: <Zap size={20} /> },
     { number: '2', title: 'Describe what you need', description: 'Tell Aivaro in plain English or pick a template. It asks the right questions, then builds it.', icon: <MessageSquare size={20} /> },
     { number: '3', title: 'It runs 24/7', description: 'Workflows trigger on emails, schedules, or webhooks. Every message matches your voice.', icon: <Bot size={20} /> },
   ];
@@ -934,7 +934,7 @@ function ResultsSection() {
   const metrics = [
     { value: '8%', label: 'No-show rate', detail: 'Down from 25%' },
     { value: '5h+', label: 'Saved per week', detail: 'Per business' },
-    { value: '15', label: 'Pilot users', detail: 'Pre-revenue beta' },
+    { value: '70%', label: 'Fewer missed follow-ups', detail: 'Automated outreach' },
     { value: '24/7', label: 'Always running', detail: 'Zero manual work' },
   ];
 
@@ -950,7 +950,7 @@ function ResultsSection() {
             Real results from <span style={{ background: 'linear-gradient(135deg, #10b981, #6ee7b7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>real businesses</span>
           </h2>
           <p style={{ fontSize: isMobile ? 15 : 17, color: styles.textMuted, maxWidth: 500, margin: '0 auto' }}>
-            Our first pilot — a liquidation business — went from manual chaos to automated operations.
+            Our first pilot - a liquidation business - cut no-shows by 70% and saved 5+ hours per week on operations.
           </p>
         </motion.div>
 
@@ -1049,11 +1049,11 @@ function ResultsSection() {
           transition={{ duration: 0.5, delay: 0.5 }}
         >
           <p style={{ fontSize: isMobile ? 16 : 18, color: styles.textSecondary, lineHeight: 1.7, fontStyle: 'italic', margin: '0 0 16px', maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
-            &ldquo;I used to spend hours every week confirming bookings and chasing people who didn&apos;t show up. Now it&apos;s all automatic — reminders go out, deposits get collected, and my no-show rate dropped from 25% to 8%. I don&apos;t even think about it anymore.&rdquo;
+            &ldquo;I used to spend hours every week confirming bookings and chasing people who didn&apos;t show up. Now it&apos;s all automatic - reminders go out, deposits get collected, and my no-show rate dropped from 25% to 8%. I don&apos;t even think about it anymore.&rdquo;
           </p>
           <div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: styles.textPrimary }}>David Y.</span>
-            <span style={{ fontSize: 13, color: styles.textMuted }}> · Liquidation & Auction Services</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: styles.textPrimary }}>David Yagubyan</span>
+            <span style={{ fontSize: 13, color: styles.textMuted }}> · Owner, Pacific Liquidation & Auctions</span>
           </div>
         </motion.div>
       </div>
@@ -1067,12 +1067,12 @@ function FeaturesSection() {
   const { isMobile, isTablet } = useResponsive();
 
   const features = [
-    { icon: <MessageSquare size={20} />, title: 'Natural Language Workflows', description: 'Describe what you need in plain English. Aivaro builds it — no drag-and-drop required.' },
+    { icon: <MessageSquare size={20} />, title: 'Natural Language Workflows', description: 'Describe what you need in plain English. Aivaro builds it - no drag-and-drop required.' },
     { icon: <Bot size={20} />, title: 'AI Knowledge Base', description: 'Stores your pricing, policies, and tone. Every message sounds like you wrote it.' },
     { icon: <Shield size={20} />, title: 'Approval Gates', description: 'Sensitive actions (payments, external emails) require your OK before sending.' },
     { icon: <Mail size={20} />, title: 'Personalized Communication', description: 'AI rewrites every email, SMS, and message to match your voice.' },
-    { icon: <Zap size={20} />, title: '8 Integrations', description: 'Gmail, Stripe, Twilio, Slack, Airtable, Notion, Calendly, Mailchimp — all connected.' },
-    { icon: <Clock size={20} />, title: 'Scheduled Triggers', description: 'Run workflows on a schedule — daily reports, weekly invoices, monthly summaries.' },
+    { icon: <Zap size={20} />, title: '8 Integrations', description: 'Gmail, Stripe, Twilio, Slack, Airtable, Notion, Calendly, Mailchimp - all connected.' },
+    { icon: <Clock size={20} />, title: 'Scheduled Triggers', description: 'Run workflows on a schedule - daily reports, weekly invoices, monthly summaries.' },
   ];
 
   return (

@@ -448,9 +448,6 @@ export default function WorkflowEditorPage() {
               >
                 {activating ? '...' : isActive ? '✓ Active' : '○ Inactive'}
               </button>
-              <button onClick={handleTestRun} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
-                🧪 Test
-              </button>
               <button onClick={() => setShowRunConfirm(true)} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
                 ▶ Run Now
               </button>

@@ -1492,16 +1492,32 @@ async def agentic_chat_stream(
     except Exception:
         pass  # Never block chat on knowledge extraction failure
 
-    # Auto-title: if conversation has <=1 messages, generate title from first user message
+    # Auto-title: if conversation has <=1 messages, generate a short summary title via LLM
     if conversation_id:
         from app.models.chat import ChatConversation
         msg_count = db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation_id).count()
         if msg_count <= 1:
-            title = user_message[:60].strip()
-            if len(user_message) > 60:
-                title += "..."
+            try:
+                from openai import OpenAI
+                title_client = OpenAI()
+                title_resp = title_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "Generate a short, descriptive title (max 6 words) for this chat conversation based on the user's message. No quotes, no punctuation at the end. Just the title."},
+                        {"role": "user", "content": user_message[:200]},
+                    ],
+                    max_tokens=20,
+                    temperature=0.5,
+                )
+                title = title_resp.choices[0].message.content.strip().strip('"').strip("'")
+                if not title:
+                    title = user_message[:50].strip()
+            except Exception:
+                title = user_message[:50].strip()
+                if len(user_message) > 50:
+                    title += "..."
             convo = db.query(ChatConversation).filter(ChatConversation.id == conversation_id).first()
-            if convo:
+            if convo and convo.title == "New conversation":
                 convo.title = title
                 db.commit()
 

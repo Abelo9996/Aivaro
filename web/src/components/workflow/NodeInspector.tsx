@@ -395,7 +395,7 @@ export default function NodeInspector({
         )}
 
         {/* Fields */}
-        {fieldConfig.fields.map((field) => (
+        {fieldConfig.fields.length > 0 ? fieldConfig.fields.map((field) => (
           <div key={field.key} className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {field.label}
@@ -432,9 +432,32 @@ export default function NodeInspector({
               <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
             )}
           </div>
-        ))}
-
-        {/* Personalize Toggle - show for outbound communication nodes */}
+        )) : (
+          /* Generic parameters editor for MCP/unknown node types */
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Parameters (JSON)
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Configure this step by providing parameters as JSON. Use {'{{variable}}'} syntax to reference data from previous steps.
+            </p>
+            <textarea
+              value={JSON.stringify(config, null, 2)}
+              onChange={(e) => {
+                try {
+                  const parsed = JSON.parse(e.target.value);
+                  setConfig(parsed);
+                  onUpdate(node.id, { config: parsed });
+                } catch {
+                  // Invalid JSON — don't update until it's valid
+                }
+              }}
+              rows={6}
+              placeholder={'{\n  "key": "value",\n  "email": "{{email}}"\n}'}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        )}
         {['send_email', 'twilio_send_sms', 'twilio_send_whatsapp', 'send_slack'].includes(nodeType) && (
           <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-lg">
             <div className="flex items-center justify-between">
@@ -448,13 +471,13 @@ export default function NodeInspector({
                   const newVal = !params.personalize;
                   onUpdate(node.id, { config: { ...params, personalize: newVal } });
                 }}
-                className={`relative w-11 h-6 rounded-full transition-colors ${
+                className={`relative inline-flex flex-shrink-0 w-11 h-6 rounded-full transition-colors cursor-pointer ${
                   ((node.data.config || {}) as Record<string, unknown>).personalize ? 'bg-purple-500' : 'bg-gray-300'
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    ((node.data.config || {}) as Record<string, unknown>).personalize ? 'translate-x-5' : ''
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                    ((node.data.config || {}) as Record<string, unknown>).personalize ? 'translate-x-[1.25rem]' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -475,13 +498,13 @@ export default function NodeInspector({
                   const newVal = !node.data.requiresApproval;
                   onUpdate(node.id, { requiresApproval: newVal });
                 }}
-                className={`relative w-11 h-6 rounded-full transition-colors ${
+                className={`relative inline-flex flex-shrink-0 w-11 h-6 rounded-full transition-colors cursor-pointer ${
                   node.data.requiresApproval ? 'bg-amber-500' : 'bg-gray-300'
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    node.data.requiresApproval ? 'translate-x-5' : ''
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                    node.data.requiresApproval ? 'translate-x-[1.25rem]' : 'translate-x-0'
                   }`}
                 />
               </button>

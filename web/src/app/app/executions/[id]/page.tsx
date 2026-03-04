@@ -16,7 +16,7 @@ export default function ExecutionDetailPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [approvals, setApprovals] = useState<any[]>([]);
-  const [actioningApproval, setActioningApproval] = useState<string | null>(null);
+  const [actioningApproval, setActioningApproval] = useState<Set<string>>(new Set());
 
   const loadApprovals = useCallback(async () => {
     try {
@@ -28,16 +28,19 @@ export default function ExecutionDetailPage() {
   }, []);
 
   const handleApproval = async (approvalId: string, action: 'approve' | 'reject') => {
-    setActioningApproval(approvalId);
+    setActioningApproval(prev => new Set(prev).add(approvalId));
     try {
       await api.actionApproval(approvalId, action);
-      // Reload both approvals and execution
       await loadApprovals();
       if (params.id) await loadExecution(params.id as string);
     } catch (err) {
       console.error('Failed to action approval:', err);
     } finally {
-      setActioningApproval(null);
+      setActioningApproval(prev => {
+        const next = new Set(prev);
+        next.delete(approvalId);
+        return next;
+      });
     }
   };
 
@@ -238,16 +241,24 @@ export default function ExecutionDetailPage() {
                       </div>
                     )}
                     {node.status === 'waiting_approval' && (() => {
+                      // If execution is already completed/failed, show resolved state instead of approval UI
+                      if (execution.status === 'completed' || execution.status === 'failed') {
+                        return (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4" /> Approved
+                          </div>
+                        );
+                      }
                       const nodeApproval = approvals.find(a => a.execution_id === execution.id && a.node_id === node.node_id);
                       return nodeApproval ? (
-                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-full overflow-hidden">
                           <div className="text-sm text-amber-800 font-medium mb-2 flex items-center gap-2">
                             <Clock className="w-4 h-4" /> Requires your approval
                           </div>
                           {nodeApproval.action_details && (
                             <details className="mb-3">
                               <summary className="text-xs text-amber-700 cursor-pointer hover:text-amber-900">View action details</summary>
-                              <pre className="mt-1 p-2 bg-white rounded border text-xs overflow-x-auto max-h-40 overflow-y-auto">
+                              <pre className="mt-1 p-2 bg-white rounded border text-xs overflow-x-auto overflow-y-auto max-h-40 whitespace-pre-wrap break-words">
                                 {typeof nodeApproval.action_details === 'string' ? nodeApproval.action_details : JSON.stringify(nodeApproval.action_details, null, 2)}
                               </pre>
                             </details>
@@ -255,17 +266,27 @@ export default function ExecutionDetailPage() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleApproval(nodeApproval.id, 'approve')}
-                              disabled={actioningApproval === nodeApproval.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                              disabled={actioningApproval.has(nodeApproval.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none"
                             >
-                              <ShieldCheck className="w-3.5 h-3.5" /> Approve
+                              {actioningApproval.has(nodeApproval.id) ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                              )}
+                              Approve
                             </button>
                             <button
                               onClick={() => handleApproval(nodeApproval.id, 'reject')}
-                              disabled={actioningApproval === nodeApproval.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                              disabled={actioningApproval.has(nodeApproval.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 disabled:pointer-events-none"
                             >
-                              <ShieldX className="w-3.5 h-3.5" /> Reject
+                              {actioningApproval.has(nodeApproval.id) ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <ShieldX className="w-3.5 h-3.5" />
+                              )}
+                              Reject
                             </button>
                           </div>
                         </div>

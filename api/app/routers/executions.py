@@ -17,6 +17,7 @@ router = APIRouter()
 @router.get("/", response_model=List[ExecutionResponse])
 async def list_executions(
     workflow_id: Optional[str] = None,
+    limit: int = 500,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -25,7 +26,7 @@ async def list_executions(
     if workflow_id:
         query = query.filter(Execution.workflow_id == workflow_id)
     
-    executions = query.order_by(Execution.started_at.desc()).all()
+    executions = query.order_by(Execution.started_at.desc()).limit(limit).all()
     
     # Ensure workflow relationship is loaded for workflow_name
     results = []
