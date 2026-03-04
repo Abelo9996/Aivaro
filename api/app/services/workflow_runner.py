@@ -287,13 +287,15 @@ class WorkflowRunner:
         # Check if approval is required
         # The 'approval' node type ALWAYS requires approval
         if node.get("requiresApproval", False) or node["type"] == "approval":
-            # Interpolate parameters with input_data so approval shows resolved values
-            resolved_params = {}
-            for k, v in node.get("parameters", {}).items():
-                if isinstance(v, str):
-                    resolved_params[k] = self._interpolate(v, input_data)
-                else:
-                    resolved_params[k] = v
+            # Run the full 4-pass param resolution so approval shows complete values
+            from app.services.node_executor import (
+                _interpolate_params, _resolve_aliases_in_params,
+                _clean_unresolved_variables, _autofill_empty_params
+            )
+            resolved_params = _interpolate_params(node.get("parameters", {}), input_data)
+            resolved_params = _resolve_aliases_in_params(resolved_params, input_data)
+            resolved_params = _clean_unresolved_variables(resolved_params)
+            resolved_params = _autofill_empty_params(resolved_params, input_data)
             resolved_node = {**node, "parameters": resolved_params}
             self._create_approval(resolved_node, exec_node, input_data)
             exec_node.status = "waiting_approval"
