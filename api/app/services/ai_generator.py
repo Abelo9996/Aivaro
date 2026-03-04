@@ -72,7 +72,7 @@ def _get_mcp_tool_docs(connected_providers: list[str] = None) -> str:
     if not sections:
         return ""
     
-    return "\n\nADDITIONAL INTEGRATION NODE TYPES (from MCP):\n" + "\n".join(sections) + "\n"
+    return "\n\nADDITIONAL INTEGRATION NODE TYPES (from MCP):\nWhen these nodes follow a read_sheet node, row columns are available as {{column_name}} (lowercased, spaces→underscores). Fill parameters with these variables.\n" + "\n".join(sections) + "\n"
 
 
 # ============================================================
@@ -855,7 +855,8 @@ The condition node checks: input_data[field] <operator> value. Available operato
    If ambiguous AND multiple services are connected, note in the summary which service is being used and why.
 33. FOR-EACH ITERATION: When read_sheet is followed by action nodes (send_email, brevo_send_transactional_email, etc.), the runner automatically executes downstream nodes ONCE PER ROW. Each row's column values are available as {{column_name}} (lowercased, spaces→underscores). Example: sheet headers ["Name", "Email", "Phone"] → {{name}}, {{email}}, {{phone}}. You do NOT need to reference sheet_data or build loops.
 34. USE email_template INSTEAD OF ai_reply for deterministic emails (reminders, notifications, confirmations, invoices). ai_reply is ONLY for when you need the AI to compose content dynamically (e.g., "respond to this email intelligently"). If the user specifies what the email should say, use email_template → send_email (with {{template_to}}, {{template_subject}}, {{template_body}}). This is faster, cheaper, and deterministic.
-35. SHEET-TO-EMAIL PATTERN: read_sheet → email_template → send_email. The template renders per-row, and send_email sends per-row. The email_template output fields are template_to, template_subject, template_body — use these in the send_email parameters.
+35. SHEET-TO-EMAIL PATTERN: read_sheet → email_template → send_email. The template renders per-row, and send_email sends per-row. The email_template output fields are template_to, template_subject, template_body — use these in the send_email parameters. For Brevo: read_sheet → email_template → brevo_send_transactional_email (with to_email={{template_to}}, subject={{template_subject}}, text_content={{template_body}}, sender_email={{my_email}}).
+36. ALWAYS fill MCP node parameters with {{variable}} references when data comes from previous nodes. NEVER leave parameters empty. If read_sheet has columns Name and Email, use to_email="{{email}}", subject="Reminder for {{name}}", etc.
 
 Example for "booking automation with deposit":
 {

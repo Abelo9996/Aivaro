@@ -284,7 +284,15 @@ class WorkflowRunner:
         # Check if approval is required
         # The 'approval' node type ALWAYS requires approval
         if node.get("requiresApproval", False) or node["type"] == "approval":
-            self._create_approval(node, exec_node, input_data)
+            # Interpolate parameters with input_data so approval shows resolved values
+            resolved_params = {}
+            for k, v in node.get("parameters", {}).items():
+                if isinstance(v, str):
+                    resolved_params[k] = self._interpolate(v, input_data)
+                else:
+                    resolved_params[k] = v
+            resolved_node = {**node, "parameters": resolved_params}
+            self._create_approval(resolved_node, exec_node, input_data)
             exec_node.status = "waiting_approval"
             self.execution.status = "paused"
             self.db.commit()
