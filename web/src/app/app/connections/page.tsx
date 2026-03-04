@@ -154,7 +154,7 @@ export default function ConnectionsPage() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [apiKeyModal, setApiKeyModal] = useState<{ type: string; name: string } | null>(null);
-  const [apiKey, setApiKey] = useState('');
+  const [credFields, setCredFields] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
@@ -225,7 +225,7 @@ export default function ConnectionsPage() {
     // For API key auth types, show the modal
     if (service?.authType === 'api_key') {
       setApiKeyModal({ type, name: service.name });
-      setApiKey('');
+      setCredFields({});
       return;
     }
     
@@ -292,67 +292,63 @@ export default function ConnectionsPage() {
     }
   };
 
+  // Per-provider credential field definitions
+  const getCredentialFields = (type: string): { key: string; label: string; placeholder: string; type?: string; required?: boolean }[] => {
+    switch (type) {
+      case 'twilio':
+        return [
+          { key: 'account_sid', label: 'Account SID', placeholder: 'AC...', required: true },
+          { key: 'auth_token', label: 'Auth Token', placeholder: 'Your auth token', type: 'password', required: true },
+        ];
+      case 'shopify':
+        return [
+          { key: 'shop_domain', label: 'Shop Domain', placeholder: 'your-store.myshopify.com', required: true },
+          { key: 'access_token', label: 'Access Token', placeholder: 'shpat_...', type: 'password', required: true },
+        ];
+      case 'brevo':
+        return [
+          { key: 'api_key', label: 'API Key', placeholder: 'xkeysib-...', type: 'password', required: true },
+          { key: 'sender_email', label: 'Verified Sender Email', placeholder: 'noreply@yourdomain.com', required: true },
+        ];
+      case 'discord':
+        return [
+          { key: 'bot_token', label: 'Bot Token', placeholder: 'From Discord Developer Portal', type: 'password', required: true },
+          { key: 'guild_id', label: 'Server (Guild) ID', placeholder: 'Optional — right-click server → Copy ID' },
+        ];
+      case 'jira':
+        return [
+          { key: 'domain', label: 'Jira Domain', placeholder: 'your-org.atlassian.net', required: true },
+          { key: 'email', label: 'Email', placeholder: 'you@company.com', required: true },
+          { key: 'api_token', label: 'API Token', placeholder: 'From id.atlassian.com/manage-profile/security/api-tokens', type: 'password', required: true },
+        ];
+      case 'whatsapp':
+        return [
+          { key: 'access_token', label: 'Access Token', placeholder: 'From Meta Business Suite', type: 'password', required: true },
+          { key: 'phone_number_id', label: 'Phone Number ID', placeholder: 'Your WhatsApp phone number ID', required: true },
+        ];
+      default:
+        return [
+          { key: 'api_key', label: 'API Key', placeholder: getApiKeyPlaceholder(type), type: 'password', required: true },
+        ];
+    }
+  };
+
   const handleApiKeySubmit = async () => {
-    if (!apiKeyModal || !apiKey.trim()) return;
+    if (!apiKeyModal) return;
+    
+    const fields = getCredentialFields(apiKeyModal.type);
+    const requiredMissing = fields.some(f => f.required && !credFields[f.key]?.trim());
+    if (requiredMissing) return;
     
     setConnecting(apiKeyModal.type);
     setMessage(null);
     
     try {
-      // Parse credentials based on provider type
-      let credentials: Record<string, string> = {};
-      const raw = apiKey.trim();
-      
-      switch (apiKeyModal.type) {
-        case 'twilio': {
-          const parts = raw.split(',').map(s => s.trim());
-          credentials = { account_sid: parts[0] || '', auth_token: parts[1] || '' };
-          break;
-        }
-        case 'shopify': {
-          const parts = raw.split(',').map(s => s.trim());
-          credentials = { shop_domain: parts[0] || '', access_token: parts[1] || '' };
-          break;
-        }
-        case 'brevo': {
-          const parts = raw.split(',').map(s => s.trim());
-          credentials = { api_key: parts[0] || '' };
-          if (parts[1]) credentials.sender_email = parts[1];
-          break;
-        }
-        case 'discord': {
-          const parts = raw.split(',').map(s => s.trim());
-          credentials = { bot_token: parts[0] || '' };
-          if (parts[1]) credentials.guild_id = parts[1];
-          break;
-        }
-        case 'jira': {
-          const parts = raw.split(',').map(s => s.trim());
-          credentials = { domain: parts[0] || '', email: parts[1] || '', api_token: parts[2] || '' };
-          break;
-        }
-        case 'whatsapp': {
-          const parts = raw.split(',').map(s => s.trim());
-          credentials = { access_token: parts[0] || '', phone_number_id: parts[1] || '' };
-          break;
-        }
-        case 'github':
-          credentials = { access_token: raw };
-          break;
-        case 'hubspot':
-          credentials = { access_token: raw };
-          break;
-        case 'linear':
-          credentials = { api_key: raw };
-          break;
-        case 'monday':
-          credentials = { api_key: raw };
-          break;
-        case 'sendgrid':
-          credentials = { api_key: raw };
-          break;
-        default:
-          credentials = { api_key: raw };
+      // Build credentials from field values, trimming whitespace
+      const credentials: Record<string, string> = {};
+      for (const field of fields) {
+        const val = (credFields[field.key] || '').trim();
+        if (val) credentials[field.key] = val;
       }
       
       await api.createConnection({
@@ -365,7 +361,7 @@ export default function ConnectionsPage() {
         text: `${apiKeyModal.name} connected successfully!` 
       });
       setApiKeyModal(null);
-      setApiKey('');
+      setCredFields({});
       loadConnections();
     } catch (err: any) {
       console.error('Failed to connect:', err);
@@ -390,7 +386,7 @@ export default function ConnectionsPage() {
       case 'shopify':
         return 'your-store.myshopify.com,shpat_... (domain,token)';
       case 'brevo':
-        return 'xkeysib-...,sender@yourdomain.com (API key, sender email)';
+        return 'xkeysib-...';
       case 'discord':
         return 'Bot token (from Discord Developer Portal)';
       case 'jira':
@@ -742,7 +738,7 @@ export default function ConnectionsPage() {
               <button
                 onClick={() => {
                   setApiKeyModal(null);
-                  setApiKey('');
+                  setCredFields({});
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
@@ -750,26 +746,31 @@ export default function ConnectionsPage() {
               </button>
             </div>
             
-            <div className="p-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Key className="w-4 h-4 inline mr-1" />
-                API Key
-              </label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={getApiKeyPlaceholder(apiKeyModal.type)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
-                autoFocus
-              />
+            <div className="p-6 space-y-4">
+              {getCredentialFields(apiKeyModal.type).map((field, idx) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {idx === 0 && <Key className="w-4 h-4 inline mr-1" />}
+                    {field.label}
+                    {field.required && <span className="text-red-400 ml-0.5">*</span>}
+                  </label>
+                  <input
+                    type={field.type || 'text'}
+                    value={credFields[field.key] || ''}
+                    onChange={(e) => setCredFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    placeholder={field.placeholder}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+                    autoFocus={idx === 0}
+                  />
+                </div>
+              ))}
               {getApiKeyInstructions(apiKeyModal.type)}
               
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => {
                     setApiKeyModal(null);
-                    setApiKey('');
+                    setCredFields({});
                   }}
                   className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
                 >
@@ -777,7 +778,10 @@ export default function ConnectionsPage() {
                 </button>
                 <button
                   onClick={handleApiKeySubmit}
-                  disabled={!apiKey.trim() || connecting === apiKeyModal.type}
+                  disabled={
+                    getCredentialFields(apiKeyModal.type).some(f => f.required && !credFields[f.key]?.trim()) ||
+                    connecting === apiKeyModal.type
+                  }
                   className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {connecting === apiKeyModal.type ? 'Connecting...' : 'Connect'}
