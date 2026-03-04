@@ -452,6 +452,7 @@ NO_APPROVAL_NODES = {
     "mailchimp_add_subscriber", "mailchimp_update_subscriber", "mailchimp_add_tags",
     "ai_reply", "ai_summarize", "ai_extract",
     "send_slack", "slack_send_dm", "http_request",
+    "email_template",
 }
 
 
@@ -752,9 +753,10 @@ Available ACTION node types:
 - ai_reply: Generate an AI response to an email. IMPORTANT: This only GENERATES a reply — it does NOT send it. You MUST add a send_email step after ai_reply to actually deliver the response. Parameters: {context: "...", tone: "professional/friendly/casual"}. Output: {{ai_response}}
 - ai_summarize: Use AI to summarize data. Parameters: {source: "...", format: "bullet_points/paragraph"}
 - append_row: Add row to Google Sheets. Parameters: {spreadsheet: "...", sheet_name: "Sheet1", columns: [{name: "...", value: "{{...}}"}]}
-- read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "spreadsheet ID or file name (e.g. 'Contacts.xlsx')", spreadsheet_name: "optional display name", range: "Sheet1!A1:Z1000"}
+- read_sheet: Read data from Google Sheets. Parameters: {spreadsheet_id: "spreadsheet ID or file name (e.g. 'Contacts.xlsx')", spreadsheet_name: "optional display name", range: "Sheet1!A1:Z1000"}. Output: rows (array of {header_name: value} dicts), headers, row_count. IMPORTANT: read_sheet automatically triggers FOR-EACH iteration — all downstream nodes execute ONCE PER ROW with each row's fields available as {{column_name}} variables (headers lowercased, spaces become underscores). You do NOT need a loop node.
 - delay: Wait for a duration. Parameters: {duration: 2, unit: "hours/minutes/days"}
 - send_notification: Log an internal note to the workflow execution log. Parameters: {message: "..."}. NOTE: This does NOT send any message to anyone — it only records a note in the execution log visible in the dashboard. To actually notify the workflow owner, use send_email (to={{user_email}}), slack_send_dm (email={{user_email}}), or twilio_send_sms. NEVER use send_notification as a substitute for real owner notifications.
+- email_template: Render a deterministic email template with variable substitution. NO AI involved — just fills in {{variables}}. Use this instead of ai_reply when you know exactly what the email should say (reminders, notifications, confirmations, etc.). Parameters: {to: "{{email}}", subject: "Reminder: ...", body: "Hi {{name}},\\n\\nThis is a reminder..."} Output: template_to, template_subject, template_body. Follow with send_email using {{template_to}}, {{template_subject}}, {{template_body}}.
 - send_slack: Send a Slack message to a CHANNEL. Parameters: {channel: "#general", message: "..."}. Only use for posting to channels.
 - slack_send_dm: Send a direct message to a specific PERSON on Slack. Parameters: {email: "user@email.com", message: "..."}. Use this when the user wants to message a specific person (NOT a channel).
 - http_request: Make an API call. Parameters: {url: "...", method: "GET/POST"}
@@ -851,6 +853,9 @@ The condition node checks: input_data[field] <operator> value. Available operato
    - Marketing campaigns → Mailchimp or Brevo campaigns
    - SMS → Twilio or Brevo SMS (whichever is connected)
    If ambiguous AND multiple services are connected, note in the summary which service is being used and why.
+33. FOR-EACH ITERATION: When read_sheet is followed by action nodes (send_email, brevo_send_transactional_email, etc.), the runner automatically executes downstream nodes ONCE PER ROW. Each row's column values are available as {{column_name}} (lowercased, spaces→underscores). Example: sheet headers ["Name", "Email", "Phone"] → {{name}}, {{email}}, {{phone}}. You do NOT need to reference sheet_data or build loops.
+34. USE email_template INSTEAD OF ai_reply for deterministic emails (reminders, notifications, confirmations, invoices). ai_reply is ONLY for when you need the AI to compose content dynamically (e.g., "respond to this email intelligently"). If the user specifies what the email should say, use email_template → send_email (with {{template_to}}, {{template_subject}}, {{template_body}}). This is faster, cheaper, and deterministic.
+35. SHEET-TO-EMAIL PATTERN: read_sheet → email_template → send_email. The template renders per-row, and send_email sends per-row. The email_template output fields are template_to, template_subject, template_body — use these in the send_email parameters.
 
 Example for "booking automation with deposit":
 {
@@ -882,6 +887,23 @@ Example for condition branching (appointment with conflict check):
     {"id": "e2", "source": "2", "target": "3"},
     {"id": "e4", "source": "3", "target": "4", "sourceHandle": "yes", "label": "is appointment"},
     {"id": "e5", "source": "4", "target": "5"}
+  ]
+}
+
+Example for sheet-to-email (for-each pattern):
+{
+  "workflowName": "Weekly Payment Reminders",
+  "summary": "Every Tuesday at 2 PM, Aivaro will read contacts from Google Sheets and send each person a payment reminder email.",
+  "nodes": [
+    {"id": "1", "type": "start_schedule", "label": "Every Tuesday at 2 PM PT", "position": {"x": 250, "y": 50}, "parameters": {"time": "14:00", "frequency": "weekly"}},
+    {"id": "2", "type": "read_sheet", "label": "Read contacts from Google Sheet", "position": {"x": 250, "y": 200}, "parameters": {"spreadsheet_id": "My Contacts", "range": "Sheet1!A1:C1000"}},
+    {"id": "3", "type": "email_template", "label": "Compose reminder email", "position": {"x": 250, "y": 350}, "parameters": {"to": "{{email}}", "subject": "Payment Reminder", "body": "Hi {{name}},\n\nThis is a friendly reminder that your payment is due.\n\nPlease contact us at {{my_email}} if you have questions.\n\nThank you!"}},
+    {"id": "4", "type": "send_email", "label": "Send reminder email", "position": {"x": 250, "y": 500}, "parameters": {"to": "{{template_to}}", "subject": "{{template_subject}}", "body": "{{template_body}}"}, "requiresApproval": true}
+  ],
+  "edges": [
+    {"id": "e1", "source": "1", "target": "2"},
+    {"id": "e2", "source": "2", "target": "3"},
+    {"id": "e3", "source": "3", "target": "4"}
   ]
 }
 

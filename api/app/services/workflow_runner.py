@@ -336,8 +336,44 @@ class WorkflowRunner:
             self.db.commit()
             return
         
+        output = result.get("output", {})
+        
+        # === FOR-EACH ITERATION ===
+        # If the node flagged __iterate_rows and produced rows, execute downstream
+        # nodes once per row with row fields merged into the data context.
+        if output.get("__iterate_rows") and output.get("rows"):
+            rows = output["rows"]
+            print(f"[WorkflowRunner] FOR-EACH: Iterating {len(rows)} rows through {len(next_node_ids)} downstream nodes")
+            
+            # Remove iteration flags from the base data to prevent re-iteration
+            base_data = {k: v for k, v in output.items() if k not in ("__iterate_rows", "rows")}
+            
+            for row_idx, row in enumerate(rows):
+                # Merge row fields into the data context — row fields take priority
+                row_data = {**base_data, **row}
+                row_data["__row_index"] = row_idx
+                row_data["__row_number"] = row_idx + 1
+                row_data["__total_rows"] = len(rows)
+                
+                print(f"[WorkflowRunner] FOR-EACH row {row_idx + 1}/{len(rows)}: keys={list(row.keys())}")
+                
+                for next_id in next_node_ids:
+                    self._execute_from_node(next_id, row_data)
+                    
+                    # If any iteration failed, stop (don't continue to remaining rows)
+                    if self.execution.status == "failed":
+                        print(f"[WorkflowRunner] FOR-EACH stopped at row {row_idx + 1} due to failure")
+                        return
+            
+            # All rows processed successfully
+            self.execution.status = "completed"
+            self.execution.completed_at = datetime.utcnow()
+            self.db.commit()
+            return
+        
+        # === NORMAL FLOW (no iteration) ===
         for next_id in next_node_ids:
-            self._execute_from_node(next_id, result.get("output", {}))
+            self._execute_from_node(next_id, output)
     
     def _create_approval(self, node: dict, exec_node: ExecutionNode, input_data: dict):
         """Create an approval request"""

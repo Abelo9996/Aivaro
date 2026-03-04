@@ -258,6 +258,8 @@ class NodeExecutor:
             "twilio_list_calls": self._execute_twilio_list_calls,
             # Standalone approval gate
             "approval": self._execute_approval_gate,
+            # Deterministic email template (no AI)
+            "email_template": self._execute_email_template,
         }
         
         executor = executors.get(node_type, self._execute_default)
@@ -835,8 +837,20 @@ Extract: {fields_to_extract}"""
             values = await google.get_sheet_values(spreadsheet_id, range_name)
             logs += f"  ✅ Read {len(values)} rows\n"
             
-            # Store full spreadsheet snapshot for chat context
+            # Build structured rows with header-mapped keys
             headers = values[0] if values else []
+            rows = []
+            for row_values in values[1:]:  # skip header row
+                row_dict = {}
+                for i, header in enumerate(headers):
+                    # Normalize header to a safe variable name
+                    key = header.strip().lower().replace(" ", "_").replace("-", "_")
+                    row_dict[key] = row_values[i] if i < len(row_values) else ""
+                    # Also keep original header name for exact match
+                    row_dict[header.strip()] = row_values[i] if i < len(row_values) else ""
+                rows.append(row_dict)
+            
+            # Store full spreadsheet snapshot for chat context
             spreadsheet_snapshot = {
                 "spreadsheet_id": spreadsheet_id,
                 "name": spreadsheet_name or spreadsheet_id,
@@ -847,13 +861,20 @@ Extract: {fields_to_extract}"""
                 "read_at": datetime.utcnow().isoformat()
             }
             
+            logs += f"  Headers: {headers}\n"
+            logs += f"  Data rows: {len(rows)} (excluding header)\n"
+            
             return {
                 "success": True,
                 "output": {
                     **input_data, 
-                    "sheet_data": values, 
-                    "row_count": len(values),
-                    "_spreadsheet_snapshot": spreadsheet_snapshot
+                    "sheet_data": values,
+                    "rows": rows,
+                    "headers": headers,
+                    "row_count": len(rows),
+                    "_spreadsheet_snapshot": spreadsheet_snapshot,
+                    # Set __iterate_rows flag so workflow runner knows to loop
+                    "__iterate_rows": True,
                 },
                 "logs": logs
             }
@@ -1871,9 +1892,26 @@ Extract: {fields_to_extract}"""
             records = result.get("records", [])
             count = len(records)
             logs += f"  ✅ Retrieved {count} records\n"
+            
+            # Build iterable rows from Airtable records
+            rows = []
+            for rec in records:
+                fields = rec.get("fields", {})
+                row = {k.strip().lower().replace(" ", "_").replace("-", "_"): v for k, v in fields.items()}
+                row.update(fields)  # Keep original field names too
+                row["__airtable_id"] = rec.get("id", "")
+                rows.append(row)
+            
             return {
                 "success": True,
-                "output": {**input_data, "airtable_records": records, "airtable_count": count},
+                "output": {
+                    **input_data,
+                    "airtable_records": records,
+                    "airtable_count": count,
+                    "rows": rows,
+                    "row_count": count,
+                    "__iterate_rows": True,
+                },
                 "logs": logs
             }
         except Exception as e:
@@ -2640,6 +2678,30 @@ Extract: {fields_to_extract}"""
         except Exception as e:
             logs += f"  ❌ Failed: {str(e)}\n"
             return {"success": False, "error": str(e), "output": input_data, "logs": logs}
+
+    async def _execute_email_template(self, params: dict, input_data: dict) -> dict:
+        """Render a deterministic email template with {{variable}} substitution. No AI."""
+        subject = params.get("subject", "")
+        body = params.get("body", "")
+        to = params.get("to", "")
+        
+        logs = f"[{datetime.utcnow().isoformat()}] Rendering email template\n"
+        
+        # Interpolation already happened in execute() pre-processing
+        logs += f"  To: {to}\n"
+        logs += f"  Subject: {subject}\n"
+        logs += f"  Body length: {len(body)} chars\n"
+        
+        return {
+            "success": True,
+            "output": {
+                **input_data,
+                "template_to": to,
+                "template_subject": subject,
+                "template_body": body,
+            },
+            "logs": logs
+        }
 
     async def _execute_approval_gate(self, params: dict, input_data: dict) -> dict:
         """Standalone approval node - signals the runner to pause for approval."""
