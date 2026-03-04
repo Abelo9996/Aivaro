@@ -5,8 +5,15 @@ from app.models import User, Workflow, KnowledgeEntry
 from app.models.user import TRIAL_DURATION_DAYS
 
 
+def _is_unlimited(user: User) -> bool:
+    """Admins get unlimited everything."""
+    return getattr(user, 'is_admin', False) == True
+
+
 def check_trial_active(user: User):
     """Raise 403 if trial has expired and user hasn't upgraded."""
+    if _is_unlimited(user):
+        return
     if user.is_trial and user.trial_expired:
         raise HTTPException(
             status_code=403,
@@ -21,6 +28,8 @@ def check_trial_active(user: User):
 
 def check_can_create_workflow(user: User, db: Session):
     """Check if user can create another workflow (not just activate)."""
+    if _is_unlimited(user):
+        return
     check_trial_active(user)
     limits = user.limits
     total_count = db.query(Workflow).filter(
@@ -42,6 +51,8 @@ def check_can_create_workflow(user: User, db: Session):
 
 def check_can_activate_workflow(user: User, db: Session):
     """Check if user can activate another workflow."""
+    if _is_unlimited(user):
+        return
     check_trial_active(user)
     limits = user.limits
     active_count = db.query(Workflow).filter(
@@ -64,6 +75,8 @@ def check_can_activate_workflow(user: User, db: Session):
 
 def check_can_run_workflow(user: User):
     """Check if user has remaining runs."""
+    if _is_unlimited(user):
+        return
     check_trial_active(user)
     limits = user.limits
     if user.total_runs_used >= limits["max_total_runs"]:
@@ -81,6 +94,8 @@ def check_can_run_workflow(user: User):
 
 def check_can_use_agent(user: User):
     """Check if user can use agent tasks."""
+    if _is_unlimited(user):
+        return
     check_trial_active(user)
     if not user.limits["allow_agent_tasks"]:
         raise HTTPException(
@@ -95,6 +110,8 @@ def check_can_use_agent(user: User):
 
 def check_can_add_knowledge(user: User, db: Session):
     """Check if user can add more knowledge entries."""
+    if _is_unlimited(user):
+        return
     check_trial_active(user)
     limits = user.limits
     count = db.query(KnowledgeEntry).filter(KnowledgeEntry.user_id == user.id).count()
@@ -113,6 +130,8 @@ def check_can_add_knowledge(user: User, db: Session):
 
 def check_can_import_file(user: User):
     """Check if user can import files."""
+    if _is_unlimited(user):
+        return
     check_trial_active(user)
     if not user.limits["allow_file_import"]:
         raise HTTPException(
