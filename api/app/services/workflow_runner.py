@@ -150,7 +150,6 @@ class WorkflowRunner:
                     self.execution.error = str(getattr(limit_err, 'detail', {}).get('message', 'Plan limit reached'))
                     self.db.commit()
                     return self.execution
-                increment_run_count(user, self.db)
 
             start_nodes = self.get_start_nodes()
             
@@ -172,6 +171,10 @@ class WorkflowRunner:
             print(f"[WorkflowRunner] Starting execution from node {start_nodes[0]['id']} with data keys: {list(current_data.keys())}")
             print(f"[WorkflowRunner] Has real trigger data: {trigger_data is not None and len(trigger_data) > 0}")
             self._execute_from_node(start_nodes[0]["id"], current_data)
+            
+            # Only count successful/completed runs against the trial limit
+            if user and self.execution.status in ("completed", "paused"):
+                increment_run_count(user, self.db)
             
             return self.execution
         except Exception as e:
