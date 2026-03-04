@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { WalkthroughProvider } from '@/components/walkthrough';
@@ -15,6 +16,22 @@ export default function AppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    // Sync with sidebar's persisted state
+    try {
+      const saved = localStorage.getItem('aivaro_sidebar_collapsed');
+      if (saved === 'true') setSidebarCollapsed(true);
+    } catch {}
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setSidebarCollapsed(detail.collapsed);
+    };
+    window.addEventListener('sidebar-toggle', handler);
+    return () => window.removeEventListener('sidebar-toggle', handler);
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -50,7 +67,7 @@ export default function AppLayout({
     <WalkthroughProvider autoStart={isDashboard}>
       <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
-        <div className="flex-1 flex flex-col ml-64 min-w-0">
+        <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-200 ease-in-out", sidebarCollapsed ? "ml-[72px]" : "ml-60")}>
           <Header />
           {user && !user.email_verified && (
             <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
