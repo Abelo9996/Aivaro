@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 
 const variants = {
-  hidden: { opacity: 0, y: 20, scale: 0.98 },
-  enter: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: -20, scale: 0.98 },
+  hidden: { opacity: 0, y: 12 },
+  enter: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
 };
 
 export default function PageTransition({ children }: { children: ReactNode }) {
@@ -16,8 +16,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       initial="hidden"
       animate="enter"
       exit="exit"
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      style={{ minHeight: '100vh' }}
+      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {children}
     </motion.div>

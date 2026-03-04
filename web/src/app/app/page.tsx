@@ -629,7 +629,7 @@ export default function DashboardPage() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="h-[calc(100vh-64px)] flex">
+    <div className="h-screen flex">
       {/* Left: Conversation List */}
       <div className="w-64 flex-shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col hidden lg:flex">
         <div className="p-3 border-b border-gray-200">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import Sidebar from '@/components/layout/Sidebar';
@@ -88,7 +89,17 @@ export default function AppLayout({
               </button>
             </div>
           )}
-          <main className={`flex-1 ${isDashboard ? '' : 'p-6'} overflow-x-hidden`}>{children}</main>
+          <main className={`flex-1 ${isDashboard ? '' : 'p-6'} overflow-x-hidden`}>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+              className="h-full"
+            >
+              {children}
+            </motion.div>
+          </main>
         </div>
       </div>
     </WalkthroughProvider>
