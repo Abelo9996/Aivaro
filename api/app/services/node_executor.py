@@ -272,6 +272,10 @@ class NodeExecutor:
         
         # Third pass: clean any remaining unresolved variables from string params
         resolved_params = _clean_unresolved_variables(resolved_params)
+        
+        # Fourth pass: auto-fill empty string params from input_data
+        # If the AI left a param blank but upstream data has a matching key, fill it
+        resolved_params = _autofill_empty_params(resolved_params, input_data)
 
         # Tag params with node_type for MCP fallback
         resolved_params["__node_type"] = node_type
@@ -2949,6 +2953,62 @@ def _resolve_aliases_in_params(params: dict, data: dict) -> dict:
         else:
             resolved[key] = value
     return resolved
+
+
+# Maps param names to possible data keys they should be filled from.
+# This handles the common case where the AI generates empty params but
+# upstream nodes produce the data under slightly different keys.
+_PARAM_AUTOFILL_MAP = {
+    # Email params
+    "to_email": ["template_to", "to", "email", "recipient_email", "Email", "to_email"],
+    "to": ["template_to", "to", "email", "recipient_email", "Email"],
+    "subject": ["template_subject", "subject", "email_subject", "Subject"],
+    "text_content": ["template_body", "body", "text_content", "message", "content", "email_body"],
+    "html_content": ["template_body", "body", "html_content", "content"],
+    "body": ["template_body", "body", "text_content", "message", "content"],
+    # SMS params
+    "message": ["template_body", "body", "message", "text_content", "content", "sms_body"],
+    "phone": ["phone", "phone_number", "Phone", "to_phone"],
+    "to_number": ["phone", "phone_number", "Phone", "to_phone", "to_number"],
+    # General
+    "name": ["name", "Name", "first_name", "full_name", "contact_name"],
+    "recipient_name": ["name", "Name", "first_name", "full_name"],
+}
+
+
+def _autofill_empty_params(params: dict, data: dict) -> dict:
+    """Auto-fill empty string params from input_data using smart key matching.
+    
+    When the AI generates a node with empty params (e.g., subject='', to_email=''),
+    but upstream nodes produced the data under known keys, fill them automatically.
+    Only fills string params that are empty or whitespace-only.
+    """
+    if not data:
+        return params
+    
+    filled = dict(params)
+    for key, value in filled.items():
+        # Only fill empty/whitespace string params
+        if not isinstance(value, str) or value.strip():
+            continue
+        # Skip internal keys
+        if key.startswith("__"):
+            continue
+        
+        # Try the autofill map first
+        candidates = _PARAM_AUTOFILL_MAP.get(key, [])
+        for candidate in candidates:
+            if candidate in data and data[candidate] and str(data[candidate]).strip():
+                filled[key] = str(data[candidate])
+                print(f"[AutoFill] {key} <- {candidate} = '{filled[key][:80]}...' " if len(str(filled[key])) > 80 else f"[AutoFill] {key} <- {candidate} = '{filled[key]}'")
+                break
+        else:
+            # Fallback: exact key match in data
+            if key in data and data[key] and str(data[key]).strip():
+                filled[key] = str(data[key])
+                print(f"[AutoFill] {key} <- {key} (exact) = '{filled[key][:80]}'" if len(str(filled[key])) > 80 else f"[AutoFill] {key} <- {key} (exact) = '{filled[key]}'")
+    
+    return filled
 
 
 def _clean_unresolved_variables(params: dict) -> dict:
