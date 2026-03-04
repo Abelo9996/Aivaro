@@ -13,7 +13,9 @@ class BrevoMCPServer(BaseMCPServer):
 
     def __init__(self, credentials: dict):
         super().__init__()
-        self.api_key = (credentials.get("api_key") or "").strip()
+        raw_key = credentials.get("api_key") or credentials.get("access_token") or ""
+        self.api_key = raw_key.strip()
+        print(f"[Brevo.__init__] cred_keys={list(credentials.keys())} api_key_len={len(self.api_key)} prefix={self.api_key[:12] if self.api_key else 'EMPTY'}")
         if not self.api_key:
             import logging
             logging.getLogger(__name__).warning(
@@ -319,7 +321,11 @@ class BrevoMCPServer(BaseMCPServer):
     async def _post(self, path: str, json: dict = None) -> dict:
         import httpx
         async with httpx.AsyncClient(timeout=30.0) as client:
+            print(f"[Brevo._post] url={self.BASE_URL}{path} api_key_len={len(self.api_key)} key_repr_start={repr(self.api_key[:20])} key_repr_end={repr(self.api_key[-10:])}")
             resp = await client.post(f"{self.BASE_URL}{path}", headers=self.headers, json=json)
+            if resp.status_code == 401:
+                print(f"[Brevo._post] 401 response body: {resp.text[:500]}")
+                print(f"[Brevo._post] Request headers sent: api-key length={len(self.headers.get('api-key',''))}")
             resp.raise_for_status()
             return resp.json() if resp.text else {"status": "ok"}
 
