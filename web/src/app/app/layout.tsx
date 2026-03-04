@@ -5,7 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
 import { WalkthroughProvider } from '@/components/walkthrough';
 
 export default function AppLayout({
@@ -67,8 +66,7 @@ export default function AppLayout({
     <WalkthroughProvider autoStart={isDashboard}>
       <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
-        <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-200 ease-in-out", sidebarCollapsed ? "ml-[72px]" : "ml-60")}>
-          <Header />
+        <div className={cn("flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ease-out", sidebarCollapsed ? "ml-16" : "ml-60")}>
           {user && !user.email_verified && (
             <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
               <p className="text-sm text-amber-800">
