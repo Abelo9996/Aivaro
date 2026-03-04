@@ -272,15 +272,37 @@ async def test_connection(
             
             # === OAuth providers (access_token based) ===
             if ctype == "google" and creds.get("access_token"):
-                resp = await client.get(
-                    "https://www.googleapis.com/oauth2/v1/userinfo",
-                    headers={"Authorization": f"Bearer {creds['access_token']}"}
-                )
+                async def _test_google_token(token: str):
+                    return await client.get(
+                        "https://www.googleapis.com/oauth2/v1/userinfo",
+                        headers={"Authorization": f"Bearer {token}"}
+                    )
+                
+                resp = await _test_google_token(creds["access_token"])
+                
+                # If 401, try refreshing the token first
+                if resp.status_code == 401 and creds.get("refresh_token"):
+                    import os
+                    refresh_resp = await client.post("https://oauth2.googleapis.com/token", data={
+                        "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+                        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+                        "refresh_token": creds["refresh_token"],
+                        "grant_type": "refresh_token",
+                    })
+                    if refresh_resp.status_code == 200:
+                        new_token = refresh_resp.json().get("access_token")
+                        if new_token:
+                            # Persist the refreshed token
+                            creds["access_token"] = new_token
+                            connection.credentials = creds
+                            db.commit()
+                            resp = await _test_google_token(new_token)
+                
                 if resp.status_code == 200:
                     data = resp.json()
                     return {"success": True, "message": "Google connected", "user": {"email": data.get("email", ""), "name": data.get("name", "")}}
                 elif resp.status_code == 401:
-                    return {"success": False, "message": "Google token expired. Try reconnecting."}
+                    return {"success": False, "message": "Google token expired and refresh failed. Try reconnecting."}
                 return {"success": False, "message": f"Google verification failed (HTTP {resp.status_code})"}
             
             if ctype == "slack" and creds.get("access_token"):

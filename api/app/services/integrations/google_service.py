@@ -70,7 +70,11 @@ class GoogleService:
                 # Persist new tokens via callback
                 if self.on_token_refresh:
                     try:
-                        self.on_token_refresh(self.access_token, new_refresh)
+                        import asyncio
+                        result = self.on_token_refresh(self.access_token, new_refresh)
+                        # Handle async callbacks
+                        if asyncio.iscoroutine(result):
+                            await result
                     except Exception as e:
                         print(f"[GoogleService] Token persist callback failed: {e}")
                 

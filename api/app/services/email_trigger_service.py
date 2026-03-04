@@ -111,7 +111,7 @@ class EmailTriggerService:
                 try:
                     conn = db_inner.query(Connection).filter(
                         Connection.user_id == workflow.user_id,
-                        Connection.provider == "google"
+                        Connection.type == "google"
                     ).first()
                     if conn:
                         import json
