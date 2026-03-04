@@ -173,26 +173,21 @@ export default function Sidebar() {
       style={{ width: collapsed ? 64 : 240 }}
     >
       {/* Logo area */}
-      <div className="h-14 flex items-center flex-shrink-0 overflow-hidden border-b border-gray-100 px-3">
-        <Link href="/app" className="flex items-center flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">A</span>
-          </div>
-          <span
-            className="ml-2.5 font-semibold text-gray-900 text-[15px] whitespace-nowrap transition-opacity duration-200"
-            style={{ opacity: collapsed ? 0 : 1, width: collapsed ? 0 : 'auto' }}
-          >
-            Aivaro
-          </span>
-        </Link>
-        <div className="flex-1" />
+      <div className="h-14 flex items-center flex-shrink-0 border-b border-gray-100 px-2 gap-1">
         <button
           onClick={toggleCollapse}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+          className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          {collapsed ? <PanelLeftOpen className="w-[18px] h-[18px]" /> : <PanelLeftClose className="w-[18px] h-[18px]" />}
         </button>
+        <Link
+          href="/app"
+          className="flex items-center overflow-hidden transition-opacity duration-200"
+          style={{ opacity: collapsed ? 0 : 1, width: collapsed ? 0 : 'auto' }}
+        >
+          <span className="font-semibold text-gray-900 text-[15px] whitespace-nowrap">Aivaro</span>
+        </Link>
       </div>
 
       {/* Navigation */}
