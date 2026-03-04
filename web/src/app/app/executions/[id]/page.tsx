@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Bot, AlertCircle, Package, RefreshCw } from 'lucide-react';
+import { Bot, AlertCircle, Package, RefreshCw, ShieldCheck, ShieldX, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Execution } from '@/types';
@@ -15,6 +15,31 @@ export default function ExecutionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [actioningApproval, setActioningApproval] = useState<string | null>(null);
+
+  const loadApprovals = useCallback(async () => {
+    try {
+      const data = await api.getApprovals('pending');
+      setApprovals(data);
+    } catch (err) {
+      console.error('Failed to load approvals:', err);
+    }
+  }, []);
+
+  const handleApproval = async (approvalId: string, action: 'approve' | 'reject') => {
+    setActioningApproval(approvalId);
+    try {
+      await api.actionApproval(approvalId, action);
+      // Reload both approvals and execution
+      await loadApprovals();
+      if (params.id) await loadExecution(params.id as string);
+    } catch (err) {
+      console.error('Failed to action approval:', err);
+    } finally {
+      setActioningApproval(null);
+    }
+  };
 
   const loadExecution = useCallback(async (id: string, showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -32,6 +57,10 @@ export default function ExecutionDetailPage() {
       if (execution.status === 'completed' && execution.node_executions?.some((n: any) => n.output)) {
         setShowChat(true);
       }
+      // Load approvals if execution is paused
+      if (execution.status === 'paused') {
+        loadApprovals();
+      }
     } catch (err) {
       console.error('Failed to load execution:', err);
     } finally {
@@ -44,9 +73,9 @@ export default function ExecutionDetailPage() {
     if (params.id) loadExecution(params.id as string);
   }, [params.id, loadExecution]);
 
-  // Auto-refresh while running
+  // Auto-refresh while running or paused (waiting for approvals)
   useEffect(() => {
-    if (!execution || (execution.status !== 'running' && execution.status !== 'pending_approval')) return;
+    if (!execution || !['running', 'pending_approval', 'paused'].includes(execution.status)) return;
     const interval = setInterval(() => {
       if (params.id) loadExecution(params.id as string);
     }, 5000);
@@ -64,6 +93,8 @@ export default function ExecutionDetailPage() {
       case 'completed': return 'bg-green-100 text-green-700 border-green-200';
       case 'failed': return 'bg-red-100 text-red-700 border-red-200';
       case 'running': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'paused': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'waiting_approval': return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'skipped': return 'bg-gray-100 text-gray-600 border-gray-200';
       default: return 'bg-gray-100 text-gray-600 border-gray-200';
     }
@@ -135,6 +166,14 @@ export default function ExecutionDetailPage() {
             <div><strong>Error:</strong> {execution.error}</div>
           </div>
         )}
+        {execution.status === 'paused' && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-start gap-2">
+            <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <strong>Waiting for approval</strong> — {approvals.filter(a => a.execution_id === execution.id).length || 'Some'} step(s) need your review before continuing.
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <div className="text-gray-500">Started</div>
@@ -198,6 +237,44 @@ export default function ExecutionDetailPage() {
                         <AlertCircle className="w-4 h-4" /> {node.error}
                       </div>
                     )}
+                    {node.status === 'waiting_approval' && (() => {
+                      const nodeApproval = approvals.find(a => a.execution_id === execution.id && a.node_id === node.node_id);
+                      return nodeApproval ? (
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <div className="text-sm text-amber-800 font-medium mb-2 flex items-center gap-2">
+                            <Clock className="w-4 h-4" /> Requires your approval
+                          </div>
+                          {nodeApproval.action_details && (
+                            <details className="mb-3">
+                              <summary className="text-xs text-amber-700 cursor-pointer hover:text-amber-900">View action details</summary>
+                              <pre className="mt-1 p-2 bg-white rounded border text-xs overflow-x-auto max-h-40 overflow-y-auto">
+                                {typeof nodeApproval.action_details === 'string' ? nodeApproval.action_details : JSON.stringify(nodeApproval.action_details, null, 2)}
+                              </pre>
+                            </details>
+                          )}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApproval(nodeApproval.id, 'approve')}
+                              disabled={actioningApproval === nodeApproval.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" /> Approve
+                            </button>
+                            <button
+                              onClick={() => handleApproval(nodeApproval.id, 'reject')}
+                              disabled={actioningApproval === nodeApproval.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <ShieldX className="w-3.5 h-3.5" /> Reject
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-700 flex items-center gap-2">
+                          <Clock className="w-4 h-4" /> Waiting for approval...
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))

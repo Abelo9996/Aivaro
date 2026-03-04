@@ -39,7 +39,7 @@ const nodeTypes = {
 interface ExecutionStep {
   node_id: string;
   node_label: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'waiting_approval';
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,8 +96,9 @@ export default function WorkflowEditorPage() {
   
   const [showProgress, setShowProgress] = useState(false);
   const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([]);
-  const [executionStatus, setExecutionStatus] = useState<'running' | 'completed' | 'failed'>('running');
+  const [executionStatus, setExecutionStatus] = useState<'running' | 'completed' | 'failed' | 'paused'>('running');
   const [completedSteps, setCompletedSteps] = useState(0);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
   const [currentStep, setCurrentStep] = useState<string | undefined>();
   const [executionId, setExecutionId] = useState<string | undefined>();
   const [showRunConfirm, setShowRunConfirm] = useState(false);
@@ -333,11 +334,13 @@ export default function WorkflowEditorPage() {
             setCompletedSteps(data.completed || 0);
             setCurrentStep(data.node_label);
             setExecutionSteps(prev => prev.map(step => 
-              step.node_id === data.node_id ? { ...step, status: data.status as 'completed' | 'failed' } : step
+              step.node_id === data.node_id ? { ...step, status: data.status as 'completed' | 'failed' | 'waiting_approval' } : step
             ));
           } else if (data.type === 'complete') {
-            setExecutionStatus(data.status === 'completed' ? 'completed' : 'failed');
+            const s = data.status === 'completed' ? 'completed' : data.status === 'paused' ? 'paused' : 'failed';
+            setExecutionStatus(s as any);
             setExecutionId(data.execution_id);
+            if (data.pending_approvals) setPendingApprovals(data.pending_approvals);
           }
         }
       );
@@ -372,11 +375,13 @@ export default function WorkflowEditorPage() {
             setCompletedSteps(data.completed || 0);
             setCurrentStep(data.node_label);
             setExecutionSteps(prev => prev.map(step => 
-              step.node_id === data.node_id ? { ...step, status: data.status as 'completed' | 'failed' } : step
+              step.node_id === data.node_id ? { ...step, status: data.status as 'completed' | 'failed' | 'waiting_approval' } : step
             ));
           } else if (data.type === 'complete') {
-            setExecutionStatus(data.status === 'completed' ? 'completed' : 'failed');
+            const s = data.status === 'completed' ? 'completed' : data.status === 'paused' ? 'paused' : 'failed';
+            setExecutionStatus(s as any);
             setExecutionId(data.execution_id);
+            if (data.pending_approvals) setPendingApprovals(data.pending_approvals);
           }
         }
       );
@@ -538,6 +543,7 @@ export default function WorkflowEditorPage() {
         steps={executionSteps}
         status={executionStatus}
         executionId={executionId}
+        pendingApprovals={pendingApprovals}
         onClose={() => setShowProgress(false)}
         onViewExecution={() => {
           setShowProgress(false);

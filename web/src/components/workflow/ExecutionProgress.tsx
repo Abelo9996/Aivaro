@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle, Circle, Loader2, XCircle, Play } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, XCircle, Play, Clock, ShieldAlert } from 'lucide-react';
 
 interface Step {
   node_id: string;
   node_label: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'waiting_approval';
 }
 
 interface ExecutionProgressProps {
@@ -16,10 +16,11 @@ interface ExecutionProgressProps {
   completedSteps: number;
   currentStep?: string;
   steps: Step[];
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'paused';
   onClose: () => void;
   onViewExecution?: () => void;
   executionId?: string;
+  pendingApprovals?: number;
 }
 
 export default function ExecutionProgress({
@@ -33,6 +34,7 @@ export default function ExecutionProgress({
   onClose,
   onViewExecution,
   executionId,
+  pendingApprovals,
 }: ExecutionProgressProps) {
   const [progress, setProgress] = useState(0);
 
@@ -55,6 +57,8 @@ export default function ExecutionProgress({
         return <XCircle className="h-5 w-5 text-red-500" />;
       case 'running':
         return <Loader2 className="h-5 w-5 text-indigo-500 animate-spin" />;
+      case 'waiting_approval':
+        return <ShieldAlert className="h-5 w-5 text-amber-500" />;
       default:
         return <Circle className="h-5 w-5 text-gray-300" />;
     }
@@ -64,20 +68,22 @@ export default function ExecutionProgress({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+        <div className={`${status === 'paused' ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} px-6 py-4`}>
           <div className="flex items-center gap-3">
             {status === 'running' ? (
               <Loader2 className="h-6 w-6 text-white animate-spin" />
             ) : status === 'completed' ? (
               <CheckCircle className="h-6 w-6 text-white" />
+            ) : status === 'paused' ? (
+              <ShieldAlert className="h-6 w-6 text-white" />
             ) : (
               <XCircle className="h-6 w-6 text-white" />
             )}
             <div>
               <h3 className="text-white font-semibold">
-                {status === 'running' ? 'Running Workflow' : status === 'completed' ? 'Workflow Complete!' : 'Workflow Failed'}
+                {status === 'running' ? 'Running Workflow' : status === 'completed' ? 'Workflow Complete!' : status === 'paused' ? 'Approval Required' : 'Workflow Failed'}
               </h3>
-              <p className="text-indigo-100 text-sm">{workflowName}</p>
+              <p className="text-white/80 text-sm">{workflowName}</p>
             </div>
           </div>
         </div>
@@ -93,6 +99,7 @@ export default function ExecutionProgress({
               className={`h-full transition-all duration-500 ease-out rounded-full ${
                 status === 'failed' ? 'bg-red-500' : 
                 status === 'completed' ? 'bg-green-500' : 
+                status === 'paused' ? 'bg-amber-500' :
                 'bg-gradient-to-r from-indigo-500 to-purple-500'
               }`}
               style={{ width: `${progress}%` }}
@@ -102,6 +109,13 @@ export default function ExecutionProgress({
             <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
               <Play className="h-3 w-3" />
               Running: {currentStep}
+            </p>
+          )}
+          {status === 'paused' && (
+            <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              {pendingApprovals ? `${pendingApprovals} step(s) waiting for approval` : 'Waiting for approval'}
+              {' — '}review in the Approvals tab or Run History
             </p>
           )}
         </div>
@@ -115,7 +129,8 @@ export default function ExecutionProgress({
                 className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
                   step.status === 'running' ? 'bg-indigo-50' : 
                   step.status === 'completed' ? 'bg-green-50' :
-                  step.status === 'failed' ? 'bg-red-50' : 'bg-gray-50'
+                  step.status === 'failed' ? 'bg-red-50' : 
+                  step.status === 'waiting_approval' ? 'bg-amber-50' : 'bg-gray-50'
                 }`}
               >
                 <span className="text-gray-400 text-sm w-6">{index + 1}.</span>
@@ -145,7 +160,7 @@ export default function ExecutionProgress({
                   onClick={onViewExecution}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
                 >
-                  View Details
+                  {status === 'paused' ? 'Review Approvals' : 'View Details'}
                 </button>
               )}
             </>

@@ -145,14 +145,20 @@ async def create_execution_stream(
                         ExecutionNode.execution_id == execution_uuid
                     ).all()
                     
-                    # Send updates for newly completed nodes
+                    # Send updates for newly completed/waiting nodes
                     for node in exec_nodes:
-                        if node.id not in completed_nodes and node.status in ['completed', 'failed']:
+                        if node.id not in completed_nodes and node.status in ['completed', 'failed', 'waiting_approval']:
                             completed_nodes.add(node.id)
                             progress = len(completed_nodes) / total_nodes if total_nodes > 0 else 1
                             yield f"data: {json.dumps({'type': 'step', 'node_id': node.node_id, 'node_label': node.node_label, 'status': node.status, 'completed': len(completed_nodes), 'total': total_nodes, 'progress': progress})}\n\n"
                     
                     last_status = poll_execution.status
+                    
+                    # If paused for approval, send a paused event and stop streaming
+                    if last_status == 'paused':
+                        pending_count = sum(1 for n in exec_nodes if n.status == 'waiting_approval')
+                        yield f"data: {json.dumps({'type': 'complete', 'execution_id': execution_id, 'status': 'paused', 'pending_approvals': pending_count})}\n\n"
+                        break
                     
                     # Expire objects so next query gets fresh data
                     poll_db.expire_all()

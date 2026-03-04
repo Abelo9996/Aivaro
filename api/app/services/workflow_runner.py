@@ -371,12 +371,14 @@ class WorkflowRunner:
                 for next_id in next_node_ids:
                     self._execute_from_node(next_id, row_data)
                     
-                    # If any iteration failed, stop (don't continue to remaining rows)
-                    if self.execution.status == "failed":
-                        print(f"[WorkflowRunner] FOR-EACH stopped at row {row_idx + 1} due to failure")
+                    # If any iteration failed or paused for approval, stop
+                    if self.execution.status in ("failed", "paused"):
+                        print(f"[WorkflowRunner] FOR-EACH stopped at row {row_idx + 1} due to {self.execution.status}")
                         return
             
-            # All rows processed successfully
+            # All rows processed — check if any are waiting for approval
+            if self.execution.status == "paused":
+                return
             self.execution.status = "completed"
             self.execution.completed_at = datetime.utcnow()
             self.db.commit()

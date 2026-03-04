@@ -171,6 +171,7 @@ class ApiClient {
       completed?: number;
       total?: number;
       progress?: number;
+      pending_approvals?: number;
     }) => void
   ): { abort: () => void; promise: Promise<string> } {
     const token = this.getToken();
