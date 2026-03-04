@@ -381,14 +381,29 @@ class WorkflowRunner:
                 for next_id in next_node_ids:
                     self._execute_from_node(next_id, row_data)
                     
-                    # If any iteration failed or paused for approval, stop
-                    if self.execution.status in ("failed", "paused"):
-                        print(f"[WorkflowRunner] FOR-EACH stopped at row {row_idx + 1} due to {self.execution.status}")
+                    # If any iteration failed, stop (approval pauses should NOT stop — we want
+                    # all rows to create their approvals so user can review them all at once)
+                    if self.execution.status == "failed":
+                        print(f"[WorkflowRunner] FOR-EACH stopped at row {row_idx + 1} due to failure")
+                        self._in_foreach = False
                         return
+                    
+                    # Reset status back to running if it was set to paused by an approval
+                    # (we'll set final paused status after all rows are processed)
+                    if self.execution.status == "paused":
+                        self._foreach_has_pending_approvals = True
+                        self.execution.status = "running"
+                        self.db.commit()
             
-            # All rows processed — check if any are waiting for approval
+            # All rows processed
             self._in_foreach = False
-            if self.execution.status == "paused":
+            has_approvals = getattr(self, '_foreach_has_pending_approvals', False)
+            self._foreach_has_pending_approvals = False
+            
+            if has_approvals:
+                self.execution.status = "paused"
+                self.db.commit()
+                print(f"[WorkflowRunner] FOR-EACH complete — paused for pending approvals")
                 return
             self.execution.status = "completed"
             self.execution.completed_at = datetime.utcnow()
