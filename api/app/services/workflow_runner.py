@@ -268,6 +268,8 @@ class WorkflowRunner:
             print(f"[WorkflowRunner] Node not found: {node_id}")
             return
         
+        print(f"[WorkflowRunner] _execute_from_node: {node.get('label', node_id)} (type={node['type']}) exec_status={self.execution.status}")
+        
         # Create execution node record
         exec_node = ExecutionNode(
             execution_id=self.execution.id,
@@ -344,9 +346,12 @@ class WorkflowRunner:
         branch = result.get("branch")
         next_node_ids = self.get_next_nodes(node_id, branch=branch)
         if not next_node_ids:
-            self.execution.status = "completed"
-            self.execution.completed_at = datetime.utcnow()
-            self.db.commit()
+            # Only mark completed if we're NOT inside a for-each iteration
+            # (for-each manages completion itself after all rows finish)
+            if not getattr(self, '_in_foreach', False):
+                self.execution.status = "completed"
+                self.execution.completed_at = datetime.utcnow()
+                self.db.commit()
             return
         
         output = result.get("output", {})
@@ -360,6 +365,9 @@ class WorkflowRunner:
             
             # Remove iteration flags from the base data to prevent re-iteration
             base_data = {k: v for k, v in output.items() if k not in ("__iterate_rows", "rows")}
+            
+            # Set flag so leaf nodes don't mark execution as completed mid-iteration
+            self._in_foreach = True
             
             for row_idx, row in enumerate(rows):
                 # Merge row fields into the data context — row fields take priority
@@ -379,6 +387,7 @@ class WorkflowRunner:
                         return
             
             # All rows processed — check if any are waiting for approval
+            self._in_foreach = False
             if self.execution.status == "paused":
                 return
             self.execution.status = "completed"
