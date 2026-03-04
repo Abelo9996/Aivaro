@@ -294,10 +294,25 @@ class WorkflowRunner:
                 _interpolate_params, _resolve_aliases_in_params,
                 _clean_unresolved_variables, _autofill_empty_params
             )
-            resolved_params = _interpolate_params(node.get("parameters", {}), input_data)
-            resolved_params = _resolve_aliases_in_params(resolved_params, input_data)
+            # Inject connection-level defaults (e.g. Brevo verified sender)
+            enriched_data = dict(input_data)
+            node_type = node.get("type", "")
+            if node_type.startswith("brevo") and "brevo" in self.connections:
+                brevo_sender = self.connections["brevo"].get("sender_email", "")
+                if brevo_sender:
+                    enriched_data.setdefault("sender_email", brevo_sender)
+            
+            resolved_params = _interpolate_params(node.get("parameters", {}), enriched_data)
+            resolved_params = _resolve_aliases_in_params(resolved_params, enriched_data)
             resolved_params = _clean_unresolved_variables(resolved_params)
-            resolved_params = _autofill_empty_params(resolved_params, input_data)
+            resolved_params = _autofill_empty_params(resolved_params, enriched_data)
+            
+            # Override sender_email for Brevo nodes with verified sender
+            if node_type.startswith("brevo") and "brevo" in self.connections:
+                brevo_sender = self.connections["brevo"].get("sender_email", "")
+                if brevo_sender and "sender_email" in resolved_params:
+                    resolved_params["sender_email"] = brevo_sender
+            
             resolved_node = {**node, "parameters": resolved_params}
             self._create_approval(resolved_node, exec_node, input_data)
             exec_node.status = "waiting_approval"

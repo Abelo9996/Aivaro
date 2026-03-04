@@ -196,12 +196,10 @@ class BrevoMCPServer(BaseMCPServer):
             f"[Brevo] Sending email, api_key length={len(self.api_key)}, "
             f"prefix={self.api_key[:12] if self.api_key else 'EMPTY'}..."
         )
-        # Use default sender from connection if not specified or using user's email
-        sender_email = params.get("sender_email", "").strip()
-        if not sender_email or (self.default_sender_email and sender_email != self.default_sender_email):
-            if self.default_sender_email:
-                print(f"[Brevo] Using verified sender: {self.default_sender_email} (was: {sender_email or 'empty'})")
-                sender_email = self.default_sender_email
+        # Always use verified sender from connection credentials — ignore AI-generated value
+        sender_email = self.default_sender_email or params.get("sender_email", "").strip()
+        if self.default_sender_email and params.get("sender_email"):
+            print(f"[Brevo] Overriding sender: {params['sender_email']} -> {self.default_sender_email}")
         
         to = [{"email": params["to_email"]}]
         if params.get("to_name"):
