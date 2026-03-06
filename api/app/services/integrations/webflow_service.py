@@ -1,4 +1,4 @@
-"""Webflow Integration Service — sites, collections, items."""
+"""Webflow Integration Service — sites, collections, CMS items."""
 import httpx
 from typing import Optional, Any
 
@@ -40,9 +40,9 @@ class WebflowService:
         result = await self._request("GET", f"/sites/{site_id}/collections")
         return result.get("collections", [])
 
-    async def list_items(self, collection_id: str, limit: int = 100, offset: int = 0) -> list:
+    async def list_items(self, collection_id: str, limit: int = 100) -> list:
         result = await self._request("GET", f"/collections/{collection_id}/items",
-                                     params={"limit": limit, "offset": offset})
+                                     params={"limit": limit})
         return result.get("items", [])
 
     async def create_item(self, collection_id: str, fields: dict, is_draft: bool = False) -> dict:
@@ -58,5 +58,5 @@ class WebflowService:
 
     async def publish_site(self, site_id: str, domains: list = None) -> dict:
         body = {}
-        if domains: body["customDomains"] = domains
+        if domains: body["publishToWebflowSubdomain"] = True
         return await self._request("POST", f"/sites/{site_id}/publish", json=body)

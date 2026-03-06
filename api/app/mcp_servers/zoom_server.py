@@ -12,22 +12,22 @@ class ZoomMCPServer(BaseMCPServer):
         self._register_tools()
 
     def _register_tools(self):
-        self._register("zoom_list_meetings", "List scheduled Zoom meetings.", {
+        self._register("zoom_list_meetings", "List Zoom meetings.", {
             "type": "object",
             "properties": {
                 "user_id": {"type": "string", "description": "User ID or 'me'", "default": "me"},
-                "type": {"type": "string", "description": "scheduled, live, upcoming", "default": "scheduled"},
+                "limit": {"type": "integer", "default": 30},
             },
         }, self._list_meetings)
 
         self._register("zoom_create_meeting", "Create a Zoom meeting.", {
             "type": "object",
             "properties": {
-                "topic": {"type": "string", "description": "Meeting topic/title"},
+                "topic": {"type": "string", "description": "Meeting topic"},
                 "start_time": {"type": "string", "description": "Start time (ISO 8601, e.g. 2026-03-10T10:00:00Z)"},
                 "duration": {"type": "integer", "description": "Duration in minutes", "default": 60},
                 "timezone": {"type": "string", "description": "Timezone (e.g. America/Los_Angeles)"},
-                "agenda": {"type": "string", "description": "Meeting agenda/description"},
+                "agenda": {"type": "string", "description": "Meeting agenda"},
                 "user_id": {"type": "string", "description": "Host user ID or 'me'", "default": "me"},
             },
             "required": ["topic"],
@@ -49,7 +49,7 @@ class ZoomMCPServer(BaseMCPServer):
             "required": ["meeting_id"],
         }, self._update_meeting)
 
-        self._register("zoom_delete_meeting", "Delete/cancel a Zoom meeting.", {
+        self._register("zoom_delete_meeting", "Delete a Zoom meeting.", {
             "type": "object",
             "properties": {"meeting_id": {"type": "integer", "description": "Meeting ID"}},
             "required": ["meeting_id"],
@@ -66,11 +66,11 @@ class ZoomMCPServer(BaseMCPServer):
 
         self._register("zoom_list_users", "List Zoom users in the account.", {
             "type": "object",
-            "properties": {"page_size": {"type": "integer", "default": 30}},
+            "properties": {"limit": {"type": "integer", "default": 30}},
         }, self._list_users)
 
-    async def _list_meetings(self, user_id: str = "me", type: str = "scheduled") -> dict:
-        meetings = await self.svc.list_meetings(user_id, type)
+    async def _list_meetings(self, user_id: str = "me", limit: int = 30) -> dict:
+        meetings = await self.svc.list_meetings(user_id, limit)
         return {"meetings": meetings, "count": len(meetings)}
 
     async def _create_meeting(self, topic: str, start_time: str = None, duration: int = 60,
@@ -91,8 +91,8 @@ class ZoomMCPServer(BaseMCPServer):
         recordings = await self.svc.list_recordings(user_id, from_date, to_date)
         return {"recordings": recordings, "count": len(recordings)}
 
-    async def _list_users(self, page_size: int = 30) -> dict:
-        users = await self.svc.list_users(page_size)
+    async def _list_users(self, limit: int = 30) -> dict:
+        users = await self.svc.list_users(limit)
         return {"users": users, "count": len(users)}
 
     async def close(self):

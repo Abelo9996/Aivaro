@@ -9,13 +9,12 @@ class FreshdeskService:
 
     def __init__(self, domain: str, api_key: str):
         self.base_url = f"https://{domain}.freshdesk.com/api/v2"
-        creds = base64.b64encode(f"{api_key}:X".encode()).decode()
-        self._auth_header = f"Basic {creds}"
+        self._auth = base64.b64encode(f"{api_key}:X".encode()).decode()
         self._client = None
 
     @property
     def headers(self) -> dict:
-        return {"Authorization": self._auth_header, "Content-Type": "application/json"}
+        return {"Authorization": f"Basic {self._auth}", "Content-Type": "application/json"}
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -33,33 +32,33 @@ class FreshdeskService:
         resp.raise_for_status()
         return resp.json() if resp.content and resp.status_code != 204 else {}
 
-    async def list_tickets(self, limit: int = 30) -> list:
-        return await self._request("GET", "/tickets", params={"per_page": limit})
+    async def create_ticket(self, subject: str, description: str, email: str,
+                            priority: int = 1, status: int = 2) -> dict:
+        return await self._request("POST", "/tickets", json={
+            "subject": subject, "description": description, "email": email,
+            "priority": priority, "status": status
+        })
+
+    async def update_ticket(self, ticket_id: int, **fields) -> dict:
+        return await self._request("PUT", f"/tickets/{ticket_id}", json=fields)
 
     async def get_ticket(self, ticket_id: int) -> dict:
         return await self._request("GET", f"/tickets/{ticket_id}")
 
-    async def create_ticket(self, subject: str, description: str, email: str,
-                            priority: int = 1, status: int = 2, tags: list = None) -> dict:
-        body = {"subject": subject, "description": description, "email": email,
-                "priority": priority, "status": status}
-        if tags: body["tags"] = tags
-        return await self._request("POST", "/tickets", json=body)
-
-    async def update_ticket(self, ticket_id: int, **fields) -> dict:
-        return await self._request("PUT", f"/tickets/{ticket_id}", json=fields)
+    async def list_tickets(self, limit: int = 30) -> list:
+        return await self._request("GET", "/tickets", params={"per_page": min(limit, 100)})
 
     async def add_note(self, ticket_id: int, body: str, private: bool = True) -> dict:
         return await self._request("POST", f"/tickets/{ticket_id}/notes",
                                    json={"body": body, "private": private})
 
-    async def list_contacts(self, limit: int = 30) -> list:
-        return await self._request("GET", "/contacts", params={"per_page": limit})
-
     async def create_contact(self, name: str, email: str, phone: str = None) -> dict:
         body = {"name": name, "email": email}
         if phone: body["phone"] = phone
         return await self._request("POST", "/contacts", json=body)
+
+    async def list_contacts(self, limit: int = 30) -> list:
+        return await self._request("GET", "/contacts", params={"per_page": min(limit, 100)})
 
     async def list_agents(self) -> list:
         return await self._request("GET", "/agents")

@@ -4,7 +4,7 @@ from typing import Optional, Any
 
 
 class IntercomService:
-    """Service for Intercom REST API v2."""
+    """Service for Intercom REST API."""
 
     BASE_URL = "https://api.intercom.io"
 
@@ -15,7 +15,7 @@ class IntercomService:
     @property
     def headers(self) -> dict:
         return {"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json",
-                "Intercom-Version": "2.10"}
+                "Intercom-Version": "2.11"}
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -34,50 +34,44 @@ class IntercomService:
         return resp.json() if resp.content and resp.status_code != 204 else {}
 
     async def list_contacts(self, limit: int = 50) -> list:
-        result = await self._request("GET", "/contacts", params={"per_page": limit})
+        result = await self._request("POST", "/contacts/search",
+                                     json={"query": {"operator": "AND", "value": []},
+                                           "pagination": {"per_page": limit}})
         return result.get("data", [])
 
-    async def create_contact(self, email: str, name: str = None, role: str = "user",
-                             phone: str = None, custom_attributes: dict = None) -> dict:
-        body = {"email": email, "role": role}
+    async def create_contact(self, role: str = "user", email: str = None, name: str = None,
+                             phone: str = None, external_id: str = None) -> dict:
+        body = {"role": role}
+        if email: body["email"] = email
         if name: body["name"] = name
         if phone: body["phone"] = phone
-        if custom_attributes: body["custom_attributes"] = custom_attributes
+        if external_id: body["external_id"] = external_id
         return await self._request("POST", "/contacts", json=body)
 
     async def update_contact(self, contact_id: str, **fields) -> dict:
         return await self._request("PUT", f"/contacts/{contact_id}", json=fields)
 
-    async def search_contacts(self, query: str, field: str = "email") -> list:
-        body = {"query": {"field": field, "operator": "=", "value": query}}
-        result = await self._request("POST", "/contacts/search", json=body)
+    async def search_contacts(self, field: str, value: str) -> list:
+        query = {"query": {"field": field, "operator": "=", "value": value}}
+        result = await self._request("POST", "/contacts/search", json=query)
         return result.get("data", [])
 
     async def list_conversations(self, limit: int = 20) -> list:
         result = await self._request("GET", "/conversations", params={"per_page": limit})
         return result.get("conversations", [])
 
-    async def create_conversation(self, from_email: str, body: str) -> dict:
-        payload = {"from": {"type": "user", "email": from_email}, "body": body}
-        return await self._request("POST", "/conversations", json=payload)
+    async def create_conversation(self, from_contact_id: str, body: str) -> dict:
+        return await self._request("POST", "/conversations", json={
+            "from": {"type": "contact", "id": from_contact_id}, "body": body
+        })
 
-    async def reply_to_conversation(self, conversation_id: str, body: str, message_type: str = "comment",
-                                    admin_id: str = None) -> dict:
-        payload = {"message_type": message_type, "body": body, "type": "admin"}
+    async def reply_to_conversation(self, conversation_id: str, body: str,
+                                    admin_id: str = None, message_type: str = "comment") -> dict:
+        payload = {"body": body, "message_type": message_type, "type": "admin"}
         if admin_id: payload["admin_id"] = admin_id
         return await self._request("POST", f"/conversations/{conversation_id}/reply", json=payload)
 
-    async def tag_contact(self, contact_id: str, tag_name: str) -> dict:
-        # First find or create tag
-        tags = await self._request("GET", "/tags")
-        tag_id = None
-        for t in tags.get("data", []):
-            if t["name"] == tag_name:
-                tag_id = t["id"]
-                break
-        if not tag_id:
-            tag = await self._request("POST", "/tags", json={"name": tag_name})
-            tag_id = tag["id"]
+    async def tag_contact(self, contact_id: str, tag_id: str) -> dict:
         return await self._request("POST", f"/contacts/{contact_id}/tags", json={"id": tag_id})
 
     async def create_note(self, contact_id: str, body: str, admin_id: str = None) -> dict:

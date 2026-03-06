@@ -1,4 +1,4 @@
-"""Supabase Integration Service — CRUD via PostgREST."""
+"""Supabase Integration Service — database CRUD, RPC."""
 import httpx
 from typing import Optional, Any
 
@@ -30,7 +30,7 @@ class SupabaseService:
         client = await self._get_client()
         resp = await client.request(method, f"{self.base_url}{path}", headers=self.headers, **kwargs)
         resp.raise_for_status()
-        return resp.json() if resp.content and resp.status_code not in (204,) else {}
+        return resp.json() if resp.content and resp.status_code != 204 else {}
 
     async def list_rows(self, table: str, limit: int = 50, offset: int = 0,
                         select: str = "*", filters: dict = None) -> list:
@@ -38,31 +38,19 @@ class SupabaseService:
         if filters:
             for k, v in filters.items():
                 params[k] = f"eq.{v}"
-        result = await self._request("GET", f"/{table}", params=params)
-        return result if isinstance(result, list) else []
+        return await self._request("GET", f"/{table}", params=params)
 
-    async def get_row(self, table: str, id_column: str, id_value: str) -> dict:
-        params = {"select": "*", id_column: f"eq.{id_value}", "limit": 1}
-        result = await self._request("GET", f"/{table}", params=params)
-        return result[0] if result else {}
+    async def get_row(self, table: str, column: str, value: str) -> list:
+        return await self._request("GET", f"/{table}", params={"select": "*", column: f"eq.{value}"})
 
-    async def insert_row(self, table: str, data: dict) -> dict:
-        result = await self._request("POST", f"/{table}", json=data)
-        return result[0] if isinstance(result, list) and result else result
+    async def insert_row(self, table: str, data: dict) -> list:
+        return await self._request("POST", f"/{table}", json=data)
 
-    async def update_row(self, table: str, id_column: str, id_value: str, data: dict) -> dict:
-        params = {id_column: f"eq.{id_value}"}
-        result = await self._request("PATCH", f"/{table}", params=params, json=data)
-        return result[0] if isinstance(result, list) and result else result
+    async def update_row(self, table: str, column: str, value: str, data: dict) -> list:
+        return await self._request("PATCH", f"/{table}", params={column: f"eq.{value}"}, json=data)
 
-    async def delete_row(self, table: str, id_column: str, id_value: str) -> dict:
-        params = {id_column: f"eq.{id_value}"}
-        await self._request("DELETE", f"/{table}", params=params)
-        return {"deleted": True}
+    async def delete_row(self, table: str, column: str, value: str) -> list:
+        return await self._request("DELETE", f"/{table}", params={column: f"eq.{value}"})
 
     async def rpc_call(self, function_name: str, params: dict = None) -> Any:
-        client = await self._get_client()
-        resp = await client.post(f"{self.base_url.replace('/rest/v1', '')}/rest/v1/rpc/{function_name}",
-                                 headers=self.headers, json=params or {})
-        resp.raise_for_status()
-        return resp.json() if resp.content else {}
+        return await self._request("POST", f"/rpc/{function_name}", json=params or {})

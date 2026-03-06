@@ -1,4 +1,4 @@
-"""Webflow MCP Server — sites, collections, CMS items, publishing."""
+"""Webflow MCP Server — sites, collections, CMS items."""
 from app.mcp_servers.base import BaseMCPServer
 
 
@@ -27,7 +27,6 @@ class WebflowMCPServer(BaseMCPServer):
             "properties": {
                 "collection_id": {"type": "string", "description": "Collection ID"},
                 "limit": {"type": "integer", "default": 100},
-                "offset": {"type": "integer", "default": 0},
             },
             "required": ["collection_id"],
         }, self._list_items)
@@ -36,7 +35,7 @@ class WebflowMCPServer(BaseMCPServer):
             "type": "object",
             "properties": {
                 "collection_id": {"type": "string", "description": "Collection ID"},
-                "fields": {"type": "object", "description": "Field data as {field_slug: value}"},
+                "fields": {"type": "object", "description": "Field data (name, slug, etc.)"},
                 "is_draft": {"type": "boolean", "description": "Create as draft", "default": False},
             },
             "required": ["collection_id", "fields"],
@@ -63,10 +62,7 @@ class WebflowMCPServer(BaseMCPServer):
 
         self._register("webflow_publish_site", "Publish a Webflow site.", {
             "type": "object",
-            "properties": {
-                "site_id": {"type": "string", "description": "Site ID"},
-                "domains": {"type": "array", "items": {"type": "string"}, "description": "Custom domains to publish to"},
-            },
+            "properties": {"site_id": {"type": "string", "description": "Site ID"}},
             "required": ["site_id"],
         }, self._publish_site)
 
@@ -75,25 +71,25 @@ class WebflowMCPServer(BaseMCPServer):
         return {"sites": sites, "count": len(sites)}
 
     async def _list_collections(self, site_id: str) -> dict:
-        collections = await self.svc.list_collections(site_id)
-        return {"collections": collections, "count": len(collections)}
+        colls = await self.svc.list_collections(site_id)
+        return {"collections": colls, "count": len(colls)}
 
-    async def _list_items(self, collection_id: str, limit: int = 100, offset: int = 0) -> dict:
-        items = await self.svc.list_items(collection_id, limit, offset)
+    async def _list_items(self, collection_id: str, limit: int = 100) -> dict:
+        items = await self.svc.list_items(collection_id, limit)
         return {"items": items, "count": len(items)}
 
-    async def _create_item(self, collection_id: str, fields: dict = None, is_draft: bool = False) -> dict:
-        return await self.svc.create_item(collection_id, fields or {}, is_draft)
+    async def _create_item(self, collection_id: str, fields: dict, is_draft: bool = False) -> dict:
+        return await self.svc.create_item(collection_id, fields, is_draft)
 
     async def _update_item(self, collection_id: str, item_id: str, fields: dict) -> dict:
         return await self.svc.update_item(collection_id, item_id, fields)
 
     async def _delete_item(self, collection_id: str, item_id: str) -> dict:
         await self.svc.delete_item(collection_id, item_id)
-        return {"deleted": True}
+        return {"deleted": True, "item_id": item_id}
 
-    async def _publish_site(self, site_id: str, domains: list = None) -> dict:
-        return await self.svc.publish_site(site_id, domains)
+    async def _publish_site(self, site_id: str) -> dict:
+        return await self.svc.publish_site(site_id)
 
     async def close(self):
         await self.svc.close()

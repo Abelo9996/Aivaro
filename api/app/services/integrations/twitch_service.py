@@ -1,4 +1,4 @@
-"""Twitch Integration Service — users, streams, channels, clips."""
+"""Twitch Integration Service — streams, channels, clips."""
 import httpx
 from typing import Optional, Any
 
@@ -15,7 +15,7 @@ class TwitchService:
 
     @property
     def headers(self) -> dict:
-        return {"Client-ID": self.client_id, "Authorization": f"Bearer {self.access_token}"}
+        return {"Client-Id": self.client_id, "Authorization": f"Bearer {self.access_token}"}
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -41,10 +41,10 @@ class TwitchService:
         data = result.get("data", [])
         return data[0] if data else {}
 
-    async def get_streams(self, game_id: str = None, user_login: str = None, limit: int = 20) -> list:
+    async def get_streams(self, user_login: str = None, game_id: str = None, limit: int = 20) -> list:
         params = {"first": limit}
-        if game_id: params["game_id"] = game_id
         if user_login: params["user_login"] = user_login
+        if game_id: params["game_id"] = game_id
         result = await self._request("GET", "/streams", params=params)
         return result.get("data", [])
 
@@ -67,5 +67,6 @@ class TwitchService:
         return data[0] if data else {}
 
     async def get_subscribers(self, broadcaster_id: str, limit: int = 20) -> list:
-        result = await self._request("GET", "/subscriptions", params={"broadcaster_id": broadcaster_id, "first": limit})
+        result = await self._request("GET", "/subscriptions",
+                                     params={"broadcaster_id": broadcaster_id, "first": limit})
         return result.get("data", [])

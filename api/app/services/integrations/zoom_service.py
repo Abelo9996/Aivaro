@@ -32,18 +32,15 @@ class ZoomService:
         resp.raise_for_status()
         return resp.json() if resp.content and resp.status_code != 204 else {}
 
-    async def list_users(self, page_size: int = 30) -> list:
-        result = await self._request("GET", "/users", params={"page_size": page_size})
-        return result.get("users", [])
-
-    async def list_meetings(self, user_id: str = "me", type: str = "scheduled") -> list:
-        result = await self._request("GET", f"/users/{user_id}/meetings", params={"type": type})
+    async def list_meetings(self, user_id: str = "me", limit: int = 30) -> list:
+        result = await self._request("GET", f"/users/{user_id}/meetings",
+                                     params={"page_size": limit})
         return result.get("meetings", [])
 
     async def create_meeting(self, topic: str, start_time: str = None, duration: int = 60,
-                             timezone: str = None, agenda: str = None, user_id: str = "me",
-                             type: int = 2) -> dict:
-        body = {"topic": topic, "type": type, "duration": duration}
+                             timezone: str = None, agenda: str = None,
+                             user_id: str = "me") -> dict:
+        body = {"topic": topic, "type": 2 if start_time else 1, "duration": duration}
         if start_time: body["start_time"] = start_time
         if timezone: body["timezone"] = timezone
         if agenda: body["agenda"] = agenda
@@ -58,9 +55,14 @@ class ZoomService:
     async def delete_meeting(self, meeting_id: int) -> dict:
         return await self._request("DELETE", f"/meetings/{meeting_id}")
 
-    async def list_recordings(self, user_id: str = "me", from_date: str = None, to_date: str = None) -> list:
+    async def list_recordings(self, user_id: str = "me", from_date: str = None,
+                              to_date: str = None) -> list:
         params = {}
         if from_date: params["from"] = from_date
         if to_date: params["to"] = to_date
         result = await self._request("GET", f"/users/{user_id}/recordings", params=params)
         return result.get("meetings", [])
+
+    async def list_users(self, limit: int = 30) -> list:
+        result = await self._request("GET", "/users", params={"page_size": limit})
+        return result.get("users", [])

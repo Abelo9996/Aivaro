@@ -1,4 +1,4 @@
-"""Twitch MCP Server — users, streams, channels, clips."""
+"""Twitch MCP Server — streams, channels, clips, subscribers."""
 from app.mcp_servers.base import BaseMCPServer
 
 
@@ -12,7 +12,7 @@ class TwitchMCPServer(BaseMCPServer):
         self._register_tools()
 
     def _register_tools(self):
-        self._register("twitch_get_user", "Get a Twitch user by login name or ID.", {
+        self._register("twitch_get_user", "Get a Twitch user's info.", {
             "type": "object",
             "properties": {
                 "login": {"type": "string", "description": "Twitch username"},
@@ -20,16 +20,16 @@ class TwitchMCPServer(BaseMCPServer):
             },
         }, self._get_user)
 
-        self._register("twitch_get_streams", "Get live streams, optionally filtered.", {
+        self._register("twitch_get_streams", "Get live streams on Twitch.", {
             "type": "object",
             "properties": {
+                "user_login": {"type": "string", "description": "Filter by username"},
                 "game_id": {"type": "string", "description": "Filter by game ID"},
-                "user_login": {"type": "string", "description": "Filter by streamer username"},
                 "limit": {"type": "integer", "default": 20},
             },
         }, self._get_streams)
 
-        self._register("twitch_get_channel", "Get channel info for a broadcaster.", {
+        self._register("twitch_get_channel", "Get channel info for a Twitch broadcaster.", {
             "type": "object",
             "properties": {"broadcaster_id": {"type": "string", "description": "Broadcaster user ID"}},
             "required": ["broadcaster_id"],
@@ -44,7 +44,7 @@ class TwitchMCPServer(BaseMCPServer):
             "required": ["query"],
         }, self._search_channels)
 
-        self._register("twitch_get_clips", "Get clips for a broadcaster.", {
+        self._register("twitch_get_clips", "Get clips for a Twitch broadcaster.", {
             "type": "object",
             "properties": {
                 "broadcaster_id": {"type": "string", "description": "Broadcaster user ID"},
@@ -71,8 +71,8 @@ class TwitchMCPServer(BaseMCPServer):
     async def _get_user(self, login: str = None, user_id: str = None) -> dict:
         return await self.svc.get_user(login, user_id)
 
-    async def _get_streams(self, game_id: str = None, user_login: str = None, limit: int = 20) -> dict:
-        streams = await self.svc.get_streams(game_id, user_login, limit)
+    async def _get_streams(self, user_login: str = None, game_id: str = None, limit: int = 20) -> dict:
+        streams = await self.svc.get_streams(user_login, game_id, limit)
         return {"streams": streams, "count": len(streams)}
 
     async def _get_channel(self, broadcaster_id: str) -> dict:

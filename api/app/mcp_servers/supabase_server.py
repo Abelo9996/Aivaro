@@ -19,52 +19,52 @@ class SupabaseMCPServer(BaseMCPServer):
                 "limit": {"type": "integer", "default": 50},
                 "offset": {"type": "integer", "default": 0},
                 "select": {"type": "string", "description": "Columns to select (PostgREST syntax)", "default": "*"},
-                "filters": {"type": "object", "description": "Column filters as {column: value} for exact match"},
+                "filters": {"type": "object", "description": "Column=value equality filters"},
             },
             "required": ["table"],
         }, self._list_rows)
 
-        self._register("supabase_get_row", "Get a single row from a Supabase table by ID.", {
+        self._register("supabase_get_row", "Get rows by column value from a Supabase table.", {
             "type": "object",
             "properties": {
                 "table": {"type": "string", "description": "Table name"},
-                "id_column": {"type": "string", "description": "ID column name", "default": "id"},
-                "id_value": {"type": "string", "description": "ID value"},
+                "column": {"type": "string", "description": "Column to filter on"},
+                "value": {"type": "string", "description": "Value to match"},
             },
-            "required": ["table", "id_value"],
+            "required": ["table", "column", "value"],
         }, self._get_row)
 
         self._register("supabase_insert_row", "Insert a row into a Supabase table.", {
             "type": "object",
             "properties": {
                 "table": {"type": "string", "description": "Table name"},
-                "data": {"type": "object", "description": "Row data as {column: value}"},
+                "data": {"type": "object", "description": "Row data as key-value pairs"},
             },
             "required": ["table", "data"],
         }, self._insert_row)
 
-        self._register("supabase_update_row", "Update a row in a Supabase table.", {
+        self._register("supabase_update_row", "Update rows in a Supabase table.", {
             "type": "object",
             "properties": {
                 "table": {"type": "string", "description": "Table name"},
-                "id_column": {"type": "string", "description": "ID column name", "default": "id"},
-                "id_value": {"type": "string", "description": "ID value of row to update"},
-                "data": {"type": "object", "description": "Fields to update as {column: value}"},
+                "column": {"type": "string", "description": "Filter column"},
+                "value": {"type": "string", "description": "Filter value (equality match)"},
+                "data": {"type": "object", "description": "Fields to update"},
             },
-            "required": ["table", "id_value", "data"],
+            "required": ["table", "column", "value", "data"],
         }, self._update_row)
 
-        self._register("supabase_delete_row", "Delete a row from a Supabase table.", {
+        self._register("supabase_delete_row", "Delete rows from a Supabase table.", {
             "type": "object",
             "properties": {
                 "table": {"type": "string", "description": "Table name"},
-                "id_column": {"type": "string", "description": "ID column name", "default": "id"},
-                "id_value": {"type": "string", "description": "ID value of row to delete"},
+                "column": {"type": "string", "description": "Filter column"},
+                "value": {"type": "string", "description": "Filter value (equality match)"},
             },
-            "required": ["table", "id_value"],
+            "required": ["table", "column", "value"],
         }, self._delete_row)
 
-        self._register("supabase_rpc", "Call a Supabase stored procedure (RPC function).", {
+        self._register("supabase_rpc", "Call a Supabase/PostgreSQL stored function (RPC).", {
             "type": "object",
             "properties": {
                 "function_name": {"type": "string", "description": "Function name"},
@@ -78,17 +78,21 @@ class SupabaseMCPServer(BaseMCPServer):
         rows = await self.svc.list_rows(table, limit, offset, select, filters)
         return {"rows": rows, "count": len(rows)}
 
-    async def _get_row(self, table: str, id_value: str, id_column: str = "id") -> dict:
-        return await self.svc.get_row(table, id_column, id_value)
+    async def _get_row(self, table: str, column: str, value: str) -> dict:
+        rows = await self.svc.get_row(table, column, value)
+        return {"rows": rows, "count": len(rows)}
 
     async def _insert_row(self, table: str, data: dict) -> dict:
-        return await self.svc.insert_row(table, data)
+        result = await self.svc.insert_row(table, data)
+        return {"inserted": result}
 
-    async def _update_row(self, table: str, id_value: str, data: dict, id_column: str = "id") -> dict:
-        return await self.svc.update_row(table, id_column, id_value, data)
+    async def _update_row(self, table: str, column: str, value: str, data: dict) -> dict:
+        result = await self.svc.update_row(table, column, value, data)
+        return {"updated": result}
 
-    async def _delete_row(self, table: str, id_value: str, id_column: str = "id") -> dict:
-        return await self.svc.delete_row(table, id_column, id_value)
+    async def _delete_row(self, table: str, column: str, value: str) -> dict:
+        result = await self.svc.delete_row(table, column, value)
+        return {"deleted": result}
 
     async def _rpc_call(self, function_name: str, params: dict = None) -> dict:
         result = await self.svc.rpc_call(function_name, params)
