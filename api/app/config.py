@@ -1,6 +1,13 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
+import secrets
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Generate a random key for local dev — never use a hardcoded default
+_DEV_SECRET_KEY = secrets.token_hex(32)
 
 
 class Settings(BaseSettings):
@@ -12,8 +19,8 @@ class Settings(BaseSettings):
     # Railway: postgresql://postgres:password@xxx.railway.app:5432/railway
     database_url: str = "sqlite:///./aivaro.db"
     
-    # Security
-    secret_key: str = "your-super-secret-key-change-in-production"
+    # Security — must be set via SECRET_KEY env var in production
+    secret_key: str = _DEV_SECRET_KEY
     access_token_expire_minutes: int = 1440
     
     # OpenAI
@@ -118,7 +125,15 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    # Warn loudly if production is running without an explicit SECRET_KEY
+    if s.environment == "production" and s.secret_key == _DEV_SECRET_KEY:
+        logger.critical(
+            "FATAL: SECRET_KEY env var is not set in production! "
+            "Set it to a random 64-char hex string. Refusing to start."
+        )
+        raise RuntimeError("SECRET_KEY must be set in production")
+    return s
 
 
 # Module-level settings instance for convenience
