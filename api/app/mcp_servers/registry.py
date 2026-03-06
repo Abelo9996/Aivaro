@@ -124,6 +124,87 @@ def _brevo_factory(creds: dict) -> BaseMCPServer:
     return BrevoMCPServer(creds)
 
 
+def _telegram_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.telegram_server import TelegramMCPServer
+    return TelegramMCPServer(bot_token=creds.get("bot_token", ""))
+
+
+def _typeform_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.typeform_server import TypeformMCPServer
+    return TypeformMCPServer(access_token=creds.get("access_token", ""))
+
+
+def _asana_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.asana_server import AsanaMCPServer
+    return AsanaMCPServer(access_token=creds.get("access_token", ""))
+
+
+def _trello_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.trello_server import TrelloMCPServer
+    return TrelloMCPServer(
+        api_key=creds.get("api_key", ""),
+        api_token=creds.get("api_token", ""),
+    )
+
+
+def _clickup_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.clickup_server import ClickUpMCPServer
+    return ClickUpMCPServer(api_key=creds.get("api_key", ""))
+
+
+def _pipedrive_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.pipedrive_server import PipedriveMCPServer
+    return PipedriveMCPServer(api_token=creds.get("api_token", ""))
+
+
+def _zendesk_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.zendesk_server import ZendeskMCPServer
+    return ZendeskMCPServer(
+        subdomain=creds.get("subdomain", ""),
+        email=creds.get("email", ""),
+        api_token=creds.get("api_token", ""),
+    )
+
+
+def _intercom_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.intercom_server import IntercomMCPServer
+    return IntercomMCPServer(access_token=creds.get("access_token", ""))
+
+
+def _freshdesk_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.freshdesk_server import FreshdeskMCPServer
+    return FreshdeskMCPServer(
+        domain=creds.get("domain", ""),
+        api_key=creds.get("api_key", ""),
+    )
+
+
+def _supabase_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.supabase_server import SupabaseMCPServer
+    return SupabaseMCPServer(
+        url=creds.get("url", ""),
+        api_key=creds.get("api_key", ""),
+    )
+
+
+def _webflow_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.webflow_server import WebflowMCPServer
+    return WebflowMCPServer(access_token=creds.get("access_token", ""))
+
+
+def _twitch_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.twitch_server import TwitchMCPServer
+    return TwitchMCPServer(
+        client_id=creds.get("client_id", ""),
+        access_token=creds.get("access_token", ""),
+    )
+
+
+def _zoom_factory(creds: dict) -> BaseMCPServer:
+    from app.mcp_servers.zoom_server import ZoomMCPServer
+    return ZoomMCPServer(access_token=creds.get("access_token", ""))
+
+
 SERVER_FACTORIES = {
     "google": _google_factory,
     "slack": _slack_factory,
@@ -143,6 +224,19 @@ SERVER_FACTORIES = {
     "sendgrid": _sendgrid_factory,
     "whatsapp": _whatsapp_factory,
     "brevo": _brevo_factory,
+    "telegram": _telegram_factory,
+    "typeform": _typeform_factory,
+    "asana": _asana_factory,
+    "trello": _trello_factory,
+    "clickup": _clickup_factory,
+    "pipedrive": _pipedrive_factory,
+    "zendesk": _zendesk_factory,
+    "intercom": _intercom_factory,
+    "freshdesk": _freshdesk_factory,
+    "supabase": _supabase_factory,
+    "webflow": _webflow_factory,
+    "twitch": _twitch_factory,
+    "zoom": _zoom_factory,
 }
 
 
