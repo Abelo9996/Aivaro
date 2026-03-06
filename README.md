@@ -65,27 +65,27 @@ connects your tools, and runs it — with human-in-the-loop approval so nothing 
 ### Chat → Workflow Creation
 > Describe what you need in plain English, AI builds the full workflow
 
-https://github.com/user-attachments/assets/Chat_Workflow_Creation.mp4
+web/public/demos/Chat_Workflow_Creation.mp4
 
 ### Visual Workflow Editor
 > Drag-and-drop canvas with live execution visualization
 
-https://github.com/user-attachments/assets/Workflows_Visualizer.mp4
+web/public/demos/Workflows_Visualizer.mp4
 
 ### Form Input & Execution
 > Trigger workflows with form submissions, watch them run step-by-step
 
-https://github.com/user-attachments/assets/Chat_Form_Input.mp4
+web/public/demos/Chat_Form_Input.mp4
 
 ### Knowledge Base
 > Store business context that gets injected into all AI systems
 
-https://github.com/user-attachments/assets/Chat_Knowledge_Base.mp4
+web/public/demos/Chat_Knowledge_Base.mp4
 
 ### Connect Your Tools
 > One-click OAuth and API key connections for 18 providers
 
-https://github.com/user-attachments/assets/Tool_Connection.mp4
+web/public/demos/Tool_Connection.mp4
 
 ## 🏁 Quick Start
 
